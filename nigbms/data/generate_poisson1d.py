@@ -67,6 +67,20 @@ def get_sympy_f(u_sym):
     return u_sym.diff(x, x)
 
 
+def discretize(expr, N_grid=128):
+    """discretize sympy expression in [0, 1]
+
+    Args:
+        expr ([type]): [description]
+        N (int, optional): [description]. Defaults to 128.
+
+    Returns:
+        [type]: [description]
+    """
+    expr = lambdify(symbols("x"), expr, "numpy")
+    return expr(np.linspace(0, 1, N_grid))
+
+
 def sample_random_coeffs(N_terms: int = 10, p: float = 0.5, type="quadratic", scale=1):
     """
     Generate random coefficients for a given number of terms.
@@ -106,24 +120,9 @@ def sample_random_coeffs(N_terms: int = 10, p: float = 0.5, type="quadratic", sc
 
 def get_meta_df(N_data, N_terms: int = 10, p: float = 0.5, type="quadratic", scale=1):
     coeffs = [sample_random_coeffs(N_terms=N_terms, p=p, type=type, scale=scale) for _ in range(N_data)]
-    a = IndexedBase("a")
     column_names = [a[i] for i in range(1, N_terms + 1)] + ["is_difficult"]
     meta_df = pd.DataFrame(coeffs, columns=column_names)
     return meta_df
-
-
-def discretize(expr, N_grid=128):
-    """discretize sympy expression in [0, 1]
-
-    Args:
-        expr ([type]): [description]
-        N (int, optional): [description]. Defaults to 128.
-
-    Returns:
-        [type]: [description]
-    """
-    expr = lambdify(symbols("x"), expr, "numpy")
-    return expr(np.linspace(0, 1, N_grid))
 
 
 def generate_poisson1d(u_sym, i, coeffs, exact):
@@ -155,7 +154,7 @@ def generate_poisson1d(u_sym, i, coeffs, exact):
 
 
 # %%
-@hydra.main(config_path="../configs", config_name="generate_poisson1d")
+@hydra.main(config_path="../configs", config_name="generate_poisson1d", version_base=None)
 def main(cfg):
     u_sym = get_sympy_u(N_terms=cfg.N_grid)
     meta_df = get_meta_df(cfg.N_data, cfg.N_grid, cfg.p, cfg.type, cfg.scale)
