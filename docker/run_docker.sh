@@ -3,10 +3,11 @@
 DEVICE_NUM=$1
 CONTAINER_NAME="$(whoami)_nigbms_${DEVICE_NUM}"
 
-docker run -it --rm --shm-size=128g --gpus "device=$DEVICE_NUM" \
+docker run -itd --rm --shm-size=128g --gpus "device=$DEVICE_NUM" \
     --workdir="/home/$USER" \
     -v /home/$USER/nigbms:/home/$USER/nigbms \
-    -v /hdd/sohei/nigbms:/home/$USER/nigbms/data \
+    -v /home/$USER/.gitconfig:/home/$USER/.gitconfig \
+    -v /hdd/$USER/nigbms:/home/$USER/nigbms/data \
     --volume="/etc/passwd:/etc/passwd:ro" \
     --volume="/etc/shadow:/etc/shadow:ro" \
     --volume="/etc/group:/etc/group:ro" \
@@ -14,4 +15,6 @@ docker run -it --rm --shm-size=128g --gpus "device=$DEVICE_NUM" \
     --user $(id -u):$(id -g) \
     -e TUNNEL_NAME=${HOSTNAME}_nigbms_${DEVICE_NUM} \
     --name $CONTAINER_NAME \
-    nigbms /bin/bash
+    nigbms tmux
+
+docker exec -it $CONTAINER_NAME bash ~/nigbms/docker/tunnel.sh
