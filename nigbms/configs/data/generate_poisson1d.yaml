@@ -10,4 +10,3 @@ N_terms: 31
 scale: 10.0
 distribution: linear
 p: 0.01
-exact: True

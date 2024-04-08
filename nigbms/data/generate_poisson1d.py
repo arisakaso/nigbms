@@ -164,7 +164,7 @@ def generate_poisson1d(A: np.ndarray, u_sym: Expr, i: int, coeffs: np.ndarray) -
 
 @hydra.main(version_base="1.3", config_path="../configs/data", config_name="generate_poisson1d")
 def main(cfg):
-    u_sym = get_sympy_u(N_terms=cfg.N_grid)
+    u_sym = get_sympy_u(N_terms=cfg.N_terms)
     meta_df = get_meta_df(cfg.N_data, cfg.N_grid, cfg.p, cfg.distribution, cfg.scale)
     meta_df.to_csv("meta_df.csv", index=False)
     A = laplacian_matrix(cfg.N_grid)
