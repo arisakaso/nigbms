@@ -31,7 +31,8 @@ class PytorchIterativeSolver(_Solver):
         self.rtol = tau["rtol"]
         self.maxiter = tau["maxiter"]
         self.r = self.b - self.A @ self.x
-        self.history = [torch.norm(self.r, dim=(1, 2))]
+        self.rnorm = torch.norm(self.r, dim=(1, 2))
+        self.history = [self.rnorm]
         self.bnorm = torch.norm(self.b, dim=(1, 2))
 
     def forward(self, tau: dict, theta: TensorDict) -> Tensor:
@@ -48,7 +49,7 @@ class PytorchIterativeSolver(_Solver):
         self._setup(tau, theta)
         for _ in range(self.maxiter.max()):
             self._step()
-            self.history.append(torch.norm(self.r, dim=(1, 2)))
+            self.history.append(self.rnorm)
 
             if all(self.history[-1] < self.rtol * self.bnorm):
                 break
@@ -72,6 +73,7 @@ class Jacobi(PytorchIterativeSolver):
     def _step(self):
         self.x = self.G @ self.x + self.f
         self.r = self.b - self.A @ self.x
+        self.rnorm = torch.norm(self.r, dim=(1, 2))
 
 
 class SOR(PytorchIterativeSolver):
@@ -85,7 +87,6 @@ class SOR(PytorchIterativeSolver):
         D = torch.diag_embed(self.A.diagonal(dim1=1, dim2=2), dim1=1, dim2=2)
         L = torch.tril(self.A, -1)
         U = torch.triu(self.A, 1)
-
         G1 = D + omega * L
         G2 = omega * U + (omega - 1) * D
         self.G = torch.linalg.solve_triangular(G1, -G2, upper=False)
@@ -94,6 +95,7 @@ class SOR(PytorchIterativeSolver):
     def _step(self):
         self.x = self.G @ self.x + self.f
         self.r = self.b - self.A @ self.x
+        self.rnorm = torch.norm(self.r, dim=(1, 2))
 
 
 class CG(PytorchIterativeSolver):
@@ -102,18 +104,14 @@ class CG(PytorchIterativeSolver):
 
     def _setup(self, tau: dict, theta: TensorDict):
         super()._setup(tau, theta)
-        bs, n, _ = self.b.shape
         if "M_inv" in self.params_learn:
-            self.M_inv = self._extract_param(theta, "M_inv").reshape(bs, n, n)
+            self.M_inv = theta["M_inv"]
         else:
-            self.M_inv = torch.eye(n, n, dtype=self.b.dtype, device=self.b.device).unsqueeze(0).repeat(bs, 1, 1)
-            # self.M_inv = torch.diag_embed(1 / self.A.diagonal(dim1=1, dim2=2), dim1=1, dim2=2)
-        self.r = self.b - self.A @ self.x
+            self.M_inv = eyes_like(self.A)
         self.r_new = self.r.clone()
         self.z = self.M_inv @ self.r
         self.z_new = self.z.clone()
         self.p = self.z.clone()
-        self.residual = torch.norm(self.r, dim=(1, 2))
 
     def _step(self):
         Ap = self.A @ self.p
@@ -126,11 +124,4 @@ class CG(PytorchIterativeSolver):
 
         self.r = self.r_new
         self.z = self.z_new
-
-        if self.x_sol is not None:
-            self.error = torch.norm(self.x_sol - self.x, dim=(1, 2))
-        else:
-            self.residual = torch.norm(self.r, dim=(1, 2))
-
-
-# %%
+        self.rnorm = torch.norm(self.r, dim=(1, 2))
