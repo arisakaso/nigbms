@@ -62,7 +62,7 @@ class PytorchIterativeSolver(_Solver):
             theta (TensorDict): Dictionary containing solver parameters.
 
         Returns:
-            Tensor: The stacked history of solver outputs. Shape: (bs, niter, 1)
+            Tensor: The stacked history of absolute residual norm. Shape: (bs, niter, 1)
         """
         self._setup(tau, theta)
         for _ in range(self.maxiter.max()):
