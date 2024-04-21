@@ -65,4 +65,7 @@ RUN curl -Lk 'https://code.visualstudio.com/sha/download?build=stable&os=cli-alp
 RUN tar -xf vscode_cli.tar.gz
 RUN rm vscode_cli.tar.gz
 
+# MPI
+ENV LD_LIBRARY_PATH $LD_LIBRARY_PATH:/usr/local/mpi/lib
+
 # # RUN ./code tunnel --accept-server-license-terms
