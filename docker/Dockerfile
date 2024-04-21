@@ -32,7 +32,7 @@ RUN pip install \
     ruff \
     wandb \
     hydra-core \
-    tensordict \
+    tensordict-nightly \
     seaborn \
     jaxtyping \
     torch_optimizer \

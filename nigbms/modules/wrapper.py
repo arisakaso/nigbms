@@ -3,7 +3,7 @@ from torch import Tensor
 from torch.autograd import grad
 
 from nigbms.modules.solvers import _Solver
-from nigbms.utils.solver import add_tensordicts, rademacher_like
+from nigbms.utils.solver import rademacher_like
 
 
 def jvp(f, x: Tensor, v: Tensor, jvp_type: str, eps: float):
@@ -19,25 +19,12 @@ def jvp(f, x: Tensor, v: Tensor, jvp_type: str, eps: float):
         #     y, dvf = fwAD.unpack_dual(dual_output)
 
     elif jvp_type == "forwardFD":
-        if isinstance(x, Tensor):
-            x_plus = x + eps * v
-        else:
-            x_plus = add_tensordicts(x, v.apply(lambda x: eps * x))
-
         y = f(x)
-        y_plus = f(x_plus)
-        dvf = (y_plus - y) / eps
+        dvf = (f(x + v * eps) - y) / eps
 
     elif jvp_type == "centralFD":
-        if isinstance(x, Tensor):
-            x_plus = x + eps * v
-            x_minus = x - eps * v
-        else:
-            x_plus = add_tensordicts(x, v.apply(lambda x: eps * x))
-            x_minus = add_tensordicts(x, v.apply(lambda x: -eps * x))
-
         y = f(x)
-        dvf = (f(x_plus) - f(x_minus)) / (2 * eps)
+        dvf = (f(x + v * eps) - f(x - v * eps)) / (2 * eps)
 
     return y, dvf
 
@@ -63,28 +50,18 @@ class register_custom_grad_fn(torch.autograd.Function):
     def backward(ctx, grad_y):
         x, v = ctx.saved_tensors
         d = ctx.d
-        v = v * d["v_scale"]
-        bs, in_dim = x.shape
 
         if d["grad_type"] == "f_true":
-            # full gradient of f
-            try:
-                f_true = grad(d["y"], x, grad_outputs=grad_y, retain_graph=True)[0]
-            except:
-                f_true = torch.zeros_like(x)
-
+            f_true = grad(d["y"], x, grad_outputs=grad_y, retain_graph=True)[0]
             return f_true, None
 
         # forward gradient of f
         f_fwd = torch.sum(grad_y * d["dvf"], dim=1, keepdim=True) * v
-        f_fwd = f_fwd.reshape(d["Nv"], bs, in_dim).mean(dim=0)  # average over Nv
-
         if d["grad_type"] == "f_fwd":
             return f_fwd, None
 
         # forward gradient of f_hat
         f_hat_fwd = torch.sum(grad_y * d["dvf_hat"], dim=1, keepdim=True) * v
-        f_hat_fwd = f_hat_fwd.reshape(d["Nv"], bs, in_dim).mean(dim=0)  # average over Nv
 
         # full gradient of f_hat
         f_hat_true = grad(d["y_hat"], x, grad_outputs=grad_y, retain_graph=True)[0] / d["Nv"]
@@ -94,7 +71,6 @@ class register_custom_grad_fn(torch.autograd.Function):
 
         elif d["grad_type"] == "cv_fwd":
             # control variates
-            # c = f_fwd.norm(dim=1, keepdim=True) / (f_hat_fwd - f_hat_true).norm(dim=1, keepdim=True)
             cv_fwd = f_fwd - (f_hat_fwd - f_hat_true)
             return cv_fwd, None
 
@@ -127,6 +103,7 @@ class WrappedSolver(_Solver):
         y, dvf = jvp(self._f, theta, v, self.cfg["jvp_type"], self.cfg["eps"])
         y_hat, dvf_hat = jvp(self._f_hat, theta, v, "forwardAD", 0.0)
         d = {
+            "v": v,
             "y": y,
             "dvf": dvf,
             "y_hat": y_hat,
