@@ -3,7 +3,7 @@ from torch import Tensor
 from torch.autograd import grad
 
 from nigbms.modules.solvers import _Solver
-from nigbms.utils.solver import rademacher_like
+from nigbms.utils.solver import bms, rademacher_like
 
 
 def jvp(f, x: Tensor, v: Tensor, jvp_type: str, eps: float):
@@ -55,27 +55,19 @@ class register_custom_grad_fn(torch.autograd.Function):
             f_true = grad(d["y"], x, grad_outputs=grad_y, retain_graph=True)[0]
             return f_true, None
 
-        # forward gradient of f
-        f_fwd = torch.sum(grad_y * d["dvf"], dim=1, keepdim=True) * v
+        dvL = torch.sum(grad_y * d["dvf"], dim=1)
+        f_fwd = v.apply(lambda x: bms(x, dvL))
         if d["grad_type"] == "f_fwd":
             return f_fwd, None
 
-        # forward gradient of f_hat
-        f_hat_fwd = torch.sum(grad_y * d["dvf_hat"], dim=1, keepdim=True) * v
-
-        # full gradient of f_hat
-        f_hat_true = grad(d["y_hat"], x, grad_outputs=grad_y, retain_graph=True)[0] / d["Nv"]
-
+        f_hat_true = grad(d["y_hat"], x, grad_outputs=grad_y, retain_graph=True)[0]
         if d["grad_type"] == "f_hat_true":
             return f_hat_true, None
 
-        elif d["grad_type"] == "cv_fwd":
-            # control variates
-            cv_fwd = f_fwd - (f_hat_fwd - f_hat_true)
-            return cv_fwd, None
-
-        else:
-            raise NotImplementedError
+        dvL_hat = torch.sum(grad_y * d["dvf_hat"], dim=1)
+        f_hat_fwd = v.apply(lambda x: bms(x, dvL_hat))
+        cv_fwd = f_fwd - (f_hat_fwd - f_hat_true)
+        return cv_fwd, None
 
 
 class WrappedSolver(_Solver):

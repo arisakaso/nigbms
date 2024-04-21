@@ -27,22 +27,16 @@ def rademacher_like(tensor: torch.Tensor):
     return v
 
 
-def add_tensordicts(tensordict1, tensordict2):
-    """
-    2つのtensordictを足し合わせる関数
+def bms(m, s):
+    assert m.shape[0] == s.shape[0]
+    target_shape = torch.tensor(m.shape)
+    target_shape[1:] = 1
+    ms = m * s.reshape(target_shape)  # broadcast
+    return ms
 
-    Args:
-        tensordict1 (TensorDict): 1つ目のtensordict
-        tensordict2 (TensorDict): 2つ目のtensordict
 
-    Returns:
-        TensorDict: 2つのtensordictを足し合わせた結果
-    """
-    # 2つのtensordictのキーが同じであることを確認
-    assert set(tensordict1.keys()) == set(tensordict2.keys()), "Keys in the two tensordicts must be the same."
-
-    # 各keyに対応するtensorを足し合わせる
-    result = {k: tensordict1[k] + tensordict2[k] for k in tensordict1.keys()}
-
-    # 新しいtensordictを作成して返す
-    return TensorDict(result, batch_size=tensordict1.batch_size)
+def initialize_parameters_fcn(m, scale=1e-3):
+    if isinstance(m, torch.nn.Linear):
+        print("initialized with scale", m, scale)
+        torch.nn.init.uniform_(m.weight, -scale, scale)
+        torch.nn.init.uniform_(m.bias, -scale, scale)
