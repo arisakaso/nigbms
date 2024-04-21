@@ -1,32 +1,43 @@
 import torch
-import torch.autograd.forward_ad as fwAD
 from torch import Tensor
 from torch.autograd import grad
 
 from nigbms.modules.solvers import _Solver
+from nigbms.utils.solver import add_tensordicts, rademacher_like
 
 
 def jvp(f, x: Tensor, v: Tensor, jvp_type: str, eps: float):
+    assert jvp_type in ["forwardAD", "forwardFD", "centralFD"]
+    assert type(x) == type(v)
+    assert x.shape == v.shape
+
     if jvp_type == "forwardAD":
-        # y, dvf = torch.func.jvp(f, (x,), (v,))
-        with fwAD.dual_level():
-            dual_input = fwAD.make_dual(x, v)
-            dual_output = f(dual_input)
-            y, dvf = fwAD.unpack_dual(dual_output)
+        y, dvf = torch.func.jvp(f, (x,), (v,))
+        # with fwAD.dual_level():
+        #     dual_input = fwAD.make_dual(x, v)
+        #     dual_output = f(dual_input)
+        #     y, dvf = fwAD.unpack_dual(dual_output)
 
     elif jvp_type == "forwardFD":
+        if isinstance(x, Tensor):
+            x_plus = x + eps * v
+        else:
+            x_plus = add_tensordicts(x, v.apply(lambda x: eps * x))
+
         y = f(x)
-        y_plus = f(x + eps * v)
+        y_plus = f(x_plus)
         dvf = (y_plus - y) / eps
 
     elif jvp_type == "centralFD":
-        y = f(x)
-        y_plus = f(x + eps * v)
-        y_minus = f(x - eps * v)
-        dvf = (y_plus - y_minus) / (2 * eps)
+        if isinstance(x, Tensor):
+            x_plus = x + eps * v
+            x_minus = x - eps * v
+        else:
+            x_plus = add_tensordicts(x, v.apply(lambda x: eps * x))
+            x_minus = add_tensordicts(x, v.apply(lambda x: -eps * x))
 
-    else:
-        raise NotImplementedError
+        y = f(x)
+        dvf = (f(x_plus) - f(x_minus)) / (2 * eps)
 
     return y, dvf
 
@@ -58,12 +69,7 @@ class register_custom_grad_fn(torch.autograd.Function):
         if d["grad_type"] == "f_true":
             # full gradient of f
             try:
-                f_true = grad(
-                    d["y"],
-                    x,
-                    grad_outputs=grad_y,
-                    retain_graph=True,
-                )[0]
+                f_true = grad(d["y"], x, grad_outputs=grad_y, retain_graph=True)[0]
             except:
                 f_true = torch.zeros_like(x)
 
@@ -110,9 +116,22 @@ class WrappedSolver(_Solver):
         self.surrogate = surrogate
         self.cfg = cfg
 
-    def _setup(self, tau: dict, theta: Tensor):
+    def _setup(self, tau: dict):
+        # fix tau
+        self._f = lambda x: self.solver(tau, x)
+        self._f_hat = lambda x: self.surrogate(tau, x)
 
     def forward(self, tau: dict, theta: Tensor) -> Tensor:
-
-        self._setup(tau, theta)
+        self._setup(tau)
+        v = rademacher_like(theta)
+        y, dvf = jvp(self._f, theta, v, self.cfg["jvp_type"], self.cfg["eps"])
+        y_hat, dvf_hat = jvp(self._f_hat, theta, v, "forwardAD", 0.0)
+        d = {
+            "y": y,
+            "dvf": dvf,
+            "y_hat": y_hat,
+            "dvf_hat": dvf_hat,
+            "grad_type": self.cfg["grad_type"],
+        }
+        y = register_custom_grad_fn.apply(theta, d)
         return y, y_hat, dvf, dvf_hat
