@@ -8,12 +8,14 @@ import numpy as np
 import pytorch_lightning as pl
 import torch
 from hydra.utils import instantiate
+from tensordict import TensorDict
 from torch import Tensor
 from torch.autograd import grad
 from torch.nn.functional import cosine_similarity, mse_loss
 from torch.nn.utils import clip_grad_norm_
 
 from nigbms.modules.solvers import _Solver
+from nigbms.modules.wrapper import WrappedSolver
 
 log = logging.getLogger(__name__)
 
@@ -98,12 +100,14 @@ def main(cfg):
     pl.seed_everything(seed=cfg.seed, workers=True)
     test_function = eval(cfg.problem.test_function)
     tau = {}
-    theta = torch.Tensor(cfg.problem.num_samples, cfg.problem.dim).uniform_(*cfg.problem.initial_range)
-    theta.requires_grad = True
+    x = torch.Tensor(cfg.problem.num_samples, cfg.problem.dim).uniform_(*cfg.problem.initial_range)
+    x.requires_grad = True
+    theta = TensorDict({"x": x})
     solver = instantiate(cfg.solver)
     surrogate = instantiate(cfg.surrogate)
+    wrapped_solver = WrappedSolver(solver, surrogate, cfg.wrapper)
 
-    m_opt = instantiate(cfg.optimizer.m_opt, params=[theta])
+    m_opt = instantiate(cfg.optimizer.m_opt, params=[theta["x"]])
     s_opt = instantiate(cfg.optimizer.s_opt, params=surrogate.parameters())
     ys = torch.zeros((cfg.problem.num_iter + 1, cfg.problem.num_samples))
     sims = torch.zeros((cfg.problem.num_iter + 1, cfg.problem.num_samples))
@@ -114,30 +118,10 @@ def main(cfg):
         s_opt.zero_grad()
 
         # forward pass
-        v = torch.randint(0, 2, size=theta.shape, device=theta.device) * 2.0 - 1
-        y, dvf = jvp(test_function, theta, v, jvp_type=cfg.wrapper.jvp_type, eps=cfg.wrapper.eps)
-        if cfg.wrapper.grad_type in ["cv_fwd", "f_hat_true"]:
-            y_hat, dvf_hat = jvp(surrogate, theta, v, jvp_type=cfg.wrapper.jvp_type, eps=cfg.wrapper.eps)
-        else:
-            y_hat = torch.zeros_like(y)
-            dvf_hat = torch.zeros_like(dvf)
-
-        # register custom backward function
-        d = {
-            "v": v,
-            "y": y,
-            "dvf": dvf,
-            "y_hat": y_hat,
-            "dvf_hat": dvf_hat,
-            "grad_type": cfg.wrapper.grad_type,
-            "Nv": cfg.wrapper.Nv,
-            "v_scale": cfg.wrapper.v_scale,
-        }
-        y_modified = register_custom_grad_fn.apply(theta, d)
-        y_modified.retain_grad()
+        y, dvf, y_hat, dvf_hat = wrapped_solver(tau, theta)
 
         # compute gradient for theta
-        m_loss = y_modified.sum()
+        m_loss = y.sum()
         m_loss.backward(retain_graph=True, inputs=[theta])
 
         # compute gradient for surrogate
@@ -166,7 +150,6 @@ def main(cfg):
         s_opt.step()
 
         # store steps
-        # steps[i] = theta.detach()
         ys[i] = y.detach().squeeze()
         sims[i] = cosine_similarity(f_true, eval(cfg.wrapper.grad_type), dim=1, eps=1e-20).detach()
 
