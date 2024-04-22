@@ -14,7 +14,7 @@ docker run -itd --rm --shm-size=128g --gpus "device=$DEVICE_NUM" \
     --volume="/etc/group:/etc/group:ro" \
     --volume="/etc/gshadow:/etc/gshadow:ro" \
     --user $(id -u):$(id -g) \
-    -e TUNNEL_NAME=${HOSTNAME}_nigbms_${DEVICE_NUM} \
+    -e TUNNEL_NAME=morgen_nigbms_${DEVICE_NUM} \
     --name $CONTAINER_NAME \
     nigbms tmux
 

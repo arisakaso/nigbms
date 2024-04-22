@@ -32,7 +32,7 @@ RUN pip install \
     ruff \
     wandb \
     hydra-core \
-    tensordict-nightly \
+    tensordict \
     seaborn \
     jaxtyping \
     torch_optimizer \
@@ -45,6 +45,8 @@ RUN pip install \
     dvc \
     pdoc3 \
     mkdocs
+
+RUN pip install --upgrade torchvision
 
 ### Enable sudo without password
 RUN apt-get install -y sudo 
@@ -68,4 +70,5 @@ RUN rm vscode_cli.tar.gz
 # MPI
 ENV LD_LIBRARY_PATH $LD_LIBRARY_PATH:/usr/local/mpi/lib
 
-# # RUN ./code tunnel --accept-server-license-terms
+# must be installed last (don't know why)
+RUN pip install tensordict-nightly 
