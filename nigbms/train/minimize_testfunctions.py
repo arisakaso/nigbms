@@ -91,7 +91,7 @@ def plot_results(results, test_function, cfg):
 
 
 ### MAIN ###
-@hydra.main(config_path="../configs", config_name="minimize_testfunctions")
+@hydra.main(version_base="1.3", config_path="../configs/train", config_name="minimize_testfunctions")
 def main(cfg):
     # set up
     torch.set_default_tensor_type(eval(cfg.problem.tensor_type))

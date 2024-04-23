@@ -1,24 +1,32 @@
-defaults:
-  - hydra: base
-  - _self_
+hydra:
+  run:
+    dir: data/raw/poisson1d/${now:%Y-%m-%d_%H-%M-%S}
+  job:
+    chdir: True
+
 problem:
   test_function: rosenbrock
   dim: 128
   num_samples: 100
   num_iter: 50000
   initial_range:
-  - -1
-  - 1
+    - -1
+    - 1
   tensor_type: torch.cuda.DoubleTensor
-  # tensor_type : torch.cuda.FloatTensor
+
+solver:
+  _target_: __main__.TestFunctionSolver
+  problem: ${problem}
+
 surrogate:
-  _target_: src.models.base_models.CNN1D
-  in_channels: 1
-  out_unit: 1
-  base_channels: 64
-  kernel_size: 3
-  hidden_activation: torch.nn.GELU
-  hidden_unit_factor: 1
+  _target_: nigbms.modules.surrogates.SurrogateSolverMLP
+  params_fix: None
+  params_learn: 
+    x:
+      - ${problem.dim}
+  features:
+  model:
+
 wrapper:
   grad_type: cv_fwd
   jvp_type: forwardFD
@@ -43,14 +51,3 @@ loss:
   dvf: 1.0
 seed: 0
 log_gradient: true
-
-
-# MULTI RUN
-hydra:
-  mode: MULTIRUN
-  sweeper:
-    params:
-      seed: 0,1,2,3,4,5
-      # problem.dim: 2,8,32,128
-      # wrapper.grad_type: f_true,f_fwd,f_hat_true,cv_fwd
-  
