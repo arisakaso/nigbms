@@ -6,9 +6,10 @@ from nigbms.modules.solvers import _Solver
 
 
 class _SurrogateSolver(_Solver):
-    def __init__(self, params_fix: dict, params_learn: dict, features: dict) -> None:
+    def __init__(self, params_fix: dict, params_learn: dict, features: dict, model: dict) -> None:
         super().__init__(params_fix, params_learn)
         self.features = features
+        self.model = model
 
     def _make_features(self, tau: dict, theta: Tensor) -> Tensor:
         raise NotImplementedError
@@ -18,14 +19,8 @@ class _SurrogateSolver(_Solver):
 
 
 class SurrogateSolverMLP(_SurrogateSolver):
-    def __init__(self, params_fix: dict, params_learn: dict, features: dict, model: dict) -> None:
+    def __init__(self, params_fix: dict, params_learn: dict, features: dict) -> None:
         super().__init__(params_fix, params_learn, features)
-
-        in_dim = 0
-        for v in features.values():
-            in_dim += v["dim"]
-        model.layers[0] = in_dim
-        self.model = instantiate(model)
 
     def forward(self, tau: dict, theta: Tensor) -> Tensor:
         features = self._get_features(tau, theta)

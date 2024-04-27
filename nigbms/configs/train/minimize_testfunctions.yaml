@@ -20,12 +20,21 @@ solver:
 
 surrogate:
   _target_: nigbms.modules.surrogates.SurrogateSolverMLP
-  params_fix: None
+  params_fix: {}
   params_learn: 
     x:
       - ${problem.dim}
-  features:
+  features: ${surrogate.params_learn}
   model:
+    _target_: nigbms.modules.models.MLP
+    layers:
+      - ${calc_indim:${surrogate.features}}
+      - 128
+      - 128
+      - 1
+    hidden_activation: nn.GELU
+    output_activation: nn.Identity
+    batch_normalization: False
 
 wrapper:
   grad_type: cv_fwd

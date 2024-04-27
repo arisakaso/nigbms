@@ -8,6 +8,7 @@ import numpy as np
 import pytorch_lightning as pl
 import torch
 from hydra.utils import instantiate
+from omegaconf import OmegaConf
 from tensordict import TensorDict
 from torch import Tensor
 from torch.autograd import grad
@@ -16,8 +17,10 @@ from torch.nn.utils import clip_grad_norm_
 
 from nigbms.modules.solvers import _Solver
 from nigbms.modules.wrapper import WrappedSolver
+from nigbms.utils.resolver import calc_indim
 
 log = logging.getLogger(__name__)
+OmegaConf.register_new_resolver("calc_indim", calc_indim)
 
 
 #### TEST FUNCTIONS ####
