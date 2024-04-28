@@ -29,8 +29,8 @@ def rademacher_like(tensor: torch.Tensor):
 
 def bms(m, s):
     assert m.shape[0] == s.shape[0]
-    target_shape = torch.tensor(m.shape)
-    target_shape[1:] = 1
+    target_shape = [1] * m.ndim
+    target_shape[0] = m.shape[0]
     ms = m * s.reshape(target_shape)  # broadcast
     return ms
 

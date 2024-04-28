@@ -1,22 +1,26 @@
 hydra:
   run:
-    dir: data/raw/poisson1d/${now:%Y-%m-%d_%H-%M-%S}
+    dir: data/outputs/minimize_testfunctions/${now:%Y-%m-%d_%H-%M-%S}
   job:
     chdir: True
 
 problem:
-  test_function: rosenbrock
+  test_function: sphere
   dim: 128
   num_samples: 100
-  num_iter: 50000
+  num_iter: 2000
   initial_range:
     - -1
     - 1
   tensor_type: torch.cuda.DoubleTensor
 
 solver:
-  _target_: __main__.TestFunctionSolver
-  problem: ${problem}
+  _target_: nigbms.modules.solvers.TestFunctionSolver
+  params_fix: 
+    test_function: ${problem.test_function}
+  params_learn: 
+    x:
+      - ${problem.dim}
 
 surrogate:
   _target_: nigbms.modules.surrogates.SurrogateSolverMLP
@@ -39,13 +43,17 @@ surrogate:
 wrapper:
   grad_type: cv_fwd
   jvp_type: forwardFD
-  # jvp_type: forwardAD
-  jvp_type_s: forwardAD
   Nv: 1
   eps: 1.0e-08
   update_steps: 0
-  output_type: loss
   v_scale: 1.0
+
+loss:
+  s_loss:
+    _target_: nigbms.modules.losses.SurrogateSolverLoss
+    weights:
+      dvf_loss: 1
+
 optimizer:
   m_opt:
     _target_: torch.optim.Adam
@@ -55,8 +63,5 @@ optimizer:
     lr: 0.01
   m_clip: null
   s_clip: null
-loss:
-  'y': 0
-  dvf: 1.0
+
 seed: 0
-log_gradient: true

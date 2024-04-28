@@ -1,8 +1,10 @@
+import pydevd  # noqa
 import torch
 from torch import Tensor
-from torch.autograd import grad
+from torch.autograd import Function, grad
 
 from nigbms.modules.solvers import _Solver
+from nigbms.utils.convert import tensordict2list
 from nigbms.utils.solver import bms, rademacher_like
 
 
@@ -29,9 +31,9 @@ def jvp(f, x: Tensor, v: Tensor, jvp_type: str, eps: float):
     return y, dvf
 
 
-class register_custom_grad_fn(torch.autograd.Function):
+class register_custom_grad_fn(Function):
     @staticmethod
-    def forward(ctx, x: Tensor, d: dict):
+    def forward(ctx, d: dict, keys: list, *thetas):
         """_summary_
 
         Args:
@@ -42,44 +44,49 @@ class register_custom_grad_fn(torch.autograd.Function):
             y
         """
         ctx.d = d
-        ctx.save_for_backward(x, d["v"])
+        ctx.save_for_backward(*thetas)
 
         return d["y"].detach()
 
     @staticmethod
     def backward(ctx, grad_y):
-        x, v = ctx.saved_tensors
+        # pydevd.settrace(suspend=False, trace_only_current_thread=True)  # for debugging
         d = ctx.d
+        thetas = ctx.saved_tensors
+        _, vs = tensordict2list(d["v"])
 
         if d["grad_type"] == "f_true":
-            f_true = grad(d["y"], x, grad_outputs=grad_y, retain_graph=True)[0]
-            return f_true, None
+            f_true = grad(d["y"], thetas, grad_outputs=grad_y, retain_graph=True)
+            return None, None, *f_true
 
         dvL = torch.sum(grad_y * d["dvf"], dim=1)
-        f_fwd = v.apply(lambda x: bms(x, dvL))
+        f_fwd = map(lambda x: bms(x, dvL), vs)
+        # f_fwd = d["v"].apply(lambda x: bms(x, dvL))
+        # _, f_fwd = tensordict2list(f_fwd)
         if d["grad_type"] == "f_fwd":
-            return f_fwd, None
+            return None, None, *f_fwd
 
-        f_hat_true = grad(d["y_hat"], x, grad_outputs=grad_y, retain_graph=True)[0]
+        f_hat_true = grad(d["y_hat"], thetas, grad_outputs=grad_y, retain_graph=True)
         if d["grad_type"] == "f_hat_true":
-            return f_hat_true, None
+            return None, None, *f_hat_true
 
         dvL_hat = torch.sum(grad_y * d["dvf_hat"], dim=1)
-        f_hat_fwd = v.apply(lambda x: bms(x, dvL_hat))
-        cv_fwd = f_fwd - (f_hat_fwd - f_hat_true)
-        return cv_fwd, None
+        f_hat_fwd = map(lambda x: bms(x, dvL_hat), vs)
+        # f_hat_fwd = d["v"].apply(lambda x: bms(x, dvL_hat))
+        # _, f_hat_fwd = tensordict2list(f_hat_fwd)
+        cv_fwd = map(lambda x, y, z: x - (y - z), f_fwd, f_hat_fwd, f_hat_true)
+        # f_fwd - (f_hat_fwd - f_hat_true)
+        return None, None, *cv_fwd
 
 
 class WrappedSolver(_Solver):
     def __init__(
         self,
-        params_fix: dict,
-        params_learn: dict,
         solver: _Solver,
         surrogate: _Solver,
         cfg: dict,
     ) -> None:
-        super().__init__(params_fix, params_learn)
+        super().__init__(solver.params_fix, surrogate.params_learn)
         self.solver = solver
         self.surrogate = surrogate
         self.cfg = cfg
@@ -96,11 +103,12 @@ class WrappedSolver(_Solver):
         y_hat, dvf_hat = jvp(self._f_hat, theta, v, "forwardAD", 0.0)
         d = {
             "v": v,
-            "y": y,
-            "dvf": dvf,
-            "y_hat": y_hat,
-            "dvf_hat": dvf_hat,
+            "y": y.clone(),
+            "dvf": dvf.clone(),
+            "y_hat": y_hat.clone(),
+            "dvf_hat": dvf_hat.clone(),
             "grad_type": self.cfg["grad_type"],
         }
-        y = register_custom_grad_fn.apply(theta, d)
+        ks, thetas = tensordict2list(theta)
+        y = register_custom_grad_fn.apply(d, ks, *thetas)
         return y, y_hat, dvf, dvf_hat

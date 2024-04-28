@@ -7,6 +7,7 @@ from torch.nn import Module
 
 from nigbms.utils.convert import tensor2petscvec, torchcoo2petscmat
 from nigbms.utils.solver import clear_petsc_options, eyes_like, set_petsc_options
+from nigbms.utils.testfunctions import *  # noqa
 
 
 class _Solver(Module):
@@ -22,6 +23,15 @@ class _Solver(Module):
 
     def forward(self, tau: dict, theta: TensorDict):
         raise NotImplementedError
+
+
+class TestFunctionSolver(_Solver):
+    def __init__(self, params_fix, params_learn) -> None:
+        super().__init__(params_fix, params_learn)
+        self.f = eval(params_fix["test_function"])
+
+    def forward(self, tau: dict, theta: Tensor) -> Tensor:
+        return self.f(theta["x"])
 
 
 class PytorchIterativeSolver(_Solver):

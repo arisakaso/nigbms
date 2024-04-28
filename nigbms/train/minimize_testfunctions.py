@@ -1,5 +1,4 @@
 import logging
-import math
 import os
 
 import hydra
@@ -10,12 +9,9 @@ import torch
 from hydra.utils import instantiate
 from omegaconf import OmegaConf
 from tensordict import TensorDict
-from torch import Tensor
-from torch.autograd import grad
-from torch.nn.functional import cosine_similarity, mse_loss
-from torch.nn.utils import clip_grad_norm_
 
-from nigbms.modules.solvers import _Solver
+import nigbms  # noqa
+from nigbms.modules.solvers import TestFunctionSolver  # noqa
 from nigbms.modules.wrapper import WrappedSolver
 from nigbms.utils.resolver import calc_indim
 
@@ -23,44 +19,10 @@ log = logging.getLogger(__name__)
 OmegaConf.register_new_resolver("calc_indim", calc_indim)
 
 
-#### TEST FUNCTIONS ####
-def sphere(tensor):
-    return torch.sum(tensor**2, dim=-1, keepdim=True)
-
-
-def rosenbrock(x):
-    x1 = x[..., :-1]
-    x2 = x[..., 1:]
-    return torch.sum(100 * (x2 - x1**2) ** 2 + (1 - x1) ** 2, dim=-1, keepdim=True)
-
-
-def rosenbrock_separate(x):
-    assert x.shape[-1] % 2 == 0, "Dimension must be even."
-    x1 = x[..., ::2]
-    x2 = x[..., 1::2]
-
-    return torch.sum((1 - x1) ** 2 + 100 * (x2 - x1**2) ** 2, dim=-1, keepdim=True)
-
-
-def rastrigin(x):
-    A = 10
-    n = x.shape[-1]
-    return A * n + torch.sum(x**2 - A * torch.cos(x * math.pi * 2), dim=-1, keepdim=True)
-
-
-class TestFunctionSolver(_Solver):
-    def __init__(self, problem) -> None:
-        super().__init__(params_fix={}, params_learn={"x": (problem.dim,)})
-        self.f = eval(problem.test_function)
-
-    def forward(self, tau: dict, theta: Tensor) -> Tensor:
-        return self.f(theta["x"])
-
-
 ### PLOTTING ###
 def plot_results(results, test_function, cfg):
     # draw contour lines
-    fig, ax = plt.subplots(1, 1, figsize=(8, 6))
+    _, ax = plt.subplots(1, 1, figsize=(8, 6))
 
     plot_params = {
         "f_true": {"color": "r", "alpha": 1.0},
@@ -96,12 +58,12 @@ def plot_results(results, test_function, cfg):
 ### MAIN ###
 @hydra.main(version_base="1.3", config_path="../configs/train", config_name="minimize_testfunctions")
 def main(cfg):
-    # set up
-    torch.set_default_tensor_type(eval(cfg.problem.tensor_type))
     log.info(cfg.wrapper.grad_type)
     log.info(os.getcwd())
+
+    # set up
     pl.seed_everything(seed=cfg.seed, workers=True)
-    test_function = eval(cfg.problem.test_function)
+    torch.set_default_tensor_type(eval(cfg.problem.tensor_type))
     tau = {}
     x = torch.Tensor(cfg.problem.num_samples, cfg.problem.dim).uniform_(*cfg.problem.initial_range)
     x.requires_grad = True
@@ -109,52 +71,38 @@ def main(cfg):
     solver = instantiate(cfg.solver)
     surrogate = instantiate(cfg.surrogate)
     wrapped_solver = WrappedSolver(solver, surrogate, cfg.wrapper)
+    s_loss = instantiate(cfg.loss.s_loss)
 
     m_opt = instantiate(cfg.optimizer.m_opt, params=[theta["x"]])
     s_opt = instantiate(cfg.optimizer.s_opt, params=surrogate.parameters())
     ys = torch.zeros((cfg.problem.num_iter + 1, cfg.problem.num_samples))
     sims = torch.zeros((cfg.problem.num_iter + 1, cfg.problem.num_samples))
-    ys[0] = test_function(theta.detach()).squeeze()
+    ys[0] = solver.f(theta["x"].detach()).squeeze()
 
     for i in range(1, cfg.problem.num_iter + 1):
         m_opt.zero_grad()
         s_opt.zero_grad()
 
+        # reference for checking cosine similarity
+        ref = theta["x"].clone()
+        f_true = torch.autograd.grad(solver.f(ref).sum(), ref)[0]
+
         # forward pass
-        y, dvf, y_hat, dvf_hat = wrapped_solver(tau, theta)
+        y, y_hat, dvf, dvf_hat = wrapped_solver(tau, theta)
 
-        # compute gradient for theta
-        m_loss = y.sum()
-        m_loss.backward(retain_graph=True, inputs=[theta])
+        # backprop for theta
+        y.sum().backward(retain_graph=True)
 
-        # compute gradient for surrogate
-        if cfg.wrapper.grad_type in ["cv_fwd", "f_hat_true"]:
-            y_loss = mse_loss(y.clone().detach(), y_hat)
-            dvf_loss = mse_loss(dvf.clone().detach(), dvf_hat)
-            s_loss = cfg.loss.y * y_loss + cfg.loss.dvf * dvf_loss
-            s_loss.backward(retain_graph=True, inputs=list(surrogate.parameters()))
-
-        # for logging
-        f_true = grad(y.sum(), theta, retain_graph=True)[0]
-        if cfg.wrapper.grad_type != "f_true":
-            f_fwd = dvf.sum(dim=1, keepdim=True) * v * cfg.wrapper.v_scale
-
-            if cfg.wrapper.grad_type in ["cv_fwd", "f_hat_true"]:
-                f_hat_fwd = dvf_hat.sum(dim=1, keepdim=True) * v * cfg.wrapper.v_scale
-                f_hat_true = grad(y_hat.sum(), theta, retain_graph=True)[0]
-                cv_fwd = f_fwd - (f_hat_fwd - f_hat_true)
+        # backprop for surrogate model
+        s_loss(y, y_hat, dvf, dvf_hat)["s_loss"].mean().backward()
 
         # update
-        if cfg.optimizer.m_clip is not None:
-            clip_grad_norm_(theta, cfg.optimizer.m_clip)
-        if cfg.optimizer.s_clip is not None:
-            clip_grad_norm_(surrogate.parameters(), cfg.optimizer.s_clip)
         m_opt.step()
         s_opt.step()
 
         # store steps
         ys[i] = y.detach().squeeze()
-        sims[i] = cosine_similarity(f_true, eval(cfg.wrapper.grad_type), dim=1, eps=1e-20).detach()
+        sims[i] = torch.cosine_similarity(f_true, theta["x"].grad, dim=1, eps=1e-20).detach()
 
         # print progress
         if i % 100 == 0:

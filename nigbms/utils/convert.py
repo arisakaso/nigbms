@@ -2,6 +2,7 @@ import numpy as np
 import scipy.sparse as sp
 import torch
 from petsc4py import PETSc
+from tensordict import TensorDict
 
 
 def scipycsr2petscmat(csr_matrix: sp.csr_matrix) -> PETSc.Mat:
@@ -128,3 +129,11 @@ def scipycsr2torchcsr(csr_matrix: sp.csr_matrix) -> torch.Tensor:
     """
 
     return torch.sparse_csr_tensor(csr_matrix.indptr, csr_matrix.indices, csr_matrix.data, size=csr_matrix.shape)
+
+
+def tensordict2list(t: TensorDict):
+    return zip(*[(k, v) for k, v in t.items()], strict=False)
+
+
+def list2tensordict(ks, vs):
+    return TensorDict({k: v for k, v in zip(ks, vs, strict=False)})

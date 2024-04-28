@@ -6,7 +6,7 @@ from nigbms.modules.solvers import _Solver
 
 
 class _SurrogateSolver(_Solver):
-    def __init__(self, params_fix: dict, params_learn: dict, features: dict, model: dict) -> None:
+    def __init__(self, params_fix: dict, params_learn: dict, features: dict, model) -> None:
         super().__init__(params_fix, params_learn)
         self.features = features
         self.model = model
@@ -19,12 +19,21 @@ class _SurrogateSolver(_Solver):
 
 
 class SurrogateSolverMLP(_SurrogateSolver):
-    def __init__(self, params_fix: dict, params_learn: dict, features: dict) -> None:
-        super().__init__(params_fix, params_learn, features)
+    def __init__(self, params_fix: dict, params_learn: dict, features: dict, model) -> None:
+        super().__init__(params_fix, params_learn, features, model)
+
+    def _get_features(self, tau: dict, theta: Tensor) -> Tensor:
+        features = []
+        for k in self.features.keys():
+            if k in theta:
+                features.append(theta[k])
+            if k in tau:
+                features.append(tau[k])
+        features = torch.cat(features, dim=1)
+        return features
 
     def forward(self, tau: dict, theta: Tensor) -> Tensor:
-        features = self._get_features(tau, theta)
-        x = torch.cat([features[k] for k in self.features.keys()], dim=1)
+        x = self._get_features(tau, theta)
         y = self.model(x)
         return y
 
