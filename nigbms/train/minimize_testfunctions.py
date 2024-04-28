@@ -58,7 +58,7 @@ def plot_results(results, test_function, cfg):
 def main(cfg):
     # set up
     wandb.config = OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True)
-    wandb.init(project="minimize_testfunctions", config=wandb.config)
+    wandb.init(project=cfg.wandb.project, config=wandb.config, mode=cfg.wandb.mode)
     torch.set_default_tensor_type(eval(cfg.problem.tensor_type))
     pl.seed_everything(seed=cfg.seed, workers=True)
 

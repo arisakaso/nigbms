@@ -53,8 +53,8 @@ surrogate:
 wrapper:
   grad_type: cv_fwd
   jvp_type: forwardAD
-  Nv: 1
   eps: 1.0e-08
+  Nv: 1
   update_steps: 0
   v_scale: 1.0
 
@@ -74,5 +74,7 @@ optimizer:
   m_clip: null
   s_clip: null
 
+wandb: 
+  project: minimize_testfunctions
+  mode: disabled
 seed: 0
-save: False

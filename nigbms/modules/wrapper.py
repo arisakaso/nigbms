@@ -85,15 +85,15 @@ class WrappedSolver(_Solver):
     def forward(self, tau: dict, theta: Tensor) -> Tensor:
         self._setup(tau)
         v = rademacher_like(theta)
-        y, dvf = jvp(self._f, theta, v, self.cfg["jvp_type"], self.cfg["eps"])
+        y, dvf = jvp(self._f, theta, v, self.cfg.jvp_type, self.cfg.eps)
         y_hat, dvf_hat = jvp(self._f_hat, theta, v, "forwardAD", 0.0)
         d = {
             "v": v,
-            "y": y.clone(),
-            "dvf": dvf.clone(),
-            "y_hat": y_hat.clone(),
-            "dvf_hat": dvf_hat.clone(),
-            "grad_type": self.cfg["grad_type"],
+            "y": y,
+            "dvf": dvf,
+            "y_hat": y_hat,
+            "dvf_hat": dvf_hat,
+            "grad_type": self.cfg.grad_type,
         }
         ks, thetas = tensordict2list(theta)
         y = register_custom_grad_fn.apply(d, ks, *thetas)
