@@ -23,22 +23,32 @@ solver:
       - ${problem.dim}
 
 surrogate:
-  _target_: nigbms.modules.surrogates.SurrogateSolverMLP
-  params_fix: {}
-  params_learn: 
-    x:
-      - ${problem.dim}
+  _target_: nigbms.modules.surrogates.SurrogateSolver
+  params_fix: ${solver.params_fix}
+  params_learn: ${solver.params_learn}
   features: ${surrogate.params_learn}
   model:
     _target_: nigbms.modules.models.MLP
     layers:
       - ${calc_indim:${surrogate.features}}
-      - 128
-      - 128
+      - 1024
+      - 1024
       - 1
     hidden_activation: nn.GELU
     output_activation: nn.Identity
     batch_normalization: False
+  # model:
+  #   _target_: nigbms.modules.models.CNN1D
+  #   in_channels: ${calc_in_channels:${surrogate.features}}
+  #   out_unit: 1
+  #   base_channels: 64
+  #   kernel_size: 1
+  #   batch_normalization: False
+  #   hidden_activation: nn.GELU
+  #   output_activation: nn.Identity
+  #   num_conv_layers: 2
+  #   num_fcn_layers: 2
+    
 
 wrapper:
   grad_type: cv_fwd
@@ -57,7 +67,7 @@ loss:
 optimizer:
   m_opt:
     _target_: torch.optim.Adam
-    lr: 0.01
+    lr: 0.1
   s_opt:
     _target_: torch.optim.Adam
     lr: 0.01
@@ -65,3 +75,4 @@ optimizer:
   s_clip: null
 
 seed: 0
+save: False

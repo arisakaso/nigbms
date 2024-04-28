@@ -71,12 +71,7 @@ class register_custom_grad_fn(Function):
 
 
 class WrappedSolver(_Solver):
-    def __init__(
-        self,
-        solver: _Solver,
-        surrogate: _Solver,
-        cfg: dict,
-    ) -> None:
+    def __init__(self, solver: _Solver, surrogate: _Solver, cfg: dict) -> None:
         super().__init__(solver.params_fix, surrogate.params_learn)
         self.solver = solver
         self.surrogate = surrogate
@@ -102,4 +97,4 @@ class WrappedSolver(_Solver):
         }
         ks, thetas = tensordict2list(theta)
         y = register_custom_grad_fn.apply(d, ks, *thetas)
-        return y, y_hat, dvf, dvf_hat
+        return y, y_hat, dvf.detach(), dvf_hat

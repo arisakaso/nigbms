@@ -96,6 +96,55 @@ class MLPSkip(Module):
         return x
 
 
+### CNNs
+class CNN1D(nn.Module):
+    def __init__(
+        self,
+        in_channels,
+        out_unit=1,
+        base_channels=64,
+        kernel_size=3,
+        batch_normalization=False,
+        hidden_activation="nn.GELU",
+        output_activation="nn.Identity",
+        num_conv_layers=2,
+        num_fcn_layers=2,
+    ):
+        super().__init__()
+
+        self.conv_layers = nn.ModuleList([nn.Conv1d(in_channels, base_channels, kernel_size, padding="same")])
+        self.fcn_layers = nn.ModuleList()
+
+        for _ in range(num_conv_layers - 1):
+            self.conv_layers.append(nn.Conv1d(base_channels, base_channels, kernel_size, padding="same"))
+            if batch_normalization:
+                self.conv_layers.append(nn.BatchNorm1d(base_channels))
+            self.conv_layers.append(eval(hidden_activation)())
+
+        self.gap = nn.AdaptiveAvgPool1d(1)
+
+        for _ in range(num_fcn_layers - 1):
+            self.fcn_layers.append(nn.Linear(base_channels, base_channels))
+            self.fcn_layers.append(eval(hidden_activation)())
+
+        self.fcn_last = nn.Linear(base_channels, out_unit)
+
+        self.output_activation = eval(output_activation)()
+
+    def forward(self, x):
+        for layer in self.conv_layers:
+            x = layer(x)
+
+        x = self.gap(x).squeeze(-1)
+
+        for layer in self.fcn_layers:
+            x = layer(x)
+
+        x = self.fcn_last(x)
+
+        return self.output_activation(x)
+
+
 ### UNet2D
 
 

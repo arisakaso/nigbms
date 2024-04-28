@@ -1,77 +1,103 @@
 import torch
-from hydra.utils import instantiate
 from torch import Tensor
 
 from nigbms.modules.solvers import _Solver
 
 
-class _SurrogateSolver(_Solver):
+class SurrogateSolver(_Solver):
     def __init__(self, params_fix: dict, params_learn: dict, features: dict, model) -> None:
         super().__init__(params_fix, params_learn)
         self.features = features
         self.model = model
 
-    def _make_features(self, tau: dict, theta: Tensor) -> Tensor:
-        raise NotImplementedError
-
-    def forward(self, tau: dict, theta: Tensor) -> Tensor:
-        raise NotImplementedError
-
-
-class SurrogateSolverMLP(_SurrogateSolver):
-    def __init__(self, params_fix: dict, params_learn: dict, features: dict, model) -> None:
-        super().__init__(params_fix, params_learn, features, model)
-
-    def _get_features(self, tau: dict, theta: Tensor) -> Tensor:
+    def get_mlp_features(self, tau: dict, theta: Tensor) -> Tensor:
         features = []
         for k in self.features.keys():
             if k in theta:
                 features.append(theta[k])
             if k in tau:
                 features.append(tau[k])
-        features = torch.cat(features, dim=1)
+        features = torch.cat(features, dim=1)  # (bs, dim)
+        return features
+
+    def get_conv_features(self, tau: dict, theta: Tensor) -> Tensor:
+        features = []
+        for k in self.features.keys():
+            if k in theta:
+                features.append(theta[k])
+            if k in tau:
+                features.append(tau[k])
+        features = torch.cat(features, dim=1).unsqueeze(1)  # (bs, dim)
+
         return features
 
     def forward(self, tau: dict, theta: Tensor) -> Tensor:
-        x = self._get_features(tau, theta)
+        if self.model._get_name() == "MLP":
+            x = self.get_mlp_features(tau, theta)
+        elif self.model._get_name() == "CNN1D":
+            x = self.get_conv_features(tau, theta)
+        else:
+            raise NotImplementedError(f"Model {self.model._get_name()} not implemented")
+
         y = self.model(x)
         return y
 
 
-class SurrogateSolverCNN1D(_SurrogateSolver):
-    def __init__(self, params_fix: dict, params_learn: dict, features: dict, model: dict) -> None:
-        super().__init__(params_fix, params_learn, features)
+# class SurrogateSolverMLP(_SurrogateSolver):
+#     def __init__(self, params_fix: dict, params_learn: dict, features: dict, model) -> None:
+#         super().__init__(params_fix, params_learn, features, model)
 
-        model.in_channels = len(features)
-        self.model = instantiate(model)
+#     def _get_features(self, tau: dict, theta: Tensor) -> Tensor:
+#         features = []
+#         for k in self.features.keys():
+#             if k in theta:
+#                 features.append(theta[k])
+#             if k in tau:
+#                 features.append(tau[k])
+#         features = torch.cat(features, dim=1)
+#         return features
 
-    def _preprocess(self, tau: dict, theta: Tensor) -> Tensor:
-        features = self._get_features(tau, theta)
-        inputs = [features[k].reshape(-1, 1, v.dim) for k, v in self.features.items()]
-        x = torch.cat(inputs, dim=1)
-        return x
-
-    def forward(self, tau: dict, theta: Tensor) -> Tensor:
-        x = self._preprocess(tau, theta)
-        y = self.model(x)
-        return y
+#     def forward(self, tau: dict, theta: Tensor) -> Tensor:
+#         x = self._get_features(tau, theta)
+#         y = self.model(x)
+#         return y
 
 
-class SurrogateSolverCNN2D(_SurrogateSolver):
-    def __init__(self, params_fix: dict, params_learn: dict, features: dict, model: dict) -> None:
-        super().__init__(params_fix, params_learn, features)
+# class SurrogateSolverCNN1D(_SurrogateSolver):
+#     def __init__(self, params_fix: dict, params_learn: dict, features: dict, model) -> None:
+#         super().__init__(params_fix, params_learn, features, model)
 
-        model.n_channels = len(features)
-        self.model = instantiate(model)
+#     def _get_features(self, tau: dict, theta: Tensor) -> Tensor:
+#         features = []
+#         for k in self.features.keys():
+#             if k in theta:
+#                 features.append(theta[k])
+#             if k in tau:
+#                 features.append(tau[k])
+#         features = torch.cat(features, dim=1)
+#         return features
 
-    def forward(self, tau: dict, theta: Tensor) -> Tensor:
-        bs, n2 = tau["b"].shape
-        features = self._get_features(tau, theta)
-        n = int(n2**0.5)
-        inputs = [features[k].reshape(-1, 1, n, n) for k, v in self.features.items()]
-        x = torch.cat(inputs, dim=1)
-        y = self.model(x)
-        return y
+#     def forward(self, tau: dict, theta: Tensor) -> Tensor:
+#         x = self._get_features(tau, theta)
+#         y = self.model(x)
+#         return y
+
+
+# class SurrogateSolverCNN2D(_SurrogateSolver):
+#     def __init__(self, params_fix: dict, params_learn: dict, features: dict, model: dict) -> None:
+#         super().__init__(params_fix, params_learn, features)
+
+#         model.n_channels = len(features)
+#         self.model = instantiate(model)
+
+#     def forward(self, tau: dict, theta: Tensor) -> Tensor:
+#         bs, n2 = tau["b"].shape
+#         features = self._get_features(tau, theta)
+#         n = int(n2**0.5)
+#         inputs = [features[k].reshape(-1, 1, n, n) for k, v in self.features.items()]
+#         x = torch.cat(inputs, dim=1)
+#         y = self.model(x)
+#         return y
 
 
 # class SurrogateSolverIterative(_SurrogateSolver):
