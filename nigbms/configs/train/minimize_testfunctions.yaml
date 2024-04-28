@@ -42,7 +42,7 @@ surrogate:
 
 wrapper:
   grad_type: cv_fwd
-  jvp_type: forwardFD
+  jvp_type: forwardAD
   Nv: 1
   eps: 1.0e-08
   update_steps: 0

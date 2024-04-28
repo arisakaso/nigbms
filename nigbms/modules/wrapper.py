@@ -15,10 +15,6 @@ def jvp(f, x: Tensor, v: Tensor, jvp_type: str, eps: float):
 
     if jvp_type == "forwardAD":
         y, dvf = torch.func.jvp(f, (x,), (v,))
-        # with fwAD.dual_level():
-        #     dual_input = fwAD.make_dual(x, v)
-        #     dual_output = f(dual_input)
-        #     y, dvf = fwAD.unpack_dual(dual_output)
 
     elif jvp_type == "forwardFD":
         y = f(x)
@@ -61,8 +57,6 @@ class register_custom_grad_fn(Function):
 
         dvL = torch.sum(grad_y * d["dvf"], dim=1)
         f_fwd = map(lambda x: bms(x, dvL), vs)
-        # f_fwd = d["v"].apply(lambda x: bms(x, dvL))
-        # _, f_fwd = tensordict2list(f_fwd)
         if d["grad_type"] == "f_fwd":
             return None, None, *f_fwd
 
@@ -72,10 +66,7 @@ class register_custom_grad_fn(Function):
 
         dvL_hat = torch.sum(grad_y * d["dvf_hat"], dim=1)
         f_hat_fwd = map(lambda x: bms(x, dvL_hat), vs)
-        # f_hat_fwd = d["v"].apply(lambda x: bms(x, dvL_hat))
-        # _, f_hat_fwd = tensordict2list(f_hat_fwd)
         cv_fwd = map(lambda x, y, z: x - (y - z), f_fwd, f_hat_fwd, f_hat_true)
-        # f_fwd - (f_hat_fwd - f_hat_true)
         return None, None, *cv_fwd
 
 
