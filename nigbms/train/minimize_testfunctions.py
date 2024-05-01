@@ -3,12 +3,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pytorch_lightning as pl
 import torch
-import wandb
 from hydra.utils import instantiate
 from omegaconf import OmegaConf
 from tensordict import TensorDict
 
 import nigbms  # noqa
+import wandb
 from nigbms.modules.solvers import TestFunctionSolver  # noqa
 from nigbms.modules.wrapper import WrappedSolver
 from nigbms.utils.resolver import calc_in_channels, calc_indim
@@ -85,7 +85,8 @@ def main(cfg):
         y.sum().backward(retain_graph=True, inputs=[theta["x"]])
 
         # backprop for surrogate model
-        s_loss(y, y_hat, dvf, dvf_hat)["s_loss"].mean().backward(inputs=list(surrogate.parameters()))
+        if cfg.wrapper.grad_type in ["f_hat_true", "cv_fwd"]:
+            s_loss(y, y_hat, dvf, dvf_hat)["s_loss"].mean().backward(inputs=list(surrogate.parameters()))
 
         # logging
         ref = theta["x"].clone()  # copy to get the true gradient
@@ -95,7 +96,7 @@ def main(cfg):
         if i % 100 == 0:
             print(f"{i}, ymean: {y.mean():.3g}, ymax: {y.max():.3g}, ymin: {y.min():.3g}, cos_sim: {sim.mean():.3g}")
 
-        # update
+        # updatels
         m_opt.step()
         s_opt.step()
 

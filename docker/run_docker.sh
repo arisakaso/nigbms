@@ -8,6 +8,7 @@ docker run -itd --rm --shm-size=128g --gpus "device=$DEVICE_NUM" \
     -v /home/$USER/nigbms:/home/$USER/nigbms \
     -v /home/$USER/.gitconfig:/home/$USER/.gitconfig \
     -v /home/$USER/.bashrc:/home/$USER/.bashrc \
+    -v /home/$USER/.netrc:/home/$USER/.netrc \
     --volume="/etc/passwd:/etc/passwd:ro" \
     --volume="/etc/shadow:/etc/shadow:ro" \
     --volume="/etc/group:/etc/group:ro" \

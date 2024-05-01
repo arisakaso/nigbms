@@ -13,16 +13,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     unzip \
     software-properties-common
 
-### fenicsx
-RUN add-apt-repository ppa:fenics-packages/fenics
-RUN apt-get update && apt-get install -y fenicsx
+### required for gmsh
+RUN apt-get install libglu1-mesa libxinerama1 libxcursor1 -y
 
 ### OpenFOAM
 RUN curl https://dl.openfoam.com/add-debian-repo.sh | bash
 RUN apt-get update && apt-get install -y openfoam2312
 
-### required for gmsh
-RUN apt-get install libglu1-mesa libxinerama1 libxcursor1 -y
+### fenicsx
+RUN add-apt-repository ppa:fenics-packages/fenics
+RUN apt-get update && apt-get install -y fenicsx
+
 
 ### pip install
 RUN pip install --upgrade pip

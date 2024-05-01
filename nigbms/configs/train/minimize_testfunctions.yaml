@@ -1,14 +1,16 @@
 hydra:
   run:
-    dir: data/outputs/minimize_testfunctions/${now:%Y-%m-%d_%H-%M-%S}
+    dir: outputs/minimize_testfunctions/${now:%Y-%m-%d_%H-%M-%S}
   job:
     chdir: True
+    env_copy:
+      - HOME
 
 problem:
   test_function: sphere
   dim: 128
   num_samples: 100
-  num_iter: 2000
+  num_iter: 1000
   initial_range:
     - -1
     - 1
@@ -31,8 +33,8 @@ surrogate:
     _target_: nigbms.modules.models.MLP
     layers:
       - ${calc_indim:${surrogate.features}}
-      - 1024
-      - 1024
+      - 256
+      - 256
       - 1
     hidden_activation: nn.GELU
     output_activation: nn.Identity
@@ -66,8 +68,8 @@ loss:
 
 optimizer:
   m_opt:
-    _target_: torch.optim.Adam
-    lr: 0.1
+    _target_: torch.optim.SGD
+    lr: 0.01
   s_opt:
     _target_: torch.optim.Adam
     lr: 0.01
@@ -76,5 +78,5 @@ optimizer:
 
 wandb: 
   project: minimize_testfunctions
-  mode: disabled
+  mode: online
 seed: 0

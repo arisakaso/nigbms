@@ -55,8 +55,8 @@ class register_custom_grad_fn(Function):
             f_true = grad(d["y"], thetas, grad_outputs=grad_y, retain_graph=True)
             return None, None, *f_true
 
-        dvL = torch.sum(grad_y * d["dvf"], dim=1)
-        f_fwd = map(lambda x: bms(x, dvL), vs)
+        dvL = torch.sum(grad_y * d["dvf"], dim=-1)
+        f_fwd = map(lambda x: bms(x, dvL).mean(dim=0), vs)
         if d["grad_type"] == "f_fwd":
             return None, None, *f_fwd
 
@@ -64,8 +64,8 @@ class register_custom_grad_fn(Function):
         if d["grad_type"] == "f_hat_true":
             return None, None, *f_hat_true
 
-        dvL_hat = torch.sum(grad_y * d["dvf_hat"], dim=1)
-        f_hat_fwd = map(lambda x: bms(x, dvL_hat), vs)
+        dvL_hat = torch.sum(grad_y * d["dvf_hat"], dim=-1)
+        f_hat_fwd = map(lambda x: bms(x, dvL_hat).mean(dim=0), vs)
         cv_fwd = map(lambda x, y, z: x - (y - z), f_fwd, f_hat_fwd, f_hat_true)
         return None, None, *cv_fwd
 
@@ -84,9 +84,37 @@ class WrappedSolver(_Solver):
 
     def forward(self, tau: dict, theta: Tensor) -> Tensor:
         self._setup(tau)
-        v = rademacher_like(theta)
-        y, dvf = jvp(self._f, theta, v, self.cfg.jvp_type, self.cfg.eps)
-        y_hat, dvf_hat = jvp(self._f_hat, theta, v, "forwardAD", 0.0)
+
+        if self.cfg.grad_type == "f_true":
+            y = self._f(theta)
+            return y, None, None, None
+
+        vs = [None] * self.cfg.Nv
+        dvfs = [None] * self.cfg.Nv
+        dvf_hats = [None] * self.cfg.Nv
+
+        if self.cfg.jvp_type == "forwardFD":
+            y = self._f(theta)
+
+        for i in range(self.cfg.Nv):
+            vs[i] = rademacher_like(theta)
+
+            # compute dvf
+            if self.cfg.jvp_type == "forwardAD":
+                y, dvfs[i] = torch.func.jvp(self._f, (theta,), (vs[i],))
+            else:
+                dvfs[i] = (self._f(theta + vs[i] * self.cfg.eps) - y) / self.cfg.eps
+
+            # compute y_hat and dvf_hat if necessary
+            if self.cfg.grad_type in ["cv_fwd", "f_hat_true"]:
+                y_hat, dvf_hats[i] = torch.func.jvp(self._f_hat, (theta,), (vs[i],))
+            else:
+                y_hat, dvf_hats[i] = torch.tensor(0), torch.tensor(0)
+
+        v = torch.stack(vs)
+        dvf = torch.stack(dvfs)
+        dvf_hat = torch.stack(dvf_hats)
+
         d = {
             "v": v,
             "y": y,
