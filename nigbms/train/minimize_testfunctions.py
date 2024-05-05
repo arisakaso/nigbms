@@ -68,24 +68,21 @@ def main(cfg):
     theta = TensorDict({"x": x})
     solver = instantiate(cfg.solver)
     surrogate = instantiate(cfg.surrogate)
-    wrapped_solver = WrappedSolver(solver, surrogate, cfg.wrapper)
     s_loss = instantiate(cfg.loss.s_loss)
-    m_opt = instantiate(cfg.optimizer.m_opt, params=[theta["x"]])
+    m_loss = torch.sum
     s_opt = instantiate(cfg.optimizer.s_opt, params=surrogate.parameters())
+    m_opt = instantiate(cfg.optimizer.m_opt, params=[theta["x"]])
+    wrapped_solver = WrappedSolver(solver, surrogate, s_opt, s_loss, cfg.wrapper)
 
     for i in range(1, cfg.problem.num_iter + 1):
         # clear gradients
         m_opt.zero_grad()
-        s_opt.zero_grad()
 
         # forward pass
-        y, y_hat, dvf, dvf_hat = wrapped_solver(tau, theta)
+        y = wrapped_solver(tau, theta)
 
         # backprop for theta
-        y.sum().backward(retain_graph=True, inputs=[theta["x"]])
-
-        # backprop for surrogate model
-        s_loss(y, y_hat, dvf, dvf_hat)["s_loss"].mean().backward(inputs=list(surrogate.parameters()))
+        m_loss(y).backward(inputs=[theta["x"]], create_graph=True)
 
         # logging
         ref = theta["x"].clone()  # copy to get the true gradient
@@ -97,7 +94,6 @@ def main(cfg):
 
         # update
         m_opt.step()
-        s_opt.step()
 
 
 if __name__ == "__main__":
