@@ -32,6 +32,7 @@ class MLP(Module):
         hidden_activation,
         output_activation,
         batch_normalization,
+        weight_scale,
         dropout=0,
     ):
         super(MLP, self).__init__()
@@ -50,6 +51,11 @@ class MLP(Module):
         # output layer
         self.layers.append(nn.Linear(layers[-2], layers[-1]))
         self.layers.append(eval(output_activation)())
+
+        # Initialize the weights
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.normal_(m.weight, mean=0, std=weight_scale)
 
     def forward(self, x: Tensor) -> Tensor:
         return self.layers(x)

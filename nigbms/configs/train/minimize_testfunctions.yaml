@@ -36,6 +36,7 @@ surrogate:
     hidden_activation: nn.GELU
     output_activation: nn.Identity
     batch_normalization: False
+    weight_scale: 0.1
   # model:
   #   _target_: nigbms.modules.models.CNN1D
   #   in_channels: ${calc_in_channels:${surrogate.features}}
@@ -53,7 +54,7 @@ wrapper:
   grad_type: cv_fwd
   jvp_type: forwardAD
   eps: 1.0e-08
-  Nv: 16
+  Nv: 1
   v_scale: 1.0
 
 loss:
