@@ -5,9 +5,6 @@ import wandb
 from hydra.utils import instantiate
 from lightning import LightningModule, Trainer, seed_everything
 from omegaconf import DictConfig, OmegaConf
-from pytorch_lightning.callbacks import LearningRateMonitor
-from pytorch_lightning.callbacks.early_stopping import EarlyStopping
-from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
 from pytorch_lightning.loggers.wandb import WandbLogger
 
 from nigbms.utils.resolver import calc_in_channels, calc_in_dim
@@ -23,6 +20,7 @@ class NIGBMS(LightningModule):
         self.automatic_optimization = False
 
         self.cfg = cfg
+        self.meta_solver = instantiate(cfg.meta_solver)
         self.solver = instantiate(cfg.solver)
         self.surrogate = instantiate(cfg.surrogate)
         self.wrapped_solver = instantiate(cfg.wrapper, solver=self.solver, surrogate=self.surrogate)
@@ -76,22 +74,16 @@ class NIGBMS(LightningModule):
         }
 
 
-@hydra.main(config_path="../configs", config_name="train_poisson1d", version_base=None)
+@hydra.main(version_base="1.3", config_path="../configs/train", config_name="poisson1d")
 def main(cfg: DictConfig):
     wandb.config = OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True)
     wandb.init(project=cfg.wandb.project, config=wandb.config, mode=cfg.wandb.mode)
-    logger = WandbLogger(**cfg.logger, settings=wandb.Settings(start_method="thread"))
+    logger = WandbLogger(settings=wandb.Settings(start_method="thread"))
 
-    torch.set_default_tensor_type(eval(cfg.problem.tensor_type))
+    torch.set_default_tensor_type(torch.cuda.DoubleTensor)
     seed_everything(seed=cfg.seed, workers=True)
 
-    callbacks = [
-        EarlyStopping(**cfg.early_stopping),
-        LearningRateMonitor(logging_interval="epoch"),
-    ]
-    if cfg.train.save_model:
-        callbacks.append(ModelCheckpoint(monitor=cfg.train.monitor, mode="min", verbose=True, save_last=True))
-
+    callbacks = [instantiate(c) for c in cfg.callbacks]
     data_module = instantiate(cfg.data)
 
     nigbms = NIGBMS(cfg)

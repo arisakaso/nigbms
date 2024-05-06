@@ -60,6 +60,7 @@ class register_custom_grad_fn(Function):
         return None, *grad_thetas
 
 
+# TODO: refactor this using dataclass
 class WrappedSolver(_Solver):
     def __init__(self, solver: _Solver, surrogate: _Solver, s_opt, s_loss, s_clip, cfg: dict) -> None:
         super().__init__(solver.params_fix, surrogate.params_learn)
