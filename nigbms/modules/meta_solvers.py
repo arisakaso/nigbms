@@ -1,5 +1,6 @@
 import torch
 from omegaconf import DictConfig
+from tensordict import TensorDict
 from torch import Tensor
 from torch.nn import Module
 
@@ -13,24 +14,23 @@ class MetaSolver(Module):
         self.features = features
         self.model = model
 
-    def get_mlp_features(self, tau: Task, theta: Tensor) -> Tensor:
+    def get_mlp_features(self, tau: Task) -> Tensor:
         features = []
         for k in self.features.keys():
-            if k in theta:
-                features.append(theta[k])
-            if k in tau:
+            if k in tau.features:
                 features.append(tau[k])
         features = torch.cat(features, dim=1)  # (bs, dim)
         return features
 
-    def forward(self, tau: Task, theta: Tensor) -> Tensor:
+    def forward(self, tau: Task) -> TensorDict:
         if self.model._get_name() == "MLP":
-            x = self.get_mlp_features(tau, theta)
+            x = self.get_mlp_features(tau)
         else:
             raise NotImplementedError(f"Model {self.model._get_name()} not implemented")
 
         y = self.model(x)
-        return y
+        theta = TensorDict(y)
+        return theta
 
 
 # class MetaSolverMLP(_MetaSolver):
