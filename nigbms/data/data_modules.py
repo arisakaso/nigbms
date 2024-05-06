@@ -1,6 +1,6 @@
 # %%
 from dataclasses import astuple, dataclass
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, List, Tuple, Union
 
 import pandas as pd
 import torch
@@ -81,7 +81,7 @@ class OfflineDataModule(LightningDataModule):
     def __init__(
         self,
         data_dir: str,
-        meta_dfs: Dict[str, pd.DataFrame],
+        ds_sizes: List[int],
         fixed_A: bool,
         train_rtol: Union[float, Tuple[float, float]],
         test_rtol: Union[float, Tuple[float, float]],
@@ -91,7 +91,7 @@ class OfflineDataModule(LightningDataModule):
     ) -> None:
         super().__init__()
         self.data_dir = data_dir
-        self.meta_dfs = meta_dfs
+        self.ds_sizes = ds_sizes
         self.fixed_A = fixed_A
         self.train_rtol = train_rtol
         self.test_rtol = test_rtol
@@ -100,7 +100,14 @@ class OfflineDataModule(LightningDataModule):
         self.batch_size = batch_size
 
     def prepare_data(self) -> None:
-        pass
+        meta_df = pd.read_csv(self.data_dir + "/meta_df.csv")
+        self.meta_dfs = {
+            "train": meta_df.iloc[0 : self.ds_sizes[0]],
+            "val": meta_df.iloc[self.ds_sizes[0] : self.ds_sizes[0] + self.ds_sizes[1]],
+            "test": meta_df.iloc[
+                self.ds_sizes[0] + self.ds_sizes[1] : self.ds_sizes[0] + self.ds_sizes[1] + self.ds_sizes[2]
+            ],
+        }
 
     def setup(self, stage: str = None):
         if stage == "fit" or stage is None:

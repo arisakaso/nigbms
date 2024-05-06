@@ -5,6 +5,7 @@ from tensordict import TensorDict
 from torch import Tensor
 from torch.nn import Module
 
+from nigbms.data.data_modules import Task
 from nigbms.utils.convert import tensor2petscvec, torchcoo2petscmat
 from nigbms.utils.solver import clear_petsc_options, eyes_like, set_petsc_options
 from nigbms.utils.testfunctions import *  # noqa
@@ -18,10 +19,10 @@ class _Solver(Module):
         self.params_fix = params_fix
         self.params_learn = params_learn
 
-    def _setup(self, tau: dict, theta: TensorDict):
+    def _setup(self, tau: Task, theta: TensorDict):
         raise NotImplementedError
 
-    def forward(self, tau: dict, theta: TensorDict):
+    def forward(self, tau: Task, theta: TensorDict):
         raise NotImplementedError
 
 
@@ -30,7 +31,7 @@ class TestFunctionSolver(_Solver):
         super().__init__(params_fix, params_learn)
         self.f = eval(params_fix["test_function"])
 
-    def forward(self, tau: dict, theta: Tensor) -> Tensor:
+    def forward(self, tau: Task, theta: Tensor) -> Tensor:
         return self.f(theta["x"])
 
 
@@ -41,7 +42,7 @@ class PytorchIterativeSolver(_Solver):
     def _step(self):
         raise NotImplementedError
 
-    def _setup(self, tau: dict, theta: TensorDict):
+    def _setup(self, tau: Task, theta: TensorDict):
         """
         Set up the solver with the given parameters.
 
@@ -53,17 +54,17 @@ class PytorchIterativeSolver(_Solver):
             None
         """
 
-        self.A = tau["A"]
-        self.b = tau["b"]
+        self.A = tau.A
+        self.b = tau.b
         self.x = theta["x0"]
-        self.rtol = tau["rtol"]
-        self.maxiter = tau["maxiter"]
+        self.rtol = tau.rtol
+        self.maxiter = tau.maxiter
         self.r = self.b - self.A @ self.x
         self.rnorm = torch.norm(self.r, dim=(1, 2))
         self.history = [self.rnorm]
         self.bnorm = torch.norm(self.b, dim=(1, 2))
 
-    def forward(self, tau: dict, theta: TensorDict) -> Tensor:
+    def forward(self, tau: Task, theta: TensorDict) -> Tensor:
         """
         Perform forward pass of the solver.
 
@@ -89,7 +90,7 @@ class PyTorchJacobi(PytorchIterativeSolver):
     def __init__(self, params_fix: dict, params_learn: dict) -> None:
         super().__init__(params_fix, params_learn)
 
-    def _setup(self, tau: dict, theta: TensorDict):
+    def _setup(self, tau: Task, theta: TensorDict):
         super()._setup(tau, theta)
         omega = theta["omega"]
 
@@ -108,7 +109,7 @@ class PyTorchSOR(PytorchIterativeSolver):
     def __init__(self, params_fix: dict, params_learn: dict) -> None:
         super().__init__(params_fix, params_learn)
 
-    def _setup(self, tau: dict, theta: TensorDict):
+    def _setup(self, tau: Task, theta: TensorDict):
         super()._setup(tau, theta)
         omega = theta["omega"]
 
@@ -130,7 +131,7 @@ class PyTorchCG(PytorchIterativeSolver):
     def __init__(self, params_fix: dict, params_learn: dict) -> None:
         super().__init__(params_fix, params_learn)
 
-    def _setup(self, tau: dict, theta: TensorDict):
+    def _setup(self, tau: Task, theta: TensorDict):
         super()._setup(tau, theta)
         if "M_inv" in self.params_learn:
             self.M_inv = theta["M_inv"]
@@ -183,7 +184,7 @@ class PETScKSP(_Solver):
 
         self.opts.view()
 
-    def _setup(self, tau: dict, theta: TensorDict):
+    def _setup(self, tau: Task, theta: TensorDict):
         pass
 
     def solve(self, A: Tensor, b: Tensor, theta: TensorDict, rtol, maxiter):
@@ -212,7 +213,7 @@ class PETScKSP(_Solver):
 
         return history
 
-    def forward(self, tau: dict, theta: TensorDict) -> Tensor:
+    def forward(self, tau: Task, theta: TensorDict) -> Tensor:
         A = tau["A"].cpu()
         b = tau["b"].cpu()
         rtol = tau["rtol"].cpu().numpy()
@@ -254,11 +255,11 @@ class OpenFOAMSolver(_Solver):
     ) -> None:
         super().__init__(params_fix, params_learn)
 
-    def _setup(self, tau: dict, theta: TensorDict):
+    def _setup(self, tau: Task, theta: TensorDict):
         pass
 
     def solve(self, A: Tensor, b: Tensor, theta: TensorDict) -> Tensor:
         pass
 
-    def forward(self, tau: dict, theta: TensorDict) -> Tensor:
+    def forward(self, tau: Task, theta: TensorDict) -> Tensor:
         pass

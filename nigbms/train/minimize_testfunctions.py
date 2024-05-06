@@ -1,11 +1,11 @@
 import hydra
 import pytorch_lightning as pl
 import torch
+import wandb
 from hydra.utils import instantiate
 from omegaconf import OmegaConf
 from tensordict import TensorDict
 
-import wandb
 from nigbms.modules.wrapper import WrappedSolver
 from nigbms.utils.resolver import calc_in_channels, calc_in_dim
 

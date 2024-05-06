@@ -1,142 +1,106 @@
 # %%
 import hydra
-import pandas as pd
 import torch
 import wandb
 from hydra.utils import instantiate
-from lightning import LightningModule, seed_everything
-from omegaconf import DictConfig
+from lightning import LightningModule, Trainer, seed_everything
+from omegaconf import DictConfig, OmegaConf
 from pytorch_lightning.callbacks import LearningRateMonitor
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
 from pytorch_lightning.loggers.wandb import WandbLogger
+
+from nigbms.utils.resolver import calc_in_channels, calc_in_dim
+
+OmegaConf.register_new_resolver("calc_in_dim", calc_in_dim)
+OmegaConf.register_new_resolver("calc_in_channels", calc_in_channels)
 
 
 # %%
 class NIGBMS(LightningModule):
     def __init__(self, cfg):
         super().__init__()
+        self.automatic_optimization = False
+
+        self.cfg = cfg
         self.solver = instantiate(cfg.solver)
         self.surrogate = instantiate(cfg.surrogate)
-        self.wrapper = instantiate(cfg.wrapper, solver=self.solver, surrogate=self.surrogate)
+        self.wrapped_solver = instantiate(cfg.wrapper, solver=self.solver, surrogate=self.surrogate)
+        self.loss = instantiate(cfg.loss)
 
     def on_fit_start(self):
-        seed_everything(seed=self.hparams.train.seed, workers=True)
+        seed_everything(seed=self.cfg.seed, workers=True)
 
-    def forward(self, tau):
-        theta = self.meta_solver(tau)
-        history = self.solver(tau, theta)
-        losses = self.loss(tau, theta, history)
-        return losses
+    # def forward(self, tau: Task):
+    #     theta = self.meta_solver(tau)
+    #     y = self.wrapper(tau, theta)
+    #     return y
 
     def _add_prefix(self, d, prefix):
         return dict([(prefix + k, v) for k, v in d.items()])
 
     def training_step(self, batch, batch_idx):
+        opt = self.optimizers()
+        opt.zero_grad()
         tau = batch
-        losses = self(tau)
-        self.log_dict(self._add_prefix(losses, "train/loss/"), logger=True, on_epoch=True, on_step=False)
-
-        return losses["combined"]
-
-    def on_validation_epoch_start(self) -> None:
-        self.maxiter_train = self.hparams.solver.opts_fixed.maxiter
-        self.hparams.solver.opts_fixed.maxiter = 100_000
-        self.solver = PytorchLinearSolverModule(**self.hparams.solver)
+        theta = self.meta_solver(tau)
+        y = self.wrapped_solver(tau, theta)
+        loss = self.loss(tau, theta, y)
+        self.manual_backward(loss, create_graph=True, inputs=[self.meta_solver.parameters()])
+        opt.step()
 
     def validation_step(self, batch, batch_idx):
         tau = batch
-        losses = self(tau)
-        self.log_dict(self._add_prefix(losses, "val/loss/"), logger=True, on_epoch=True, on_step=False)
+        theta = self.meta_solver(tau)
+        y = self.solver(tau, theta)  # no surrogate
+        loss = self.loss(tau, theta, y)
 
-        return losses["combined"]
-
-    def on_validation_epoch_end(self) -> None:
-        self.hparams.solver.opts_fixed.maxiter = self.maxiter_train
-        self.solver = PytorchLinearSolverModule(**self.hparams.solver)
-
-    def on_test_epoch_start(self) -> None:
-        # test settings
-        self.hparams.solver.opts_fixed.maxiter = 100_000
-        self.solver = PytorchLinearSolverModule(**self.hparams.solver)
+        self.log("val/loss", loss)
 
     def test_step(self, batch, batch_idx, dataloader_idx):
         tau = batch
-        losses = self(tau)
-        self.log_dict(self._add_prefix(losses, "test/loss/"), logger=True, on_epoch=True, on_step=False)
-
-        # non-learning baseline
         theta = self.meta_solver(tau)
-        theta["initial_guess"] = torch.zeros_like(theta["initial_guess"])
-        history = self.solver(tau, theta)
-        losses = self.loss(tau, theta, history)
-        self.log_dict(self._add_prefix(losses, "baseline/loss/"), logger=True, on_epoch=True, on_step=False)
+        y = self.solver(tau, theta)  # no surrogate
+        loss = self.loss(tau, theta, y)
+
+        self.log("test/loss", loss)
 
     def configure_optimizers(self):
-        optimizer = instantiate(self.hparams.train.optimizer, params=self.parameters())
-        scheduler = instantiate(self.hparams.train.lr_scheduler, optimizer=optimizer)
+        opt = instantiate(self.cfg.optimizers.opt, params=self.meta_solver.parameters())
+        sch = instantiate(self.cfg.optimizers.sch, optimizer=opt)
 
         return {
-            "optimizer": optimizer,
-            "lr_scheduler": scheduler,
-            "monitor": self.hparams.train.monitor,
+            "optimizer": opt,
+            "lr_scheduler": sch,
+            "monitor": self.cfg.optimizers.monitor,
         }
 
 
 @hydra.main(config_path="../configs", config_name="train_poisson1d", version_base=None)
 def main(cfg: DictConfig):
-    # FIX SEED
-    pl.seed_everything(seed=cfg.train.seed, workers=True)
+    wandb.config = OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True)
+    wandb.init(project=cfg.wandb.project, config=wandb.config, mode=cfg.wandb.mode)
+    logger = WandbLogger(**cfg.logger, settings=wandb.Settings(start_method="thread"))
 
-    torch.set_default_dtype(torch.float64)
+    torch.set_default_tensor_type(eval(cfg.problem.tensor_type))
+    seed_everything(seed=cfg.seed, workers=True)
 
-    # MODEL SETUP
-    if cfg.train.ckpt_path:
-        gbms = GBMSPoisson1D.load_from_checkpoint(cfg.train.ckpt_path, cfg=cfg)
-    else:
-        gbms = GBMSPoisson1D(cfg=cfg)
-
-    # DATA SETUP
-    meta_df = pd.read_csv(cfg.data.root_dir + "/meta_df.csv")
-    meta_dfs = [
-        meta_df.iloc[0 : cfg.data.n_train],
-        meta_df.iloc[cfg.data.n_train : cfg.data.n_train + cfg.data.n_val],
-        meta_df.iloc[cfg.data.n_train + cfg.data.n_val : cfg.data.n_train + cfg.data.n_val + cfg.data.n_test],
-    ]
-
-    data_module = Poisson1DDataModule(
-        root_dir=cfg.data.root_dir,
-        batch_size=cfg.data.batch_size,
-        meta_dfs=meta_dfs,
-        normalize_type=cfg.data.normalize_type,
-        rtol=cfg.data.rtol,
-    )
-
-    ## SETUP WANDB LOGGER
-    logger = WandbLogger(**cfg.train.logger, settings=wandb.Settings(start_method="thread"))
-    logger.watch(gbms)
-
-    # CALLBACKS SETUP
     callbacks = [
-        EarlyStopping(**cfg.train.early_stopping),
+        EarlyStopping(**cfg.early_stopping),
         LearningRateMonitor(logging_interval="epoch"),
     ]
-
     if cfg.train.save_model:
         callbacks.append(ModelCheckpoint(monitor=cfg.train.monitor, mode="min", verbose=True, save_last=True))
 
-    # TRAINER
-    trainer = pl.Trainer(
-        logger=logger,
-        callbacks=callbacks,
-        **cfg.train.trainer,
-    )
+    data_module = instantiate(cfg.data)
 
-    # TRAIN
-    trainer.fit(model=gbms, datamodule=data_module)
+    nigbms = NIGBMS(cfg)
+
+    trainer = Trainer(logger=logger, callbacks=callbacks, **cfg.trainer)
+    trainer.fit(model=nigbms, datamodule=data_module)
 
     # TEST
-    if cfg.train.test:
+    if cfg.test:
         trainer.test(ckpt_path="best", datamodule=data_module)
 
 
