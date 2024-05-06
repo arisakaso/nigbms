@@ -43,7 +43,10 @@ class register_custom_grad_fn(Function):
             _, vs = tensordict2list(v)
 
             with torch.no_grad():
-                _, dvf = torch.func.jvp(d["f"], (theta,), (v,))  # forward AD
+                if d["cfg"].jvp_type == "forwardAD":
+                    _, dvf = torch.func.jvp(d["f"], (theta,), (v,))
+                elif d["cfg"].jvp_type == "forwardFD":
+                    dvf = (d["f"](theta + v * d["cfg"].eps) - d["y"]) / d["cfg"].eps
             dvL = torch.sum(grad_y * dvf, dim=1)
             f_fwds[i] = list(map(lambda x: bms(x, dvL), vs))
 
@@ -51,9 +54,9 @@ class register_custom_grad_fn(Function):
                 d["s_opt"].zero_grad()
                 y_hat, dvf_hat = torch.func.jvp(d["f_hat"], (theta,), (v,))  # forward AD
                 f_hat_trues[i] = grad(y_hat, thetas, grad_outputs=grad_y, retain_graph=True)
-                d["s_loss"](d["y"], y_hat, dvf, dvf_hat)["s_loss"].mean().backward(inputs=d['params'])
-                if d['s_clip']:
-                    torch.nn.utils.clip_grad_norm_(d['params'], d["s_clip"])
+                d["s_loss"](d["y"], y_hat, dvf, dvf_hat)["s_loss"].mean().backward(inputs=d["params"])
+                if d["s_clip"]:
+                    torch.nn.utils.clip_grad_norm_(d["params"], d["s_clip"])
 
                 d["s_opt"].step()
 

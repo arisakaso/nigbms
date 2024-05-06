@@ -53,8 +53,8 @@ surrogate:
 wrapper:
   grad_type: cv_fwd
   jvp_type: forwardAD
-  eps: 0
-  Nv: 4
+  eps: 1.0e-10
+  Nv: 2
   v_scale: 1.0
   v_dist: rademacher
 
@@ -75,7 +75,7 @@ optimizer:
     lr: 0.001
     momentum: 0.9
   m_clip: null
-  s_clip: null
+  s_clip: 100.0
 
 wandb: 
   project: minimize_testfunctions
