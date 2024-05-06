@@ -11,7 +11,7 @@ from nigbms.utils.solver import rademacher_like  # noqa
 
 class register_custom_grad_fn(Function):
     @staticmethod
-    def forward(ctx, d: dict, keys: list, *thetas):
+    def forward(ctx, d: dict, *thetas):
         """_summary_
 
         Args:
@@ -30,81 +30,62 @@ class register_custom_grad_fn(Function):
     def backward(ctx, grad_y):
         # pydevd.settrace(suspend=False, trace_only_current_thread=True)  # for debugging
         d = ctx.d
-        thetas = ctx.saved_tensors
-        _, vs = tensordict2list(d["v"])
+        theta = ctx.d["theta"].clone().detach()
+        theta.apply(lambda x: x.requires_grad_())
+        _, thetas = tensordict2list(theta)
 
-        if d["grad_type"] == "f_true":
-            f_true = grad(d["y"], thetas, grad_outputs=grad_y, retain_graph=True)
-            return None, None, *f_true
+        f_fwds = [None] * d["cfg"].Nv
+        f_hat_trues = [None] * d["cfg"].Nv
+        cv_fwds = [None] * d["cfg"].Nv
 
-        dvL = torch.sum(grad_y * d["dvf"], dim=-1)
-        f_fwd = map(lambda x: bms(x, dvL).mean(dim=0), vs)
-        if d["grad_type"] == "f_fwd":
-            return None, None, *f_fwd
+        for i in range(d["cfg"].Nv):
+            v = rademacher_like(theta)
+            _, vs = tensordict2list(v)
 
-        f_hat_true = grad(d["y_hat"], thetas, grad_outputs=grad_y, retain_graph=True)
-        if d["grad_type"] == "f_hat_true":
-            return None, None, *f_hat_true
+            with torch.no_grad():
+                _, dvf = torch.func.jvp(d["f"], (theta,), (v,))  # forward AD
+            dvL = torch.sum(grad_y * dvf, dim=1)
+            f_fwds[i] = list(map(lambda x: bms(x, dvL), vs))
 
-        dvL_hat = torch.sum(grad_y * d["dvf_hat"], dim=-1)
-        f_hat_fwd = map(lambda x: bms(x, dvL_hat).mean(dim=0), vs)
-        cv_fwd = map(lambda x, y, z: x - (y - z), f_fwd, f_hat_fwd, f_hat_true)
-        return None, None, *cv_fwd
+            if d["cfg"].grad_type in ["f_hat_true", "cv_fwd"]:
+                d["s_opt"].zero_grad()
+                y_hat, dvf_hat = torch.func.jvp(d["f_hat"], (theta,), (v,))  # forward AD
+                f_hat_trues[i] = grad(y_hat, thetas, grad_outputs=grad_y, retain_graph=True)
+                d["s_loss"](d["y"], y_hat, dvf, dvf_hat)["s_loss"].mean().backward()
+                d["s_opt"].step()
+
+                dvL_hat = torch.sum(grad_y * dvf_hat, dim=1)
+                f_hat_fwd = map(lambda x: bms(x, dvL_hat), vs)
+                cv_fwds[i] = list(map(lambda x, y, z: x - (y - z), f_fwds[i], f_hat_fwd, f_hat_trues[i]))
+
+        grad_thetas = [torch.stack(x).mean(dim=0) for x in zip(*eval(d["cfg"].grad_type + "s"), strict=False)]
+
+        return None, *grad_thetas
 
 
 class WrappedSolver(_Solver):
-    def __init__(self, solver: _Solver, surrogate: _Solver, cfg: dict) -> None:
+    def __init__(self, solver: _Solver, surrogate: _Solver, s_opt, s_loss, cfg: dict) -> None:
         super().__init__(solver.params_fix, surrogate.params_learn)
         self.solver = solver
         self.surrogate = surrogate
+        self.s_opt = s_opt
+        self.s_loss = s_loss
         self.cfg = cfg
 
-    def _setup(self, tau: dict):
-        # fix tau
-        self._f = lambda x: self.solver(tau, x)
-        self._f_hat = lambda x: self.surrogate(tau, x)
-
     def forward(self, tau: dict, theta: Tensor) -> Tensor:
-        self._setup(tau)
-
+        y = self.solver(tau, theta)
         if self.cfg.grad_type == "f_true":
-            y = self._f(theta)
-            return y, None, None, None
-
-        vs = [None] * self.cfg.Nv
-        dvfs = [None] * self.cfg.Nv
-        dvf_hats = [None] * self.cfg.Nv
-
-        if self.cfg.jvp_type == "forwardFD":
-            y = self._f(theta)
-
-        for i in range(self.cfg.Nv):
-            vs[i] = eval(self.cfg.v_dist + "_like")(theta)
-
-            # compute dvf
-            if self.cfg.jvp_type == "forwardAD":
-                y, dvfs[i] = torch.func.jvp(self._f, (theta,), (vs[i],))
-            else:
-                dvfs[i] = (self._f(theta + vs[i] * self.cfg.eps) - y) / self.cfg.eps
-
-            # compute y_hat and dvf_hat if necessary
-            if self.cfg.grad_type in ["cv_fwd", "f_hat_true"]:
-                y_hat, dvf_hats[i] = torch.func.jvp(self._f_hat, (theta,), (vs[i],))
-            else:
-                y_hat, dvf_hats[i] = torch.tensor(0), torch.tensor(0)
-
-        v = torch.stack(vs)
-        dvf = torch.stack(dvfs)
-        dvf_hat = torch.stack(dvf_hats)
-
-        d = {
-            "v": v,
-            "y": y,
-            "dvf": dvf,
-            "y_hat": y_hat,
-            "dvf_hat": dvf_hat,
-            "grad_type": self.cfg.grad_type,
-        }
-        ks, thetas = tensordict2list(theta)
-        y = register_custom_grad_fn.apply(d, ks, *thetas)
-        return y, y_hat, dvf.detach(), dvf_hat
+            return y
+        else:
+            _, thetas = tensordict2list(theta)
+            d = {
+                "y": y,
+                "theta": theta,
+                "f": lambda x: self.solver(tau, x),
+                "f_hat": lambda x: self.surrogate(tau, x),
+                "s_opt": self.s_opt,
+                "s_loss": self.s_loss,
+                "cfg": self.cfg,
+            }
+            y = register_custom_grad_fn.apply(d, *thetas)
+            return y

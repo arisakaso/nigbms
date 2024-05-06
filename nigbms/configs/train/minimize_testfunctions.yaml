@@ -55,7 +55,6 @@ wrapper:
   jvp_type: forwardAD
   eps: 0
   Nv: 1
-  update_steps: 0
   v_scale: 1.0
   v_dist: rademacher
 
