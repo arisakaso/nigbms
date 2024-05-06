@@ -11,7 +11,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     curl \
     unzip \
-    software-properties-common
+    software-properties-common \
+    lsof
 
 ### required for gmsh
 RUN apt-get install libglu1-mesa libxinerama1 libxcursor1 -y

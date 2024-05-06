@@ -11,9 +11,9 @@ import nigbms  # noqa
 import wandb
 from nigbms.modules.solvers import TestFunctionSolver  # noqa
 from nigbms.modules.wrapper import WrappedSolver
-from nigbms.utils.resolver import calc_in_channels, calc_indim
+from nigbms.utils.resolver import calc_in_channels, calc_in_dim
 
-OmegaConf.register_new_resolver("calc_indim", calc_indim)
+OmegaConf.register_new_resolver("calc_in_dim", calc_in_dim)
 OmegaConf.register_new_resolver("calc_in_channels", calc_in_channels)
 
 
@@ -96,7 +96,13 @@ def main(cfg):
         if i % 100 == 0:
             print(f"{i}, ymean: {y.mean():.3g}, ymax: {y.max():.3g}, ymin: {y.min():.3g}, cos_sim: {sim.mean():.3g}")
 
-        # updatels
+        # clip gradients
+        if cfg.optimizer.m_clip:
+            torch.nn.utils.clip_grad_norm_(theta["x"], cfg.optimizer.m_clip)
+        if cfg.optimizer.s_clip:
+            torch.nn.utils.clip_grad_norm_(surrogate.parameters(), cfg.optimizer.s_clip)
+
+        # updates
         m_opt.step()
         s_opt.step()
 

@@ -1,30 +1,12 @@
 import pydevd  # noqa
 import torch
-from torch import Tensor
+from torch import Tensor, randn_like  # noqa
 from torch.autograd import Function, grad
 
 from nigbms.modules.solvers import _Solver
 from nigbms.utils.convert import tensordict2list
-from nigbms.utils.solver import bms, rademacher_like
-
-
-def jvp(f, x: Tensor, v: Tensor, jvp_type: str, eps: float):
-    assert jvp_type in ["forwardAD", "forwardFD", "centralFD"]
-    assert type(x) == type(v)
-    assert x.shape == v.shape
-
-    if jvp_type == "forwardAD":
-        y, dvf = torch.func.jvp(f, (x,), (v,))
-
-    elif jvp_type == "forwardFD":
-        y = f(x)
-        dvf = (f(x + v * eps) - y) / eps
-
-    elif jvp_type == "centralFD":
-        y = f(x)
-        dvf = (f(x + v * eps) - f(x - v * eps)) / (2 * eps)
-
-    return y, dvf
+from nigbms.utils.solver import bms
+from nigbms.utils.solver import rademacher_like  # noqa
 
 
 class register_custom_grad_fn(Function):
@@ -97,7 +79,7 @@ class WrappedSolver(_Solver):
             y = self._f(theta)
 
         for i in range(self.cfg.Nv):
-            vs[i] = rademacher_like(theta)
+            vs[i] = eval(self.cfg.v_dist + "_like")(theta)
 
             # compute dvf
             if self.cfg.jvp_type == "forwardAD":
