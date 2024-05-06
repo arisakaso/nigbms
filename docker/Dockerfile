@@ -1,5 +1,5 @@
 # ベースイメージを指定
-FROM nvcr.io/nvidia/pytorch:24.03-py3
+FROM nvcr.io/nvidia/pytorch:24.04-py3
 
 ARG DEBIAN_FRONTEND=noninteractive
 
@@ -11,23 +11,26 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     curl \
     unzip \
-    software-properties-common
+    software-properties-common \
+    lsof
 
-### fenicsx
-RUN add-apt-repository ppa:fenics-packages/fenics
-RUN apt-get update && apt-get install -y fenicsx
+### required for gmsh
+RUN apt-get install libglu1-mesa libxinerama1 libxcursor1 -y
 
 ### OpenFOAM
 RUN curl https://dl.openfoam.com/add-debian-repo.sh | bash
 RUN apt-get update && apt-get install -y openfoam2312
 
-### required for gmsh
-RUN apt-get install libglu1-mesa libxinerama1 libxcursor1 -y
+### fenicsx
+RUN add-apt-repository ppa:fenics-packages/fenics
+RUN apt-get update && apt-get install -y fenicsx
+
 
 ### pip install
 RUN pip install --upgrade pip
 RUN pip install --upgrade "jax[cuda12_pip]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
 RUN pip install \
+    tensordict \    
     lightning \
     ruff \
     wandb \
@@ -43,6 +46,7 @@ RUN pip install \
     ml_collections \
     flax \
     dvc \
+    pydevd \
     pdoc3 \
     mkdocs
 
@@ -52,12 +56,6 @@ RUN pip install --upgrade torchvision
 RUN apt-get install -y sudo 
 RUN echo "ALL ALL=(root) NOPASSWD:ALL" > /etc/sudoers.d/all && \
     chmod 0440 /etc/sudoers.d/all
-
-
-# # gitの設定
-# ARG GIT_NAME="Sohei Arisaka"
-# ARG GIT_EMAIL="sohei.arisaka@u.nus.edu"
-# RUN git config --global user.name "${GIT_NAME}" && git config --global user.email "${GIT_EMAIL}"
 
 # 作業ディレクトリを設定
 WORKDIR /workspace
@@ -69,6 +67,3 @@ RUN rm vscode_cli.tar.gz
 
 # MPI
 ENV LD_LIBRARY_PATH $LD_LIBRARY_PATH:/usr/local/mpi/lib
-
-# must be installed last (don't know why)
-RUN pip install tensordict-nightly 

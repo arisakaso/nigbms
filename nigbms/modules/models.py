@@ -28,34 +28,44 @@ class Square(Module):
 class MLP(Module):
     def __init__(
         self,
-        layers,
+        in_dim,  # input dimension
+        out_dim,  # output dimension
+        num_layers,  # number of hidden layers
+        num_neurons,  # number of neurons in the hidden layers
         hidden_activation,
         output_activation,
         batch_normalization,
         weight_scale,
         dropout=0,
+        weight_scale=1.0,  # scale of weights in initialization
     ):
         super(MLP, self).__init__()
 
-        # Create the fully connected layers using the provided layer sizes
         self.layers = nn.Sequential()
 
+        # input layer
+        self.layers.append(nn.Linear(in_dim, num_neurons))
+        if batch_normalization:
+            self.layers.append(nn.BatchNorm1d(num_neurons, track_running_stats=False))
+        self.layers.append(eval(hidden_activation)())
+        self.layers.append(nn.Dropout(p=dropout))
+
         # hidden layers
-        for i in range(len(layers) - 2):
-            self.layers.append(nn.Linear(layers[i], layers[i + 1]))
+        for i in range(num_layers):
+            self.layers.append(nn.Linear(num_neurons, num_neurons))
             if batch_normalization:
-                self.layers.append(nn.BatchNorm1d(layers[i + 1]))
+                self.layers.append(nn.BatchNorm1d(num_neurons, track_running_stats=False))
             self.layers.append(eval(hidden_activation)())
             self.layers.append(nn.Dropout(p=dropout))
 
         # output layer
-        self.layers.append(nn.Linear(layers[-2], layers[-1]))
+        self.layers.append(nn.Linear(num_neurons, out_dim))
         self.layers.append(eval(output_activation)())
 
-        # Initialize the weights
-        for m in self.modules():
-            if isinstance(m, nn.Linear):
-                nn.init.normal_(m.weight, mean=0, std=weight_scale)
+        # initialize weights
+        for layer in self.layers:
+            if isinstance(layer, nn.Linear):
+                nn.init.normal_(layer.weight, mean=0, std=weight_scale)
 
     def forward(self, x: Tensor) -> Tensor:
         return self.layers(x)
@@ -124,7 +134,7 @@ class CNN1D(nn.Module):
         for _ in range(num_conv_layers - 1):
             self.conv_layers.append(nn.Conv1d(base_channels, base_channels, kernel_size, padding="same"))
             if batch_normalization:
-                self.conv_layers.append(nn.BatchNorm1d(base_channels))
+                self.conv_layers.append(nn.BatchNorm1d(base_channels, track_running_stats=False))
             self.conv_layers.append(eval(hidden_activation)())
 
         self.gap = nn.AdaptiveAvgPool1d(1)

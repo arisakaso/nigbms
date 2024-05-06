@@ -3,17 +3,17 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pytorch_lightning as pl
 import torch
-import wandb
 from hydra.utils import instantiate
 from omegaconf import OmegaConf
 from tensordict import TensorDict
 
 import nigbms  # noqa
+import wandb
 from nigbms.modules.solvers import TestFunctionSolver  # noqa
 from nigbms.modules.wrapper import WrappedSolver
-from nigbms.utils.resolver import calc_in_channels, calc_indim
+from nigbms.utils.resolver import calc_in_channels, calc_in_dim
 
-OmegaConf.register_new_resolver("calc_indim", calc_indim)
+OmegaConf.register_new_resolver("calc_in_dim", calc_in_dim)
 OmegaConf.register_new_resolver("calc_in_channels", calc_in_channels)
 
 
@@ -83,7 +83,7 @@ def main(cfg):
 
         # backprop for theta
         m_loss(y).backward(inputs=[theta["x"]], create_graph=True)
-
+        
         # logging
         ref = theta["x"].clone()  # copy to get the true gradient
         f_true = torch.autograd.grad(solver.f(ref).sum(), ref)[0]
@@ -92,7 +92,13 @@ def main(cfg):
         if i % 100 == 0:
             print(f"{i}, ymean: {y.mean():.3g}, ymax: {y.max():.3g}, ymin: {y.min():.3g}, cos_sim: {sim.mean():.3g}")
 
-        # update
+        # clip gradients
+        if cfg.optimizer.m_clip:
+            torch.nn.utils.clip_grad_norm_(theta["x"], cfg.optimizer.m_clip)
+        if cfg.optimizer.s_clip:
+            torch.nn.utils.clip_grad_norm_(surrogate.parameters(), cfg.optimizer.s_clip)
+
+        # updates
         m_opt.step()
 
 

@@ -1,6 +1,6 @@
 hydra:
   run:
-    dir: data/outputs/minimize_testfunctions/${now:%Y-%m-%d_%H-%M-%S}
+    dir: outputs/minimize_testfunctions/${now:%Y-%m-%d_%H-%M-%S}
   job:
     chdir: True
 
@@ -29,10 +29,10 @@ surrogate:
   features: ${surrogate.params_learn}
   model:
     _target_: nigbms.modules.models.MLP
-    layers:
-      - ${calc_indim:${surrogate.features}}
-      - 1024
-      - 1
+    in_dim: ${calc_in_dim:${surrogate.features}}
+    out_dim: 1
+    num_layers: 1
+    num_neurons: 4096
     hidden_activation: nn.GELU
     output_activation: nn.Identity
     batch_normalization: False
@@ -53,15 +53,18 @@ surrogate:
 wrapper:
   grad_type: cv_fwd
   jvp_type: forwardAD
-  eps: 1.0e-08
+  eps: 0
   Nv: 1
   v_scale: 1.0
+  v_dist: rademacher
 
 loss:
   s_loss:
     _target_: nigbms.modules.losses.SurrogateSolverLoss
     weights:
       dvf_loss: 1
+      dvf_loss_relative: 0
+      y_loss: 0
 
 optimizer:
   m_opt:
@@ -72,9 +75,9 @@ optimizer:
     lr: 0.001
     momentum: 0.9
   m_clip: null
-  s_clip: null
+  s_clip: 100.0
 
 wandb: 
   project: minimize_testfunctions
-  mode: disabled
+  mode: online
 seed: 0
