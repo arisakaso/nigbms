@@ -1,6 +1,8 @@
+# %%
 import hydra
 import numpy as np
 import pandas as pd
+import torch
 from joblib import Parallel, delayed
 from scipy.sparse import diags
 from sympy import Expr, IndexedBase, lambdify, pi, sin, symbols
@@ -156,8 +158,8 @@ def generate_poisson1d(A: np.ndarray, u_sym: Expr, i: int, coeffs: np.ndarray) -
     b = A @ x
     assert np.allclose(A @ x, b)
 
-    np.save(f"{i}_x.npy", x)
-    np.save(f"{i}_b.npy", b)
+    torch.save(torch.tensor(x), f"{i}_x.pt")
+    torch.save(torch.tensor(b), f"{i}_b.pt")
 
     return None
 
@@ -168,7 +170,7 @@ def main(cfg):
     meta_df = get_meta_df(cfg.N_data, cfg.N_grid, cfg.p, cfg.distribution, cfg.scale)
     meta_df.to_csv("meta_df.csv", index=False)
     A = laplacian_matrix(cfg.N_grid)
-    np.save("A.npy", A)
+    torch.save(torch.tensor(A).to_sparse_coo(), "A.pt")  # save in torch COO format
     Parallel(verbose=10, n_jobs=-1)(
         [
             delayed(generate_poisson1d)(A, u_sym, i, coeffs.to_dict())
@@ -177,5 +179,6 @@ def main(cfg):
     )
 
 
+# %%
 if __name__ == "__main__":
     main()

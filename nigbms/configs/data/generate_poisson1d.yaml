@@ -4,9 +4,9 @@ hydra:
   job:
     chdir: True
 
-N_data: 10
+N_data: 10_000
 N_grid: 31 # number of inner grid points, i.e. the size of A
 N_terms: 31
-scale: 10.0
+scale: 1.0
 distribution: linear
 p: 0.01

@@ -12,15 +12,6 @@ from nigbms.utils.solver import rademacher_like  # noqa
 class register_custom_grad_fn(Function):
     @staticmethod
     def forward(ctx, d: dict, *thetas):
-        """_summary_
-
-        Args:
-            x: input
-            d: dictionary with keys: y, dvf, y_hat, dvf_hat, grad_type
-
-        Returns:
-            y
-        """
         ctx.d = d
         ctx.save_for_backward(*thetas)
 
