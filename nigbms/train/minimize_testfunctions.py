@@ -5,9 +5,7 @@ from hydra.utils import instantiate
 from omegaconf import OmegaConf
 from tensordict import TensorDict
 
-import nigbms  # noqa
 import wandb
-from nigbms.modules.solvers import TestFunctionSolver  # noqa
 from nigbms.modules.wrapper import WrappedSolver
 from nigbms.utils.resolver import calc_in_channels, calc_in_dim
 
