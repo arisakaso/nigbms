@@ -72,7 +72,7 @@ def main(cfg):
     m_loss = torch.sum
     s_opt = instantiate(cfg.optimizer.s_opt, params=surrogate.parameters())
     m_opt = instantiate(cfg.optimizer.m_opt, params=[theta["x"]])
-    wrapped_solver = WrappedSolver(solver, surrogate, s_opt, s_loss, cfg.wrapper)
+    wrapped_solver = WrappedSolver(solver, surrogate, s_opt, s_loss, cfg.optimizer.s_clip, cfg.wrapper)
 
     for i in range(1, cfg.problem.num_iter + 1):
         # clear gradients
@@ -83,7 +83,7 @@ def main(cfg):
 
         # backprop for theta
         m_loss(y).backward(inputs=[theta["x"]], create_graph=True)
-        
+
         # logging
         ref = theta["x"].clone()  # copy to get the true gradient
         f_true = torch.autograd.grad(solver.f(ref).sum(), ref)[0]
@@ -95,8 +95,7 @@ def main(cfg):
         # clip gradients
         if cfg.optimizer.m_clip:
             torch.nn.utils.clip_grad_norm_(theta["x"], cfg.optimizer.m_clip)
-        if cfg.optimizer.s_clip:
-            torch.nn.utils.clip_grad_norm_(surrogate.parameters(), cfg.optimizer.s_clip)
+
 
         # updates
         m_opt.step()

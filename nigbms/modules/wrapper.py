@@ -51,7 +51,10 @@ class register_custom_grad_fn(Function):
                 d["s_opt"].zero_grad()
                 y_hat, dvf_hat = torch.func.jvp(d["f_hat"], (theta,), (v,))  # forward AD
                 f_hat_trues[i] = grad(y_hat, thetas, grad_outputs=grad_y, retain_graph=True)
-                d["s_loss"](d["y"], y_hat, dvf, dvf_hat)["s_loss"].mean().backward()
+                d["s_loss"](d["y"], y_hat, dvf, dvf_hat)["s_loss"].mean().backward(inputs=d['params'])
+                if d['s_clip']:
+                    torch.nn.utils.clip_grad_norm_(d['params'], d["s_clip"])
+
                 d["s_opt"].step()
 
                 dvL_hat = torch.sum(grad_y * dvf_hat, dim=1)
@@ -64,12 +67,13 @@ class register_custom_grad_fn(Function):
 
 
 class WrappedSolver(_Solver):
-    def __init__(self, solver: _Solver, surrogate: _Solver, s_opt, s_loss, cfg: dict) -> None:
+    def __init__(self, solver: _Solver, surrogate: _Solver, s_opt, s_loss, s_clip, cfg: dict) -> None:
         super().__init__(solver.params_fix, surrogate.params_learn)
         self.solver = solver
         self.surrogate = surrogate
         self.s_opt = s_opt
         self.s_loss = s_loss
+        self.s_clip = s_clip
         self.cfg = cfg
 
     def forward(self, tau: dict, theta: Tensor) -> Tensor:
@@ -86,6 +90,8 @@ class WrappedSolver(_Solver):
                 "s_opt": self.s_opt,
                 "s_loss": self.s_loss,
                 "cfg": self.cfg,
+                "params": list(self.surrogate.parameters()),
+                "s_clip": self.s_clip,
             }
             y = register_custom_grad_fn.apply(d, *thetas)
             return y

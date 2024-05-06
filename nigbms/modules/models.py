@@ -37,7 +37,6 @@ class MLP(Module):
         batch_normalization,
         weight_scale,
         dropout=0,
-        weight_scale=1.0,  # scale of weights in initialization
     ):
         super(MLP, self).__init__()
 

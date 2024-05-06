@@ -32,7 +32,7 @@ surrogate:
     in_dim: ${calc_in_dim:${surrogate.features}}
     out_dim: 1
     num_layers: 1
-    num_neurons: 4096
+    num_neurons: 1024
     hidden_activation: nn.GELU
     output_activation: nn.Identity
     batch_normalization: False
@@ -54,7 +54,7 @@ wrapper:
   grad_type: cv_fwd
   jvp_type: forwardAD
   eps: 0
-  Nv: 1
+  Nv: 4
   v_scale: 1.0
   v_dist: rademacher
 
@@ -75,9 +75,9 @@ optimizer:
     lr: 0.001
     momentum: 0.9
   m_clip: null
-  s_clip: 100.0
+  s_clip: null
 
 wandb: 
   project: minimize_testfunctions
-  mode: online
+  mode: disabled
 seed: 0
