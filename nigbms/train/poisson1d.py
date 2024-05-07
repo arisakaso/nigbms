@@ -3,7 +3,7 @@ import hydra
 import torch
 import wandb
 from hydra.utils import instantiate
-from lightning import LightningModule, Trainer
+from lightning import LightningModule, Trainer, seed_everything
 from omegaconf import DictConfig, OmegaConf
 from pytorch_lightning.loggers.wandb import WandbLogger
 
@@ -29,13 +29,7 @@ class NIGBMS(LightningModule):
         self.loss = instantiate(cfg.loss)
 
     def on_fit_start(self):
-        pass
-        # seed_everything(seed=self.cfg.seed, workers=True)
-
-    # def forward(self, tau: Task):
-    #     theta = self.meta_solver(tau)
-    #     y = self.wrapper(tau, theta)
-    #     return y
+        seed_everything(seed=self.cfg.seed, workers=True)
 
     def _add_prefix(self, d, prefix):
         return dict([(prefix + k, v) for k, v in d.items()])
@@ -83,10 +77,8 @@ def main(cfg: DictConfig):
     wandb.init(project=cfg.wandb.project, config=wandb.config, mode=cfg.wandb.mode)
     logger = WandbLogger(settings=wandb.Settings(start_method="thread"))
 
-    # torch.set_default_tensor_type(torch.cuda.DoubleTensor)
-    torch.set_default_dtype(torch.float64)
-    torch.set_default_device("cuda")
-    # seed_everything(seed=cfg.seed, workers=True)
+    torch.set_default_dtype(cfg.dtype)
+    torch.set_default_device(cfg.device)
 
     callbacks = [instantiate(c) for c in cfg.callbacks]
     data_module = instantiate(cfg.data)

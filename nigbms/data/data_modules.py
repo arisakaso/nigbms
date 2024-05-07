@@ -19,7 +19,7 @@ class Task:
     x: torch.Tensor = None
     rtol: torch.Tensor = None
     maxiter: torch.Tensor = None
-    features: TensorDict = None
+    features: TensorDict = TensorDict({})
 
 
 class OfflineDataset(Dataset):

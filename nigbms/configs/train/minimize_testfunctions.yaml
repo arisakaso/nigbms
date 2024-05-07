@@ -4,6 +4,10 @@ hydra:
   job:
     chdir: True
 
+wandb: 
+  project: minimize_testfunctions
+  mode: disabled
+
 problem:
   test_function: sphere
   dim: 128
@@ -49,35 +53,30 @@ surrogate:
   #   num_conv_layers: 2
   #   num_fcn_layers: 2
     
-
 wrapper:
-  grad_type: cv_fwd
-  jvp_type: forwardAD
-  eps: 1.0e-10
-  Nv: 2
-  v_scale: 1.0
-  v_dist: rademacher
-
-loss:
-  s_loss:
-    _target_: nigbms.modules.losses.SurrogateSolverLoss
-    weights:
-      dvf_loss: 1
-      dvf_loss_relative: 0
-      y_loss: 0
-
-optimizer:
-  m_opt:
-    _target_: torch.optim.SGD
-    lr: 0.01
-  s_opt:
+  opt:
     _target_: torch.optim.SGD
     lr: 0.001
     momentum: 0.9
-  m_clip: null
-  s_clip: 100.0
+  loss:
+    _target_: nigbms.modules.losses.SurrogateSolverLoss
+    weights:
+      dvf_loss: 1
+  clip: 100.0
+  cfg:
+    grad_type: cv_fwd
+    jvp_type: forwardAD
+    eps: 1.0e-10
+    Nv: 2
+    v_scale: 1.0
+    v_dist: rademacher
 
-wandb: 
-  project: minimize_testfunctions
-  mode: disabled
+opt:
+  _target_: torch.optim.SGD
+  lr: 0.01
+
+clip: null
 seed: 0
+device: cuda
+dtype: torch.float64
+
