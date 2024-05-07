@@ -38,6 +38,7 @@ class TestFunctionSolver(_Solver):
 class PytorchIterativeSolver(_Solver):
     def __init__(self, params_fix: dict, params_learn: dict) -> None:
         super().__init__(params_fix, params_learn)
+        self.history_length = params_fix.history_length
 
     def _step(self):
         raise NotImplementedError
@@ -61,7 +62,8 @@ class PytorchIterativeSolver(_Solver):
         self.maxiter = tau.maxiter
         self.r = self.b - self.A @ self.x
         self.rnorm = torch.norm(self.r, dim=(1, 2))
-        self.history = [self.rnorm]
+        self.history = torch.zeros(tau.b.shape[0], self.history_length, device=tau.b.device, dtype=tau.b.dtype)
+        self.history[:, 0] = self.rnorm
         self.bnorm = torch.norm(self.b, dim=(1, 2))
 
     def forward(self, tau: Task, theta: TensorDict) -> Tensor:
@@ -76,14 +78,14 @@ class PytorchIterativeSolver(_Solver):
             Tensor: The stacked history of absolute residual norm. Shape: (bs, niter, 1)
         """
         self._setup(tau, theta)
-        for _ in range(self.maxiter.max()):
+        for i in range(self.maxiter.max()):
             self._step()
-            self.history.append(self.rnorm)
+            self.history[:, i] = self.rnorm
 
-            if all(self.history[-1] < self.rtol * self.bnorm):
+            if all(self.rnorm < self.rtol * self.bnorm):
                 break
 
-        return torch.stack(self.history, dim=1)  # (bs, niter, 1)
+        return self.history  # (bs, history_length)
 
 
 class PyTorchJacobi(PytorchIterativeSolver):
@@ -92,7 +94,12 @@ class PyTorchJacobi(PytorchIterativeSolver):
 
     def _setup(self, tau: Task, theta: TensorDict):
         super()._setup(tau, theta)
-        omega = theta["omega"]
+        if "omega" in self.params_fix:
+            omega = self.params_fix.omega
+        elif "omega" in theta.keys():
+            omega = theta.omega
+        else:
+            omega = 1.0
 
         D_inv = torch.diag_embed(1 / self.A.diagonal(dim1=1, dim2=2), dim1=1, dim2=2)
         I = eyes_like(self.A)  # noqa: E741

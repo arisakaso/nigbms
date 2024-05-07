@@ -3,14 +3,16 @@ import hydra
 import torch
 import wandb
 from hydra.utils import instantiate
-from lightning import LightningModule, Trainer, seed_everything
+from lightning import LightningModule, Trainer
 from omegaconf import DictConfig, OmegaConf
 from pytorch_lightning.loggers.wandb import WandbLogger
 
+from nigbms.modules.wrapper import WrappedSolver
 from nigbms.utils.resolver import calc_in_channels, calc_in_dim
 
 OmegaConf.register_new_resolver("calc_in_dim", calc_in_dim)
 OmegaConf.register_new_resolver("calc_in_channels", calc_in_channels)
+OmegaConf.register_new_resolver("eval", eval)
 
 
 # %%
@@ -23,11 +25,12 @@ class NIGBMS(LightningModule):
         self.meta_solver = instantiate(cfg.meta_solver)
         self.solver = instantiate(cfg.solver)
         self.surrogate = instantiate(cfg.surrogate)
-        self.wrapped_solver = instantiate(cfg.wrapper, solver=self.solver, surrogate=self.surrogate)
+        self.wrapped_solver = WrappedSolver(solver=self.solver, surrogate=self.surrogate, **cfg.wrapper)
         self.loss = instantiate(cfg.loss)
 
     def on_fit_start(self):
-        seed_everything(seed=self.cfg.seed, workers=True)
+        pass
+        # seed_everything(seed=self.cfg.seed, workers=True)
 
     # def forward(self, tau: Task):
     #     theta = self.meta_solver(tau)
@@ -43,34 +46,34 @@ class NIGBMS(LightningModule):
         tau = batch
         theta = self.meta_solver(tau)
         y = self.wrapped_solver(tau, theta)
-        loss = self.loss(tau, theta, y)
-        self.manual_backward(loss, create_graph=True, inputs=[self.meta_solver.parameters()])
+        loss_dict = self.loss(tau, theta, y)
+        self.manual_backward(loss_dict["loss"], create_graph=True, inputs=list(self.meta_solver.parameters()))
         opt.step()
 
     def validation_step(self, batch, batch_idx):
         tau = batch
         theta = self.meta_solver(tau)
         y = self.solver(tau, theta)  # no surrogate
-        loss = self.loss(tau, theta, y)
+        loss_dict = self.loss(tau, theta, y)
 
-        self.log("val/loss", loss)
+        self.log_dict(loss_dict)
 
     def test_step(self, batch, batch_idx, dataloader_idx):
         tau = batch
         theta = self.meta_solver(tau)
         y = self.solver(tau, theta)  # no surrogate
-        loss = self.loss(tau, theta, y)
+        loss_dict = self.loss(tau, theta, y)
 
-        self.log("test/loss", loss)
+        self.log_dict(loss_dict)
 
     def configure_optimizers(self):
-        opt = instantiate(self.cfg.optimizers.opt, params=self.meta_solver.parameters())
-        sch = instantiate(self.cfg.optimizers.sch, optimizer=opt)
+        opt = instantiate(self.cfg.opt, params=self.meta_solver.parameters())
+        sch = instantiate(self.cfg.sch, optimizer=opt)
 
         return {
             "optimizer": opt,
             "lr_scheduler": sch,
-            "monitor": self.cfg.optimizers.monitor,
+            "monitor": self.cfg.monitor,
         }
 
 
@@ -80,8 +83,10 @@ def main(cfg: DictConfig):
     wandb.init(project=cfg.wandb.project, config=wandb.config, mode=cfg.wandb.mode)
     logger = WandbLogger(settings=wandb.Settings(start_method="thread"))
 
-    torch.set_default_tensor_type(torch.cuda.DoubleTensor)
-    seed_everything(seed=cfg.seed, workers=True)
+    # torch.set_default_tensor_type(torch.cuda.DoubleTensor)
+    torch.set_default_dtype(torch.float64)
+    torch.set_default_device("cuda")
+    # seed_everything(seed=cfg.seed, workers=True)
 
     callbacks = [instantiate(c) for c in cfg.callbacks]
     data_module = instantiate(cfg.data)

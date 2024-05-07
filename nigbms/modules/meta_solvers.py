@@ -18,8 +18,8 @@ class MetaSolver(Module):
         features = []
         for k in self.features.keys():
             if k in tau.features:
-                features.append(tau[k])
-        features = torch.cat(features, dim=1)  # (bs, dim)
+                features.append(tau.features[k])
+        features = torch.cat(features, dim=1).squeeze()  # (bs, dim)
         return features
 
     def forward(self, tau: Task) -> TensorDict:
@@ -29,7 +29,7 @@ class MetaSolver(Module):
             raise NotImplementedError(f"Model {self.model._get_name()} not implemented")
 
         y = self.model(x)
-        theta = TensorDict(y)
+        theta = TensorDict({"x0": y.unsqueeze(-1)})  # TODO: write function to construct theta
         return theta
 
 

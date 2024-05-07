@@ -2,7 +2,7 @@ import pydevd  # noqa
 import torch
 from torch import Tensor, randn_like  # noqa
 from torch.autograd import Function, grad
-
+from hydra.utils import instantiate
 from nigbms.modules.solvers import _Solver
 from nigbms.utils.convert import tensordict2list
 from nigbms.utils.solver import bms
@@ -42,14 +42,14 @@ class register_custom_grad_fn(Function):
             f_fwds[i] = list(map(lambda x: bms(x, dvL), vs))
 
             if d["cfg"].grad_type in ["f_hat_true", "cv_fwd"]:
-                d["s_opt"].zero_grad()
+                d["opt"].zero_grad()
                 y_hat, dvf_hat = torch.func.jvp(d["f_hat"], (theta,), (v,))  # forward AD
                 f_hat_trues[i] = grad(y_hat, thetas, grad_outputs=grad_y, retain_graph=True)
-                d["s_loss"](d["y"], y_hat, dvf, dvf_hat)["s_loss"].mean().backward(inputs=d["params"])
-                if d["s_clip"]:
-                    torch.nn.utils.clip_grad_norm_(d["params"], d["s_clip"])
+                d["loss"](d["y"], y_hat, dvf, dvf_hat)["s_loss"].mean().backward(inputs=d["params"])
+                if d["clip"]:
+                    torch.nn.utils.clip_grad_norm_(d["params"], d["clip"])
 
-                d["s_opt"].step()
+                d["opt"].step()
 
                 dvL_hat = torch.sum(grad_y * dvf_hat, dim=1)
                 f_hat_fwd = map(lambda x: bms(x, dvL_hat), vs)
@@ -62,13 +62,13 @@ class register_custom_grad_fn(Function):
 
 # TODO: refactor this using dataclass
 class WrappedSolver(_Solver):
-    def __init__(self, solver: _Solver, surrogate: _Solver, s_opt, s_loss, s_clip, cfg: dict) -> None:
+    def __init__(self, solver: _Solver, surrogate: _Solver, opt, loss, clip, cfg: dict) -> None:
         super().__init__(solver.params_fix, surrogate.params_learn)
         self.solver = solver
         self.surrogate = surrogate
-        self.s_opt = s_opt
-        self.s_loss = s_loss
-        self.s_clip = s_clip
+        self.opt = instantiate(opt, params=self.surrogate.parameters())
+        self.loss = instantiate(loss)
+        self.clip = clip
         self.cfg = cfg
 
     def forward(self, tau: dict, theta: Tensor) -> Tensor:
@@ -82,11 +82,11 @@ class WrappedSolver(_Solver):
                 "theta": theta,
                 "f": lambda x: self.solver(tau, x),
                 "f_hat": lambda x: self.surrogate(tau, x),
-                "s_opt": self.s_opt,
-                "s_loss": self.s_loss,
+                "opt": self.opt,
+                "loss": self.loss,
                 "cfg": self.cfg,
                 "params": list(self.surrogate.parameters()),
-                "s_clip": self.s_clip,
+                "clip": self.clip,
             }
             y = register_custom_grad_fn.apply(d, *thetas)
             return y

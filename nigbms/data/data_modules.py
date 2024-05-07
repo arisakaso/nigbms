@@ -60,11 +60,19 @@ class OfflineDataset(Dataset):
         else:
             A = torch.load(self.data_dir + f"/{idx}_A.pt")
 
-        b = torch.load(self.data_dir + f"/{idx}_b.pt")
-        x = torch.load(self.data_dir + f"/{idx}_x.pt")
+        A = A.to_dense()  # TODO: fix this coo case
+        b = torch.load(self.data_dir + f"/{idx}_b.pt").reshape(-1, 1)
+        x = torch.load(self.data_dir + f"/{idx}_x.pt").reshape(-1, 1)
         rtol = self.rtol_dist.sample()
-        maxiter = self.maxiter_dist.sample()
-        features = TensorDict({"rtol": rtol.clone(), "maxiter": maxiter.clone()})
+        maxiter = self.maxiter_dist.sample().type(torch.int)
+        features = TensorDict(
+            {
+                "rtol": rtol.clone(),
+                "maxiter": maxiter.clone(),
+                "b": b.clone(),
+                "x": x.clone(),
+            }
+        )
 
         tau = Task(A, b, x, rtol, maxiter, features)
 
@@ -124,13 +132,31 @@ class OfflineDataModule(LightningDataModule):
             )
 
     def train_dataloader(self):
-        return DataLoader(self.train_ds, batch_size=self.batch_size, shuffle=True, collate_fn=offline_collate_fn)
+        return DataLoader(
+            self.train_ds,
+            batch_size=self.batch_size,
+            shuffle=True,
+            collate_fn=offline_collate_fn,
+            generator=torch.Generator(device="cuda"),  # not sure why this is necessary
+        )
 
     def val_dataloader(self):
-        return DataLoader(self.val_ds, batch_size=self.batch_size, shuffle=False, collate_fn=offline_collate_fn)
+        return DataLoader(
+            self.val_ds,
+            batch_size=self.batch_size,
+            shuffle=False,
+            collate_fn=offline_collate_fn,
+            generator=torch.Generator(device="cuda"),
+        )
 
     def test_dataloader(self):
-        return DataLoader(self.test_ds, batch_size=self.batch_size, shuffle=False, collate_fn=offline_collate_fn)
+        return DataLoader(
+            self.test_ds,
+            batch_size=self.batch_size,
+            shuffle=False,
+            collate_fn=offline_collate_fn,
+            generator=torch.Generator(device="cuda"),
+        )
 
 
 # %%

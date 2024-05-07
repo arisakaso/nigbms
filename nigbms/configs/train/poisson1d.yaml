@@ -11,10 +11,10 @@ wandb:
 data:
   _target_: nigbms.data.data_modules.OfflineDataModule
   data_dir: /home/arisaka/nigbms/data/raw/poisson1d/2024-05-06_06-07-05
-  ds_sizes: [100, 100, 100]
+  ds_sizes: [1000, 1000, 1000]
   fixed_A: True
-  train_rtol: 1.0e-5
-  test_rtol: 1.0e-5
+  train_rtol: 1.0e-3
+  test_rtol: 1.0e-3
   train_maxiter: 1000
   test_maxiter: 1000
   batch_size: 32
@@ -22,40 +22,47 @@ data:
 meta_solver:
   _target_: nigbms.modules.meta_solvers.MetaSolver
   params_learn: 
-    x0: [100]
+    x0: 
+      - ${dim}
+      - 1
   features:
-    b: [100]
+    b: 
+      - ${dim}
   model:
     _target_: nigbms.modules.models.MLP
-    in_dim: 100
-    out_dim: 100
-    num_layers: 1
+    in_dim: ${dim}
+    out_dim: ${dim}
+    num_layers: 2
     num_neurons: 1024
     hidden_activation: nn.GELU
     output_activation: nn.Identity
     batch_normalization: False
-    weight_scale: 0.1
 
 solver:
   _target_: nigbms.modules.solvers.PyTorchJacobi
   params_fix: 
     omega: 1.0
+    history_length: ${eval:${data.test_maxiter} + 1}
   params_learn: 
-    x0: [100]
+    x0: 
+      - ${dim}
 
 surrogate:
   _target_: nigbms.modules.surrogates.SurrogateSolver
   params_fix: ${solver.params_fix}
   params_learn: ${solver.params_learn}
   features: 
-    b: [100]
-    x: [100]
-    x0: [100]
-    xn: [100]   
+    b: 
+      - ${dim}
+    x: 
+      - ${dim}
+    x0: 
+      - ${dim}
+    # xn: [100]   
   model:
     _target_: nigbms.modules.models.MLP
     in_dim: ${calc_in_dim:${surrogate.features}}
-    out_dim: 100
+    out_dim: ${solver.params_fix.history_length}
     num_layers: 1
     num_neurons: 1024
     hidden_activation: nn.GELU
@@ -74,7 +81,7 @@ wrapper:
       dvf_loss: 1
   clip: 100.0
   cfg:
-    grad_type: cv_fwd
+    grad_type: f_true
     jvp_type: forwardAD
     eps: 1.0e-10
     Nv: 2
@@ -82,12 +89,14 @@ wrapper:
     v_dist: rademacher
   
 loss:
-  _target_: src.losses.pytorch.SolverIndependentLoss
+  _target_: nigbms.modules.losses.MetaSolverLoss
   weights:
-    number_of_iterations_surrogate: 1
+    # iter_r_proxy: 1
+    e0: 1
+  reduce: True
   
 opt:
-  _target_: torch.optim.SGD
+  _target_: torch.optim.Adam
   lr: 0.01
 sch:
   _target_: torch.optim.lr_scheduler.StepLR
@@ -96,25 +105,26 @@ sch:
 
 callbacks:
   - _target_: lightning.pytorch.callbacks.EarlyStopping
-    monitor: val/loss
+    monitor: ${monitor}
     patience: 10
     mode: min
     verbose: True
   - _target_: lightning.pytorch.callbacks.LearningRateMonitor
     logging_interval: epoch
   - _target_: lightning.pytorch.callbacks.ModelCheckpoint
-    monitor: val/loss
+    monitor: ${monitor}
     mode: min
     save_top_k: 1
     save_last: True
 
 trainer:
   max_epochs: 1000
-  gpus: 1
+  accelerator: gpu
+  devices: 1
   check_val_every_n_epoch: 1
   log_every_n_steps: 1
 
 seed: 0
-monitor: val/loss
+monitor: loss
 test: False
 dim: 31
