@@ -39,16 +39,16 @@ class register_custom_grad_fn(Function):
         cv_fwds = [None] * cfg.Nv
 
         for i in range(cfg.Nv):
-            v = rademacher_like(theta)
-            _, vs = tensordict2list(v)
-
             with torch.no_grad():
+                v = rademacher_like(theta)
+                _, vs = tensordict2list(v)
+
                 if cfg.jvp_type == "forwardAD":
                     _, dvf = torch.func.jvp(f, (theta,), (v,))
                 elif cfg.jvp_type == "forwardFD":
                     dvf = (f(theta + v * cfg.eps) - y) / cfg.eps
-            dvL = torch.sum(grad_y * dvf, dim=1)
-            f_fwds[i] = list(map(lambda x: bms(x, dvL), vs))
+                dvL = torch.sum(grad_y * dvf, dim=1)
+                f_fwds[i] = list(map(lambda x: bms(x, dvL), vs))
 
             if cfg.grad_type in ["f_hat_true", "cv_fwd"]:
                 wrapper.opt.zero_grad()
@@ -63,8 +63,8 @@ class register_custom_grad_fn(Function):
                 if wrapper.clip:
                     torch.nn.utils.clip_grad_norm_(wrapper.surrogate.parameters(), wrapper.clip)
                 wrapper.opt.step()
-
-        grad_thetas = [torch.stack(x).mean(dim=0) for x in zip(*eval(cfg.grad_type + "s"), strict=False)]
+        with torch.no_grad():
+            grad_thetas = [torch.stack(x).mean(dim=0) for x in zip(*eval(cfg.grad_type + "s"), strict=False)]
 
         return None, *grad_thetas
 

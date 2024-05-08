@@ -81,6 +81,7 @@ wrapper:
     _target_: nigbms.modules.losses.SurrogateSolverLoss
     weights:
       dvf_loss: 1
+      dvL_loss: 1
     reduce: True
   clip: 100.0
   cfg:
