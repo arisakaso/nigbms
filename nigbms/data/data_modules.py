@@ -96,6 +96,7 @@ class OfflineDataModule(LightningDataModule):
         train_maxiter: Union[int, Tuple[int, int]],
         test_maxiter: Union[int, Tuple[int, int]],
         batch_size: int,
+        num_workers: int,
     ) -> None:
         super().__init__()
         self.data_dir = data_dir
@@ -106,6 +107,7 @@ class OfflineDataModule(LightningDataModule):
         self.train_maxiter = train_maxiter
         self.test_maxiter = test_maxiter
         self.batch_size = batch_size
+        self.num_workers = num_workers
 
     def prepare_data(self) -> None:
         meta_df = pd.read_csv(self.data_dir + "/meta_df.csv")
@@ -137,7 +139,8 @@ class OfflineDataModule(LightningDataModule):
             batch_size=self.batch_size,
             shuffle=True,
             collate_fn=offline_collate_fn,
-            generator=torch.Generator(device="cuda"),  # not sure why this is necessary
+            num_workers=self.num_workers,
+            # generator=torch.Generator(device="cuda"),  # not sure why this is necessary
         )
 
     def val_dataloader(self):
@@ -146,7 +149,8 @@ class OfflineDataModule(LightningDataModule):
             batch_size=self.batch_size,
             shuffle=False,
             collate_fn=offline_collate_fn,
-            generator=torch.Generator(device="cuda"),
+            num_workers=self.num_workers,
+            # generator=torch.Generator(device="cuda"),
         )
 
     def test_dataloader(self):
@@ -160,16 +164,3 @@ class OfflineDataModule(LightningDataModule):
 
 
 # %%
-if __name__ == "__main__":
-    # memo
-    data_dir = "/home/arisaka/nigbms/data/raw/poisson1d/2024-05-06_06-07-05"
-    meta_dfs = {
-        "train": pd.read_csv(data_dir + "/meta_df.csv"),
-        "val": pd.read_csv(data_dir + "/meta_df.csv"),
-        "test": pd.read_csv(data_dir + "/meta_df.csv"),
-    }
-    dm = OfflineDataModule(data_dir, meta_dfs, True, 1.0e-6, 1.0e-6, 1000, 1000, 32)
-    dm.setup("fit")
-    dl = dm.train_dataloader()
-    for batch in dl:
-        print(batch)

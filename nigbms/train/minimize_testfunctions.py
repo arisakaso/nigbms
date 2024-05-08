@@ -57,7 +57,7 @@ def main(cfg):
         if cfg.clip:
             torch.nn.utils.clip_grad_norm_(theta["x"], cfg.clip)
 
-        # updates
+        # update
         opt.step()
 
 

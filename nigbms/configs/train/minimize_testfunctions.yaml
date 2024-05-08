@@ -67,7 +67,7 @@ wrapper:
     grad_type: cv_fwd
     jvp_type: forwardAD
     eps: 1.0e-10
-    Nv: 2
+    Nv: 1
     v_scale: 1.0
     v_dist: rademacher
 

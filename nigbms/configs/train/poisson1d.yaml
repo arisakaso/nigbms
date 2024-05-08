@@ -5,19 +5,20 @@ hydra:
     chdir: True
 
 wandb: 
-  project: poisson1d
-  mode: disabled
+  project: nigbms_poisson1d
+  mode: online
 
 data:
   _target_: nigbms.data.data_modules.OfflineDataModule
   data_dir: /home/arisaka/nigbms/data/raw/poisson1d/2024-05-06_06-07-05
-  ds_sizes: [1000, 1000, 1000]
+  ds_sizes: [5000, 5000, 0]
   fixed_A: True
   train_rtol: 1.0e-3
   test_rtol: 1.0e-3
   train_maxiter: 1000
   test_maxiter: 1000
-  batch_size: 32
+  batch_size: 256
+  num_workers: 32
 
 meta_solver:
   _target_: nigbms.modules.meta_solvers.MetaSolver
@@ -32,9 +33,9 @@ meta_solver:
     _target_: nigbms.modules.models.MLP
     in_dim: ${dim}
     out_dim: ${dim}
-    num_layers: 2
-    num_neurons: 1024
-    hidden_activation: nn.GELU
+    num_layers: 1
+    num_neurons: 512
+    hidden_activation: nn.SiLU
     output_activation: nn.Identity
     batch_normalization: False
 
@@ -54,37 +55,39 @@ surrogate:
   features: 
     b: 
       - ${dim}
-    x: 
-      - ${dim}
     x0: 
       - ${dim}
-    # xn: [100]   
+    # xn: 
+    #   - ${dim}
+    x: 
+      - ${dim}
   model:
     _target_: nigbms.modules.models.MLP
     in_dim: ${calc_in_dim:${surrogate.features}}
     out_dim: ${solver.params_fix.history_length}
-    num_layers: 1
+    num_layers: 3
     num_neurons: 1024
     hidden_activation: nn.GELU
     output_activation: nn.Identity
     batch_normalization: False
-    weight_scale: 0.1  
+    # weight_scale: 0.01
 
 wrapper:
   opt:
-    _target_: torch.optim.SGD
-    lr: 0.001
-    momentum: 0.9
+    _target_: torch.optim.Adam
+    lr: 5.0e-4
+    # momentum: 0.9
   loss:
     _target_: nigbms.modules.losses.SurrogateSolverLoss
     weights:
       dvf_loss: 1
+    reduce: True
   clip: 100.0
   cfg:
     grad_type: cv_fwd
     jvp_type: forwardAD
     eps: 1.0e-10
-    Nv: 2
+    Nv: 1
     v_scale: 1.0
     v_dist: rademacher
   
@@ -97,12 +100,12 @@ loss:
   
 opt:
   _target_: torch.optim.Adam
-  lr: 0.01
+  lr: 0 #5.0e-5
 sch:
-  _target_: torch.optim.lr_scheduler.StepLR
-  step_size: 100
+  _target_: torch.optim.lr_scheduler.MultiStepLR
+  milestones: [500, 750]
   gamma: 0.1
-
+  
 callbacks:
   - _target_: lightning.pytorch.callbacks.EarlyStopping
     monitor: ${monitor}
@@ -114,19 +117,20 @@ callbacks:
   - _target_: lightning.pytorch.callbacks.ModelCheckpoint
     monitor: ${monitor}
     mode: min
-    save_top_k: 1
+    save_top_k: 0
     save_last: True
 
 trainer:
-  max_epochs: 1000
+  max_epochs: 10
   accelerator: gpu
   devices: 1
-  check_val_every_n_epoch: 1
+  check_val_every_n_epoch: 10
   log_every_n_steps: 1
 
 seed: 0
-monitor: loss
-device: cuda
-dtype: ${eval:torch.float64}
+monitor: val/iter_r
+dtype: torch.float64
 test: False
 dim: 31
+compile: False
+logging: True

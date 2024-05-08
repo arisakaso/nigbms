@@ -4,6 +4,7 @@ from torch import Tensor, randn_like  # noqa
 from torch.autograd import Function, grad
 from hydra.utils import instantiate
 from nigbms.modules.solvers import _Solver
+from nigbms.data.data_modules import Task
 from nigbms.utils.convert import tensordict2list
 from nigbms.utils.solver import bms
 from nigbms.utils.solver import rademacher_like  # noqa
@@ -53,24 +54,21 @@ class register_custom_grad_fn(Function):
                 wrapper.opt.zero_grad()
                 y_hat, dvf_hat = torch.func.jvp(f_hat, (theta,), (v,))  # forward AD
                 f_hat_trues[i] = grad(y_hat, thetas, grad_outputs=grad_y, retain_graph=True)
-                wrapper.loss(y, y_hat, dvf, dvf_hat)["s_loss"].mean().backward(
-                    inputs=list(wrapper.surrogate.parameters())
-                )
-                if wrapper.clip:
-                    torch.nn.utils.clip_grad_norm_(wrapper.surrogate.parameters(), wrapper.clip)
-
-                wrapper.opt.step()
-
                 dvL_hat = torch.sum(grad_y * dvf_hat, dim=1)
                 f_hat_fwd = map(lambda x: bms(x, dvL_hat), vs)
                 cv_fwds[i] = list(map(lambda x, y, z: x - (y - z), f_fwds[i], f_hat_fwd, f_hat_trues[i]))
+
+                wrapper.loss_dict = wrapper.loss(y, y_hat, dvf, dvf_hat, dvL, dvL_hat)
+                wrapper.loss_dict["loss"].backward(inputs=list(wrapper.surrogate.parameters()))
+                if wrapper.clip:
+                    torch.nn.utils.clip_grad_norm_(wrapper.surrogate.parameters(), wrapper.clip)
+                wrapper.opt.step()
 
         grad_thetas = [torch.stack(x).mean(dim=0) for x in zip(*eval(cfg.grad_type + "s"), strict=False)]
 
         return None, *grad_thetas
 
 
-# TODO: refactor this using dataclass
 class WrappedSolver(_Solver):
     def __init__(self, solver: _Solver, surrogate: _Solver, opt, loss, clip, cfg: dict) -> None:
         super().__init__(solver.params_fix, surrogate.params_learn)
@@ -80,8 +78,9 @@ class WrappedSolver(_Solver):
         self.loss = instantiate(loss)
         self.clip = clip
         self.cfg = cfg
+        self.loss_dict = None
 
-    def forward(self, tau: dict, theta: Tensor) -> Tensor:
+    def forward(self, tau: Task, theta: Tensor) -> Tensor:
         y = self.solver(tau, theta)
         if self.cfg.grad_type == "f_true":
             return y
