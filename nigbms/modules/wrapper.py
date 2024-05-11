@@ -39,8 +39,8 @@ class register_custom_grad(Function):
 
             if cfg.grad_type in ["f_hat_true", "cv_fwd"]:
                 wrapper.opt.zero_grad()
-                y_hat, dvf_hat = torch.func.jvp(ctx.f_hat, (theta,), (v,))  # forward AD
-                f_hat_true[i] = grad(y_hat, theta, grad_outputs=grad_y, retain_graph=True)
+                y_hat, dvf_hat = torch.func.jvp(wrapper.f_hat, (theta,), (v,))  # forward AD
+                f_hat_true[i] = grad(y_hat, theta, grad_outputs=grad_y, retain_graph=True)[0]
                 dvL_hat = torch.sum(grad_y * dvf_hat, dim=1, keepdim=True)
                 f_hat_fwd = dvL_hat * v
                 cv_fwd[i] = f_fwd[i] - f_hat_fwd + f_hat_true[i]

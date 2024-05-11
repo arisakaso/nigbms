@@ -62,6 +62,7 @@ wrapper:
     _target_: nigbms.modules.losses.SurrogateSolverLoss
     weights:
       dvf_loss: 1
+    reduce: True
   clip: 100.0
   cfg:
     grad_type: cv_fwd
@@ -70,6 +71,11 @@ wrapper:
     Nv: 1
     v_scale: 1.0
     v_dist: rademacher
+
+constructor:
+  _target_: nigbms.modules.constructors.ThetaConstructor
+  params: ${solver.params_learn}
+
 
 opt:
   _target_: torch.optim.SGD

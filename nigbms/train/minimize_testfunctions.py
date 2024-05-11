@@ -4,7 +4,6 @@ import torch
 import wandb
 from hydra.utils import instantiate
 from omegaconf import OmegaConf
-from tensordict import TensorDict
 
 from nigbms.data.data_modules import Task
 from nigbms.modules.wrapper import WrappedSolver
@@ -26,14 +25,14 @@ def main(cfg):
     pl.seed_everything(seed=cfg.seed, workers=True)
 
     tau = Task()
-    x = torch.distributions.Uniform(*cfg.problem.initial_range).sample((cfg.problem.num_samples, cfg.problem.dim))
-    x.requires_grad = True
-    theta = TensorDict({"x": x})
+    theta = torch.distributions.Uniform(*cfg.problem.initial_range).sample((cfg.problem.num_samples, cfg.problem.dim))
+    theta.requires_grad = True
     solver = instantiate(cfg.solver)
     surrogate = instantiate(cfg.surrogate)
+    constructor = instantiate(cfg.constructor)
     loss = torch.sum
-    opt = instantiate(cfg.opt, params=[theta["x"]])
-    wrapped_solver = WrappedSolver(solver=solver, surrogate=surrogate, **cfg.wrapper)
+    opt = instantiate(cfg.opt, params=[theta])
+    wrapped_solver = WrappedSolver(solver=solver, surrogate=surrogate, constructor=constructor, **cfg.wrapper)
 
     for i in range(1, cfg.problem.num_iter + 1):
         # clear gradients
@@ -43,12 +42,12 @@ def main(cfg):
         y = wrapped_solver(tau, theta)
 
         # backprop for theta
-        loss(y).backward(inputs=[theta["x"]], create_graph=True)
+        loss(y).backward(inputs=theta, create_graph=True)
 
         # logging
-        ref = theta["x"].clone()  # copy to get the true gradient
+        ref = theta.clone()  # copy to get the true gradient
         f_true = torch.autograd.grad(solver.f(ref).sum(), ref)[0]
-        sim = torch.cosine_similarity(f_true, theta["x"].grad, dim=1, eps=1e-20).detach()
+        sim = torch.cosine_similarity(f_true, theta.grad, dim=1, eps=1e-20).detach()
         wandb.log({"ymean": y.mean(), "ymax": y.max(), "ymin": y.min(), "cos_sim": sim.mean()})
         if i % 100 == 0:
             print(f"{i}, ymean: {y.mean():.3g}, ymax: {y.max():.3g}, ymin: {y.min():.3g}, cos_sim: {sim.mean():.3g}")
