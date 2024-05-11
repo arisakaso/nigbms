@@ -6,7 +6,7 @@ hydra:
 
 wandb: 
   project: nigbms_poisson1d
-  mode: online
+  mode: disabled
 
 data:
   _target_: nigbms.data.data_modules.OfflineDataModule
@@ -47,6 +47,7 @@ solver:
   params_learn: 
     x0: 
       - ${dim}
+      - 1
 
 surrogate:
   _target_: nigbms.modules.surrogates.SurrogateSolver
@@ -57,35 +58,39 @@ surrogate:
       - ${dim}
     x0: 
       - ${dim}
-    # xn: 
-    #   - ${dim}
-    x: 
+    xn: 
       - ${dim}
+    # x: 
+    #   - ${dim}
   model:
     _target_: nigbms.modules.models.MLP
     in_dim: ${calc_in_dim:${surrogate.features}}
     out_dim: ${solver.params_fix.history_length}
-    num_layers: 3
+    num_layers: 1
     num_neurons: 1024
     hidden_activation: nn.GELU
     output_activation: nn.Identity
     batch_normalization: False
     # weight_scale: 0.01
 
+constructor:
+  _target_: nigbms.modules.constructors.ThetaConstructor
+  params: ${solver.params_learn}
+
 wrapper:
   opt:
     _target_: torch.optim.Adam
-    lr: 5.0e-4
+    lr: 1.0e-3
     # momentum: 0.9
   loss:
     _target_: nigbms.modules.losses.SurrogateSolverLoss
     weights:
       dvf_loss: 1
-      dvL_loss: 1
+      # dvL_loss: 1
     reduce: True
   clip: 100.0
   cfg:
-    grad_type: cv_fwd
+    grad_type: f_fwd
     jvp_type: forwardAD
     eps: 1.0e-10
     Nv: 1
@@ -101,7 +106,7 @@ loss:
   
 opt:
   _target_: torch.optim.Adam
-  lr: 0 #5.0e-5
+  lr: 5.0e-5
 sch:
   _target_: torch.optim.lr_scheduler.MultiStepLR
   milestones: [500, 750]
@@ -134,4 +139,4 @@ dtype: torch.float64
 test: False
 dim: 31
 compile: False
-logging: True
+logging: False

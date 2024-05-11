@@ -25,8 +25,11 @@ class NIGBMS(LightningModule):
         self.meta_solver = instantiate(cfg.meta_solver)
         self.solver = instantiate(cfg.solver)
         self.surrogate = instantiate(cfg.surrogate)
-        self.wrapped_solver = WrappedSolver(solver=self.solver, surrogate=self.surrogate, **cfg.wrapper)
-        self.loss = instantiate(cfg.loss)
+        self.constructor = instantiate(cfg.constructor)
+        self.wrapped_solver = WrappedSolver(
+            solver=self.solver, surrogate=self.surrogate, constructor=self.constructor, **cfg.wrapper
+        )
+        self.loss = instantiate(cfg.loss, constructor=self.constructor)
         if cfg.compile:
             self.solver.compile()
             self.wrapped_solver.compile()
@@ -46,7 +49,7 @@ class NIGBMS(LightningModule):
         tau = batch
         theta = self.meta_solver(tau)
         if self.cfg.logging:
-            theta["x0"].retain_grad()
+            theta.retain_grad()
         y = self.wrapped_solver(tau, theta)
         tau.features["xn"] = self.wrapped_solver.solver.x  # add xn for surrogate input
         loss_dict = self.loss(tau, theta, y)
@@ -71,7 +74,7 @@ class NIGBMS(LightningModule):
     def validation_step(self, batch, batch_idx):
         tau = batch
         theta = self.meta_solver(tau)
-        y = self.solver(tau, theta)  # no surrogate
+        y = self.wrapped_solver(tau, theta, mode="test")  # no surrogate
         loss_dict = self.loss(tau, theta, y)
 
         self.log_dict(self._add_prefix(loss_dict, "val/"))
@@ -79,7 +82,7 @@ class NIGBMS(LightningModule):
     def test_step(self, batch, batch_idx):
         tau = batch
         theta = self.meta_solver(tau)
-        y = self.solver(tau, theta)  # no surrogate
+        y = self.wrapped_solver(tau, theta, mode="test")  # no surrogate
         loss_dict = self.loss(tau, theta, y)
 
         self.log_dict(self._add_prefix(loss_dict, "test/"))

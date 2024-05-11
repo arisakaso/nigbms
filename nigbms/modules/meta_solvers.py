@@ -28,8 +28,7 @@ class MetaSolver(Module):
         else:
             raise NotImplementedError(f"Model {self.model._get_name()} not implemented")
 
-        y = self.model(x)
-        theta = TensorDict({"x0": y.unsqueeze(-1)})  # TODO: write function to construct theta
+        theta = self.model(x)
         return theta
 
 

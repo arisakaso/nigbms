@@ -1,7 +1,51 @@
+import numpy as np
 import torch
+from tensordict import TensorDict
 from torch import Tensor
 from torch.nn import Module
 from torch.nn import functional as F
+
+
+class _Decoder(Module):
+    def __init__(self, in_dim: int, params_out) -> None:
+        super().__init__()
+        self.in_dim = in_dim
+        self.params_out = params_out
+
+    def forward(self, theta: Tensor) -> TensorDict:
+        raise NotImplementedError
+
+
+class ThetaConstructor(Module):
+    def __init__(self, params):
+        super().__init__()
+        self.params = params
+
+    def forward(self, theta: Tensor) -> TensorDict:
+        assert theta.shape[-1] == sum([np.prod(v) for v in self.params.values()])
+        theta_dict = TensorDict({})
+        idx = 0
+        for k, shape in self.params.items():
+            size = np.prod(shape)
+            theta_dict[k] = theta[:, idx : idx + size].reshape(-1, *shape)
+            idx += size
+        return theta_dict
+
+
+class SinDecoder(_Decoder):
+    def __init__(self, in_dim: int = 128, out_dim: int = 128):
+        super().__init__(in_dim, out_dim)
+        self.basis = torch.sin(
+            torch.arange(1, out_dim + 1).unsqueeze(-1)
+            * torch.tensor([i / (out_dim + 1) for i in range(1, out_dim + 1)])
+            * torch.pi
+        )
+        self.basis = self.basis[:, :in_dim].unsqueeze(0)  # (1, out_dim, n_basis)
+
+    def forward(self, theta: Tensor) -> Tensor:
+        decoded_theta = torch.matmul(self.basis, theta)  # (bs, out_dim, 1)
+        TensorDict({"x0": y.unsqueeze(-1)})  # TODO: write function to construct theta
+        return decoded_theta.squeeze()
 
 
 class InterpolateDecoder(Module):
@@ -10,10 +54,10 @@ class InterpolateDecoder(Module):
         self.out_dim = out_dim
         self.mode = mode
 
-    def forward(self, signal: Tensor) -> Tensor:
-        signal = signal.unsqueeze(1)
-        scale_factor = self.out_dim // signal.shape[-1]
-        interpolated_signal = F.interpolate(signal, scale_factor=scale_factor, mode=self.mode, align_corners=True)
+    def forward(self, x: Tensor) -> Tensor:
+        x = x.unsqueeze(1)
+        scale_factor = self.out_dim // x.shape[-1]
+        interpolated_signal = F.interpolate(x, scale_factor=scale_factor, mode=self.mode, align_corners=True)
 
         return interpolated_signal.squeeze(1)
 
@@ -55,24 +99,6 @@ class IFFTDecoder(Module):
         freq_signal = torch.view_as_complex(freq_signal.reshape(-1, n_components, 2))
         signal = torch.fft.irfft(freq_signal, n=self.out_dim, dim=-1)
         return signal
-
-
-class SinDecoder(Module):
-    def __init__(self, out_dim: int = 128, in_dim: int = 128):
-        super().__init__()
-        self.out_dim = out_dim
-        self.basis = torch.sin(
-            torch.arange(1, out_dim + 1).unsqueeze(-1)
-            * torch.tensor([i / (out_dim + 1) for i in range(1, out_dim + 1)])
-            * torch.pi
-        )
-        self.basis = self.basis[:, :in_dim].unsqueeze(0).cuda()  # (1, out_dim, n_basis)
-
-    def forward(self, freq_signal: Tensor) -> Tensor:
-        # freq_signal: (bs, n_basis)
-        signal = torch.matmul(self.basis, freq_signal.unsqueeze(-1))  # (bs, out_dim, 1)
-
-        return signal.squeeze()
 
 
 class SinEncoder(Module):

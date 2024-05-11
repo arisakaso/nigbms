@@ -29,12 +29,15 @@ class SurrogateSolverLoss(Module):
 
 
 class MetaSolverLoss(Module):
-    def __init__(self, weights: dict, reduce: bool) -> None:
+    def __init__(self, weights: dict, reduce: bool, constructor) -> None:
         super().__init__()
         self.weights = weights
         self.reduce = reduce
+        self.constructor = constructor
 
     def forward(self, tau, theta, history):
+        theta = self.constructor(theta)
+
         bnorm = norm(tau.b, dim=(1, 2))  # (bs,)
         xnorm = norm(tau.x, dim=(1, 2))  # (bs,)
         rtol_bnorm = (tau.rtol * bnorm).unsqueeze(-1)  # (bs, 1)
