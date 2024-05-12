@@ -6,7 +6,7 @@ hydra:
 
 wandb: 
   project: nigbms_poisson1d
-  mode: disabled
+  mode: online
 
 data:
   _target_: nigbms.data.data_modules.OfflineDataModule
@@ -39,7 +39,7 @@ meta_solver:
     batch_normalization: False
     init_weight: 
       dist: uniform
-      scale: 1.0e-5
+      scale: 1.0e-3
 
 solver:
   _target_: nigbms.modules.solvers.PyTorchJacobi

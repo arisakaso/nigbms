@@ -36,6 +36,7 @@ class OfflineDataset(Dataset):
 
         if fixed_A:
             self.fixed_A = torch.load(data_dir + "/A.pt")
+            self.fixed_A = self.fixed_A.to_dense()  # TODO: remove this line
 
         if isinstance(rtol, tuple):
             self.rtol_dist = LogUniform(rtol[0], rtol[1])
@@ -60,7 +61,6 @@ class OfflineDataset(Dataset):
         else:
             A = torch.load(self.data_dir + f"/{idx}_A.pt")
 
-        A = A.to_dense()  # TODO: fix this coo case
         b = torch.load(self.data_dir + f"/{idx}_b.pt").reshape(-1, 1)
         x = torch.load(self.data_dir + f"/{idx}_x.pt").reshape(-1, 1)
         rtol = self.rtol_dist.sample()
@@ -140,7 +140,6 @@ class OfflineDataModule(LightningDataModule):
             shuffle=True,
             collate_fn=offline_collate_fn,
             num_workers=self.num_workers,
-            # generator=torch.Generator(device="cuda"),  # not sure why this is necessary
         )
 
     def val_dataloader(self):
@@ -150,7 +149,6 @@ class OfflineDataModule(LightningDataModule):
             shuffle=False,
             collate_fn=offline_collate_fn,
             num_workers=self.num_workers,
-            # generator=torch.Generator(device="cuda"),
         )
 
     def test_dataloader(self):

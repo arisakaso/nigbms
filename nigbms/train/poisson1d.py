@@ -50,7 +50,7 @@ class NIGBMS(LightningModule):
         theta = self.meta_solver(tau)
         if self.cfg.logging:
             theta.retain_grad()
-        y = self.wrapped_solver(tau, theta)
+        y = self.wrapped_solver(tau, theta, mode="test")
         tau.features["xn"] = self.wrapped_solver.solver.x  # add xn for surrogate input
         loss_dict = self.loss(tau, theta, y)
         self.manual_backward(loss_dict["loss"], create_graph=True, inputs=list(self.meta_solver.parameters()))
@@ -67,7 +67,13 @@ class NIGBMS(LightningModule):
         opt.step()
         sch.step()
 
-        self.log_dict(self._add_prefix(loss_dict, "train/"), prog_bar=True)
+        self.log_dict(
+            self._add_prefix(loss_dict, "train/"),
+            logger=True,
+            on_epoch=True,
+            on_step=False,
+            prog_bar=True,
+        )
         if self.wrapped_solver.loss_dict:
             self.log_dict(self._add_prefix(self.wrapped_solver.loss_dict, "surrogate/"), prog_bar=True)
 
