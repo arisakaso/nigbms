@@ -50,7 +50,7 @@ class NIGBMS(LightningModule):
         theta = self.meta_solver(tau)
         if self.cfg.logging:
             theta.retain_grad()
-        y = self.wrapped_solver(tau, theta, mode="test")
+        y = self.wrapped_solver(tau, theta)
         tau.features["xn"] = self.wrapped_solver.solver.x  # add xn for surrogate input
         loss_dict = self.loss(tau, theta, y)
         self.manual_backward(loss_dict["loss"], create_graph=True, inputs=list(self.meta_solver.parameters()))

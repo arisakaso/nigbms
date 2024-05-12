@@ -11,6 +11,8 @@ wandb:
 data:
   _target_: nigbms.data.data_modules.OfflineDataModule
   data_dir: /home/arisaka/nigbms/data/raw/poisson1d/2024-05-12_12-33-14
+  # /home/arisaka/nigbms/data/raw/poisson1d/2024-05-12_10-24-19
+  # /home/arisaka/nigbms/data/raw/poisson1d/2024-05-12_12-33-14
   ds_sizes: [5000, 5000, 0]
   fixed_A: True
   train_rtol: 1.0e-3
@@ -68,7 +70,7 @@ surrogate:
     _target_: nigbms.modules.models.MLP
     in_dim: ${calc_in_dim:${surrogate.features}}
     out_dim: ${solver.params_fix.history_length}
-    num_layers: 1
+    num_layers: 2
     num_neurons: 1024
     hidden_activation: nn.GELU
     output_activation: nn.Identity
@@ -88,7 +90,7 @@ constructor:
 wrapper:
   opt:
     _target_: torch.optim.Adam
-    lr: 1.0e-3
+    lr: 1.0e-4
     # momentum: 0.9
   loss:
     _target_: nigbms.modules.losses.SurrogateSolverLoss
@@ -98,10 +100,10 @@ wrapper:
     reduce: True
   clip: 100.0
   cfg:
-    grad_type: f_true
+    grad_type: f_fwd
     jvp_type: forwardAD
     eps: 1.0e-10
-    Nv: 1
+    Nv: 4
     v_scale: 1.0
     v_dist: rademacher
   
@@ -114,7 +116,7 @@ loss:
   
 opt:
   _target_: torch.optim.Adam
-  lr: 1.0e-5
+  lr: 1.0e-4
 sch:
   _target_: torch.optim.lr_scheduler.MultiStepLR
   milestones: [100]
