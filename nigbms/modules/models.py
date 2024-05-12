@@ -35,7 +35,7 @@ class MLP(Module):
         hidden_activation,
         output_activation,
         batch_normalization,
-        weight_scale=None,
+        init_weight=None,
         dropout=0,
     ):
         super(MLP, self).__init__()
@@ -62,10 +62,14 @@ class MLP(Module):
         self.layers.append(eval(output_activation)())
 
         # initialize weights
-        if weight_scale is not None:
+        if init_weight is not None:
             for layer in self.layers:
                 if isinstance(layer, nn.Linear):
-                    nn.init.normal_(layer.weight, mean=0, std=weight_scale)
+                    if init_weight.dist == "normal":
+                        nn.init.normal_(layer.weight, mean=0, std=init_weight.scale)
+                    elif init_weight.dist == "uniform":
+                        nn.init.uniform_(layer.weight, a=-init_weight.scale, b=init_weight.scale)
+                        nn.init.uniform_(layer.bias, a=-init_weight.scale, b=init_weight.scale)
 
     def forward(self, x: Tensor) -> Tensor:
         return self.layers(x)

@@ -1,35 +1,41 @@
 import numpy as np
 import torch
+from hydra.utils import instantiate
 from tensordict import TensorDict
 from torch import Tensor
 from torch.nn import Module
 from torch.nn import functional as F
 
 
-class _Decoder(Module):
-    def __init__(self, in_dim: int, params_out) -> None:
-        super().__init__()
-        self.in_dim = in_dim
-        self.params_out = params_out
-
-    def forward(self, theta: Tensor) -> TensorDict:
-        raise NotImplementedError
-
-
 class ThetaConstructor(Module):
     def __init__(self, params):
         super().__init__()
         self.params = params
+        self.decoders = {k: instantiate(v.decoder) for k, v in self.params.items() if v.decoder is not None}
 
     def forward(self, theta: Tensor) -> TensorDict:
-        assert theta.shape[-1] == sum([np.prod(v) for v in self.params.values()])
         theta_dict = TensorDict({})
         idx = 0
-        for k, shape in self.params.items():
-            size = np.prod(shape)
-            theta_dict[k] = theta[:, idx : idx + size].reshape(-1, *shape)
-            idx += size
+        for k, v in self.params.items():
+            if k in self.decoders:
+                in_dim = self.decoders[k].in_dim
+                param = self.decoders[k](theta[:, idx : idx + in_dim])
+            else:
+                in_dim = np.prod(v.shape)
+                param = theta[:, idx : idx + in_dim]
+            theta_dict[k] = param.reshape(-1, *v.shape)
+            idx += in_dim
         return theta_dict
+
+
+class _Decoder(Module):
+    def __init__(self, in_dim: int, out_dim) -> None:
+        super().__init__()
+        self.in_dim = in_dim
+        self.out_dim = out_dim
+
+    def forward(self, x: Tensor) -> Tensor:
+        raise NotImplementedError
 
 
 class SinDecoder(_Decoder):
@@ -41,10 +47,10 @@ class SinDecoder(_Decoder):
             * torch.pi
         )
         self.basis = self.basis[:, :in_dim].unsqueeze(0)  # (1, out_dim, n_basis)
+        self.basis = self.basis.cuda()
 
     def forward(self, theta: Tensor) -> Tensor:
-        decoded_theta = torch.matmul(self.basis, theta)  # (bs, out_dim, 1)
-        TensorDict({"x0": y.unsqueeze(-1)})  # TODO: write function to construct theta
+        decoded_theta = torch.matmul(self.basis, theta.unsqueeze(-1))  # (bs, out_dim, 1)
         return decoded_theta.squeeze()
 
 

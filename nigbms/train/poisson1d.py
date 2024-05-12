@@ -67,7 +67,7 @@ class NIGBMS(LightningModule):
         opt.step()
         sch.step()
 
-        self.log_dict(self._add_prefix(loss_dict, "train/"))
+        self.log_dict(self._add_prefix(loss_dict, "train/"), prog_bar=True)
         if self.wrapped_solver.loss_dict:
             self.log_dict(self._add_prefix(self.wrapped_solver.loss_dict, "surrogate/"), prog_bar=True)
 
@@ -77,7 +77,7 @@ class NIGBMS(LightningModule):
         y = self.wrapped_solver(tau, theta, mode="test")  # no surrogate
         loss_dict = self.loss(tau, theta, y)
 
-        self.log_dict(self._add_prefix(loss_dict, "val/"))
+        self.log_dict(self._add_prefix(loss_dict, "val/"), prog_bar=True)
 
     def test_step(self, batch, batch_idx):
         tau = batch

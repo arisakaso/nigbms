@@ -10,22 +10,21 @@ wandb:
 
 data:
   _target_: nigbms.data.data_modules.OfflineDataModule
-  data_dir: /home/arisaka/nigbms/data/raw/poisson1d/2024-05-06_06-07-05
+  data_dir: /home/arisaka/nigbms/data/raw/poisson1d/2024-05-12_12-33-14
   ds_sizes: [5000, 5000, 0]
   fixed_A: True
   train_rtol: 1.0e-3
   test_rtol: 1.0e-3
-  train_maxiter: 1000
-  test_maxiter: 1000
+  train_maxiter: 10_000
+  test_maxiter: 10_000
   batch_size: 256
   num_workers: 32
 
 meta_solver:
   _target_: nigbms.modules.meta_solvers.MetaSolver
   params_learn: 
-    x0: 
+    theta: 
       - ${dim}
-      - 1
   features:
     b: 
       - ${dim}
@@ -33,11 +32,14 @@ meta_solver:
     _target_: nigbms.modules.models.MLP
     in_dim: ${dim}
     out_dim: ${dim}
-    num_layers: 1
+    num_layers: 0
     num_neurons: 512
     hidden_activation: nn.SiLU
     output_activation: nn.Identity
     batch_normalization: False
+    init_weight: 
+      dist: uniform
+      scale: 1.0e-5
 
 solver:
   _target_: nigbms.modules.solvers.PyTorchJacobi
@@ -71,11 +73,17 @@ surrogate:
     hidden_activation: nn.GELU
     output_activation: nn.Identity
     batch_normalization: False
-    # weight_scale: 0.01
 
 constructor:
   _target_: nigbms.modules.constructors.ThetaConstructor
-  params: ${solver.params_learn}
+  _recursive_: False
+  params: 
+    x0:
+      decoder: 
+        _target_: nigbms.modules.constructors.SinDecoder
+        in_dim: ${dim}
+        out_dim: ${dim}
+      shape: ${solver.params_learn.x0}
 
 wrapper:
   opt:
@@ -90,7 +98,7 @@ wrapper:
     reduce: True
   clip: 100.0
   cfg:
-    grad_type: f_fwd
+    grad_type: f_true
     jvp_type: forwardAD
     eps: 1.0e-10
     Nv: 1
@@ -101,15 +109,15 @@ loss:
   _target_: nigbms.modules.losses.MetaSolverLoss
   weights:
     iter_r_proxy: 1
-    # e0: 1
+    # r0: 1
   reduce: True
   
 opt:
   _target_: torch.optim.Adam
-  lr: 5.0e-5
+  lr: 1.0e-5
 sch:
   _target_: torch.optim.lr_scheduler.MultiStepLR
-  milestones: [500, 750]
+  milestones: [100]
   gamma: 0.1
   
 callbacks:
@@ -124,10 +132,10 @@ callbacks:
     monitor: ${monitor}
     mode: min
     save_top_k: 0
-    save_last: True
+    save_last: False
 
 trainer:
-  max_epochs: 10
+  max_epochs: 100
   accelerator: gpu
   devices: 1
   check_val_every_n_epoch: 10
