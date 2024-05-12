@@ -16,7 +16,7 @@ class SurrogateSolver(_Solver):
         for k in self.features.keys():
             if k in theta:
                 features.append(theta[k])
-            if k in tau.features:
+            elif k in tau.features:
                 features.append(tau.features[k])
         features = torch.cat(features, dim=1).squeeze()  # (bs, dim)
         return features
@@ -26,7 +26,7 @@ class SurrogateSolver(_Solver):
         for k in self.features.keys():
             if k in theta:
                 features.append(theta[k])
-            if k in tau:
+            elif k in tau:
                 features.append(tau[k])
         features = torch.cat(features, dim=1).unsqueeze(1)  # (bs, dim)
 

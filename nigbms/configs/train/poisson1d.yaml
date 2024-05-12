@@ -6,7 +6,7 @@ hydra:
 
 wandb: 
   project: nigbms_poisson1d
-  mode: online
+  mode: disabled
 
 data:
   _target_: nigbms.data.data_modules.OfflineDataModule
@@ -20,7 +20,7 @@ data:
   train_maxiter: 10_000
   test_maxiter: 10_000
   batch_size: 256
-  num_workers: 32
+  num_workers: 0
 
 meta_solver:
   _target_: nigbms.modules.meta_solvers.MetaSolver
@@ -64,6 +64,8 @@ surrogate:
       - ${dim}
     xn: 
       - ${dim}
+    xn-x0:
+      - ${dim}
     # x: 
     #   - ${dim}
   model:
@@ -75,6 +77,9 @@ surrogate:
     hidden_activation: nn.GELU
     output_activation: nn.Identity
     batch_normalization: False
+    init_weight: 
+      dist: uniform
+      scale: 1.0e-3
 
 constructor:
   _target_: nigbms.modules.constructors.ThetaConstructor
@@ -100,7 +105,7 @@ wrapper:
     reduce: True
   clip: 100.0
   cfg:
-    grad_type: f_fwd
+    grad_type: cv_fwd
     jvp_type: forwardAD
     eps: 1.0e-10
     Nv: 4
