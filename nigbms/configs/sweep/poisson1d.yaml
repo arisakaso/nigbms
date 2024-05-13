@@ -1,0 +1,45 @@
+project: nigbms_poisson1d
+program: nigbms/train/poisson1d.py
+name: fixlr
+metric:
+  name: surrogate/sim
+method: grid
+parameters:
+  surrogate.model.init_weight.dist:
+    values:
+      - uniform
+      - normal
+  surrogate.model.init_weight.scale:
+    values:
+      - 1.0e-4
+      - 1.0e-3
+      - 1.0e-2
+      - 1.0e-1
+  surrogate.model.num_layers:
+    values:
+      - 0
+      - 1
+      - 2
+      - 3
+  surrogate.model.output_activation:
+    values:
+      - nn.GELU
+      - nn.ReLU
+      - nn.Sigmoid
+  wrapper.loss.weights.y_loss:
+    values:
+      - 0
+      - 0.1
+      - 1
+  wrapper.opt.lr:
+    values:
+      - 1.0e-4
+      - 1.0e-3
+      - 1.0e-2
+
+# for hydra compatibility
+command:
+  - ${env}
+  - python
+  - ${program}
+  - ${args_no_hyphens}

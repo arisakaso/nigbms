@@ -51,22 +51,22 @@ class NIGBMS(LightningModule):
         if self.cfg.logging:
             theta.retain_grad()
         y = self.wrapped_solver(tau, theta)
-        tau.features["xn"] = self.wrapped_solver.solver.x  # add xn for surrogate input
-        tau.features["xn-x0"] = tau.features["xn"] - tau.features["x0"]
+
         loss_dict = self.loss(tau, theta, y)
         self.manual_backward(loss_dict["loss"], create_graph=True, inputs=list(self.meta_solver.parameters()))
 
         # logging
-        if self.cfg.logging:
+        if self.cfg.logging and self.cfg.wrapper.cfg.grad_type != "f_true":
             theta_ref = theta.clone()  # copy to get the true gradient
-            y_ref = self.solver(tau, theta_ref)
+            y_ref = self.wrapped_solver(tau, theta_ref, mode="test")
             loss_ref = self.loss(tau, theta_ref, y_ref)["loss"]
-            f_true = torch.autograd.grad(loss_ref, theta_ref["x0"])[0]
-            sim = torch.cosine_similarity(f_true, theta["x0"].grad, dim=1, eps=1e-20)
-            self.log("train/sim", sim.mean(), prog_bar=True)
+            f_true = torch.autograd.grad(loss_ref, theta_ref)[0]
+            sim = torch.cosine_similarity(f_true, theta.grad, dim=1, eps=1e-20)
+            self.log("surrogate/sim", sim.mean(), prog_bar=True)
 
-        opt.step()
-        sch.step()
+        if self.current_epoch >= self.cfg.warmup:
+            opt.step()
+            sch.step()
 
         self.log_dict(
             self._add_prefix(loss_dict, "train/"),

@@ -70,6 +70,16 @@ class WrappedSolver(_Solver):
         self.loss_dict = None
         self.y = None
 
+    def make_theta_features(self, tau, theta: Tensor) -> Tensor:
+        encdec = self.constructor.encdecs["x0"]
+        theta["x0_sin"] = encdec.encode(theta["x0"])
+        theta["xn_sin-x0_sin"] = tau.features["xn_sin"] - theta["x0_sin"]
+
+    def make_tau_features(self, tau: Task) -> None:
+        encdec = self.constructor.encdecs["x0"]
+        tau.features["xn"] = self.solver.x.detach()
+        tau.features["xn_sin"] = encdec.encode(tau.features["xn"])
+
     def forward(self, tau: Task, theta: Tensor, mode: str = "train") -> Tensor:
         def f(x):
             x = self.constructor(x)
@@ -78,6 +88,7 @@ class WrappedSolver(_Solver):
 
         def f_hat(x):
             x = self.constructor(x)
+            self.make_theta_features(tau, x)
             y = self.surrogate(tau, x)
             return y
 
@@ -85,6 +96,7 @@ class WrappedSolver(_Solver):
         self.f_hat = f_hat
 
         y = self.f(theta)
+        self.make_tau_features(tau)
 
         if mode == "test" or self.cfg.grad_type == "f_true":
             return y

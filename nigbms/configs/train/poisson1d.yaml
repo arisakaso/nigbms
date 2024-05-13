@@ -6,21 +6,19 @@ hydra:
 
 wandb: 
   project: nigbms_poisson1d
-  mode: disabled
+  mode: online
 
 data:
   _target_: nigbms.data.data_modules.OfflineDataModule
   data_dir: /home/arisaka/nigbms/data/raw/poisson1d/2024-05-12_12-33-14
-  # /home/arisaka/nigbms/data/raw/poisson1d/2024-05-12_10-24-19
-  # /home/arisaka/nigbms/data/raw/poisson1d/2024-05-12_12-33-14
   ds_sizes: [5000, 5000, 0]
   fixed_A: True
   train_rtol: 1.0e-3
   test_rtol: 1.0e-3
-  train_maxiter: 10_000
-  test_maxiter: 10_000
+  train_maxiter: 1_000
+  test_maxiter: 1_000
   batch_size: 256
-  num_workers: 0
+  num_workers: 32
 
 meta_solver:
   _target_: nigbms.modules.meta_solvers.MetaSolver
@@ -64,18 +62,20 @@ surrogate:
       - ${dim}
     xn: 
       - ${dim}
-    xn-x0:
+    xn_sin-x0_sin:
       - ${dim}
+    # xn-x0:
+    #   - ${dim}
     # x: 
     #   - ${dim}
   model:
     _target_: nigbms.modules.models.MLP
     in_dim: ${calc_in_dim:${surrogate.features}}
     out_dim: ${solver.params_fix.history_length}
-    num_layers: 2
+    num_layers: 0
     num_neurons: 1024
     hidden_activation: nn.GELU
-    output_activation: nn.Identity
+    output_activation: nn.GELU
     batch_normalization: False
     init_weight: 
       dist: uniform
@@ -86,29 +86,31 @@ constructor:
   _recursive_: False
   params: 
     x0:
-      decoder: 
-        _target_: nigbms.modules.constructors.SinDecoder
-        in_dim: ${dim}
-        out_dim: ${dim}
+      encdec: 
+        _target_: nigbms.modules.constructors.SinEncDec
+        enc_dim: ${dim}
+        dec_dim: ${dim}
       shape: ${solver.params_learn.x0}
+    
 
 wrapper:
   opt:
     _target_: torch.optim.Adam
-    lr: 1.0e-4
+    lr: 1.0e-3
     # momentum: 0.9
   loss:
     _target_: nigbms.modules.losses.SurrogateSolverLoss
     weights:
-      dvf_loss: 1
-      # dvL_loss: 1
+      y_loss: 0
+      # dvf_loss: 1
+      dvL_loss: 1
     reduce: True
-  clip: 100.0
+  clip: 10.0
   cfg:
     grad_type: cv_fwd
     jvp_type: forwardAD
     eps: 1.0e-10
-    Nv: 4
+    Nv: 1
     v_scale: 1.0
     v_dist: rademacher
   
@@ -121,7 +123,7 @@ loss:
   
 opt:
   _target_: torch.optim.Adam
-  lr: 1.0e-4
+  lr: 0 # 1.0e-4
 sch:
   _target_: torch.optim.lr_scheduler.MultiStepLR
   milestones: [100]
@@ -142,11 +144,12 @@ callbacks:
     save_last: False
 
 trainer:
-  max_epochs: 100
+  max_epochs: 20
   accelerator: gpu
   devices: 1
-  check_val_every_n_epoch: 10
+  check_val_every_n_epoch: 20
   log_every_n_steps: 1
+  fast_dev_run: False
 
 seed: 0
 monitor: val/iter_r
@@ -154,4 +157,5 @@ dtype: torch.float64
 test: False
 dim: 31
 compile: False
-logging: False
+logging: True
+warmup: 0

@@ -1,3 +1,4 @@
+# %%
 import numpy as np
 import torch
 from hydra.utils import instantiate
@@ -11,47 +12,87 @@ class ThetaConstructor(Module):
     def __init__(self, params):
         super().__init__()
         self.params = params
-        self.decoders = {k: instantiate(v.decoder) for k, v in self.params.items() if v.decoder is not None}
+        self.encdecs = {k: instantiate(v.encdec) for k, v in self.params.items() if hasattr(v, "encdec")}
 
     def forward(self, theta: Tensor) -> TensorDict:
         theta_dict = TensorDict({})
         idx = 0
         for k, v in self.params.items():
-            if k in self.decoders:
-                in_dim = self.decoders[k].in_dim
-                param = self.decoders[k](theta[:, idx : idx + in_dim])
+            if k in self.encdecs:
+                enc_dim = self.encdecs[k].enc_dim
+                param = self.encdecs[k].decode(theta[:, idx : idx + enc_dim])
             else:
-                in_dim = np.prod(v.shape)
-                param = theta[:, idx : idx + in_dim]
+                enc_dim = np.prod(v.shape)
+                param = theta[:, idx : idx + enc_dim]
             theta_dict[k] = param.reshape(-1, *v.shape)
-            idx += in_dim
+            idx += enc_dim
+        theta_dict["enc"] = theta.unsqueeze(-1)
         return theta_dict
 
 
 class _Decoder(Module):
-    def __init__(self, in_dim: int, out_dim) -> None:
+    def __init__(self, enc_dim: int, dec_dim) -> None:
         super().__init__()
-        self.in_dim = in_dim
-        self.out_dim = out_dim
+        self.enc_dim = enc_dim
+        self.dec_dim = dec_dim
 
     def forward(self, x: Tensor) -> Tensor:
         raise NotImplementedError
 
 
-class SinDecoder(_Decoder):
-    def __init__(self, in_dim: int = 128, out_dim: int = 128):
-        super().__init__(in_dim, out_dim)
+class SinEncDec(_Decoder):
+    def __init__(self, enc_dim: int = 128, dec_dim: int = 128):
+        super().__init__(enc_dim, dec_dim)
         self.basis = torch.sin(
-            torch.arange(1, out_dim + 1).unsqueeze(-1)
-            * torch.tensor([i / (out_dim + 1) for i in range(1, out_dim + 1)])
+            torch.arange(1, enc_dim + 1).unsqueeze(-1)
+            * torch.tensor([i / (dec_dim + 1) for i in range(1, dec_dim + 1)])
             * torch.pi
         )
-        self.basis = self.basis[:, :in_dim].unsqueeze(0)  # (1, out_dim, n_basis)
+        self.basis = self.basis.unsqueeze(0)  # (1, dec_dim, enc_dim)
+        self.basis = self.basis.cuda()
+
+    def encode(self, decoded_theta: Tensor) -> Tensor:
+        decoded_theta = decoded_theta.reshape(-1, self.dec_dim, 1)
+        encoded_theta = torch.matmul(self.basis, decoded_theta)
+        return encoded_theta
+
+    def decode(self, encoded_theta: Tensor) -> Tensor:
+        encoded_theta = encoded_theta.reshape(-1, self.dec_dim, 1)
+        decoded_theta = torch.matmul(self.basis.transpose(1, 2), encoded_theta)  # (bs, out_dim, 1)
+        return decoded_theta
+
+
+class SinDecoder(_Decoder):
+    def __init__(self, enc_dim: int = 128, dec_dim: int = 128):
+        super().__init__(enc_dim, dec_dim)
+        self.basis = torch.sin(
+            torch.arange(1, dec_dim + 1).unsqueeze(-1)
+            * torch.tensor([i / (dec_dim + 1) for i in range(1, dec_dim + 1)])
+            * torch.pi
+        )
+        self.basis = self.basis.unsqueeze(0)  # (1, out_dim, n_basis)
         self.basis = self.basis.cuda()
 
     def forward(self, theta: Tensor) -> Tensor:
         decoded_theta = torch.matmul(self.basis, theta.unsqueeze(-1))  # (bs, out_dim, 1)
         return decoded_theta.squeeze()
+
+
+class SinEncoder(_Decoder):
+    def __init__(self, enc_dim: int = 128, dec_dim: int = 128):
+        super().__init__(enc_dim, dec_dim)
+        self.basis = torch.sin(
+            torch.arange(1, dec_dim + 1).unsqueeze(-1)
+            * torch.tensor([i / (dec_dim + 1) for i in range(1, dec_dim + 1)])
+            * torch.pi
+        )
+        self.basis = self.basis.unsqueeze(0)  # (1, out_dim, n_basis)
+        self.basis = self.basis.cuda()
+
+    def forward(self, signal: Tensor) -> Tensor:
+        freq_signal = torch.matmul(self.basis.transpose(1, 2), signal.reshape(-1, self.dec_dim, 1))
+
+        return freq_signal.squeeze()
 
 
 class InterpolateDecoder(Module):
@@ -107,20 +148,4 @@ class IFFTDecoder(Module):
         return signal
 
 
-class SinEncoder(Module):
-    def __init__(self, out_dim: int = 128):
-        super().__init__()
-        self.out_dim = out_dim
-        N = out_dim
-        self.basis = (
-            torch.sin(
-                torch.arange(1, N + 1).reshape(N, 1) * torch.tensor([i / (N + 1) for i in range(1, N + 1)]) * torch.pi
-            )
-            .reshape(1, N, N)
-            .cuda()
-        )  # (1, N, N)
-
-    def forward(self, signal: Tensor) -> Tensor:
-        freq_signal = torch.matmul(self.basis.transpose(1, 2), signal.reshape(-1, self.out_dim, 1))
-
-        return freq_signal.squeeze()
+# %%

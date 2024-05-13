@@ -65,7 +65,6 @@ class PytorchIterativeSolver(_Solver):
         self.history = torch.zeros(tau.b.shape[0], self.history_length, device=tau.b.device, dtype=tau.b.dtype)
         self.history[:, 0] = self.rnorm
         self.bnorm = torch.norm(self.b, dim=(1, 2))
-        tau.features["x0"] = theta["x0"]
 
     def forward(self, tau: Task, theta: TensorDict) -> Tensor:
         """
