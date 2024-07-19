@@ -1,0 +1,18 @@
+opts_fixed: 
+    # ksp
+    ksp_type: cg
+    ksp_max_it: 5000
+    ksp_rtol: 1.0e-5
+    ksp_divtol: 1.0e+10
+    ksp_initial_guess_nonzero: False
+    ksp_norm_type: unpreconditioned
+
+    # pc
+    pc_type: jacobi
+
+opts2tune_list:
+  - name: none
+    dim: 1
+    min: 0
+    max: 1.0
+    type: linear

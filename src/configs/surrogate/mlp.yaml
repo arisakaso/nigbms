@@ -1,0 +1,9 @@
+defaults:
+  - model: mlp
+
+_target_: src.models.surrogates.SurrogateSolverMLP
+_recursive_: False
+params_fix:
+params_learn: # determined by solver.opts2learn
+features:
+  

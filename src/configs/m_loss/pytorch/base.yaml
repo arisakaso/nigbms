@@ -1,0 +1,18 @@
+_target_: src.losses.pytorch.PytorchLoss
+weights:
+    initial_residual: 0
+    initial_residual_relative: 0
+    initial_error_to_ground_truth: 0
+    initial_error_to_ground_truth_relative: 0
+    initial_error_to_final_solution: 0
+    number_of_iterations_residual: 0
+    number_of_iterations_residual_surrogate: 0
+    number_of_iterations_residual_surrogate_nomask: 0
+    number_of_iterations_residual_surrogate_log: 0
+    number_of_iterations_residual_surrogate_log_nomask: 0
+    number_of_iterations_error: 0
+    number_of_iterations_error_surrogate: 0
+    number_of_iterations_error_surrogate_nomask: 0
+    number_of_iterations_error_surrogate_log: 0
+    number_of_iterations_error_surrogate_log_nomask: 0
+reduce: False

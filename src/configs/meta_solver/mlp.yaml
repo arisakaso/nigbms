@@ -1,0 +1,11 @@
+defaults:
+  - model: mlp
+
+_target_: src.models.meta_solvers.MetaSolverMLP
+_recursive_: False
+params_learn:
+  initial_guess:
+    dim: 10
+features:
+  b:
+    dim: 10

@@ -1,0 +1,14 @@
+defaults:
+  - model: cnn1d
+
+_target_: src.models.surrogates.SurrogateSolverCNN1D
+_recursive_: False
+params_fix:
+params_learn:
+  initial_guess:
+    dim: 10
+features:
+  b:
+    dim: 10
+  x_sol:
+    dim: 10

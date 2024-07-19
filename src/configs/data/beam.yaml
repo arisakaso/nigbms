@@ -1,0 +1,12 @@
+_target_: src.data.beam.BeamDataModule
+root_dir: /workspace/gbms/data/raw/beam/2023-09-07_11-48-34
+n_samples:
+  - 5000
+  - 2500
+  - 2500
+batch_size: 64
+normalize_type: null # minmax, standard, null
+rtol:
+  - 1.0e-2
+  - 1.0e-2
+maxiter: 1_000_000

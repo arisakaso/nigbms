@@ -1,0 +1,38 @@
+opts_fixed: 
+    # ksp
+    ksp_type: cg
+    ksp_max_it: 0
+    ksp_rtol: 1.0e-5
+    ksp_atol: 1.0e-50
+    ksp_divtol: 1.0e+10
+    ksp_initial_guess_nonzero: True
+    ksp_norm_type: unpreconditioned
+
+    # pc
+    pc_type: sor
+    pc_sor_symmetric: True
+    pc_sor_its: 1
+    
+
+opts2learn:
+  # pc_sor_omega:
+  #   dim: 1
+  #   ref: 0.1
+  #   # the following is for parameter sensitivity analysis
+  #   space: linspace
+  #   start: 1
+  #   end: 2
+  #   steps: 100
+  initial_guess:
+    dim: 243
+    space: linspace
+    start: -0.1
+    end: 0.1
+    steps: 1
+  
+params4diff:
+  delta: 1.0e-2
+  type: forward
+  relative: True
+
+debug: False

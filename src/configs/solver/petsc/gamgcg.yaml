@@ -1,0 +1,27 @@
+_target_: src.solvers.pytorch.Jacobi
+
+params_fix:
+  # ksp
+  ksp_type: richardson
+  ksp_max_it: 5000
+  ksp_rtol: 1.0e-5
+  ksp_divtol: 1.0e+10
+  ksp_initial_guess_nonzero: True
+  ksp_norm_type: unpreconditioned
+
+  # pc
+  # parameters are based on https://lists.mcs.anl.gov/pipermail/petsc-users/2015-June/025844.html
+  pc_type: gamg
+  pc_mg_cycle_type: v
+  pc_mg_levels: 3
+  # mg
+  mg_levels_ksp_type: richardson
+  mg_levels_pc_type: sor
+  mg_levels_ksp_max_it: 5
+  mg_coarse_ksp_type: richardson
+  mg_coarse_pc_type: sor
+  mg_coarse_ksp_max_it: 5
+
+params_learn:
+  x0:
+    dim: 961

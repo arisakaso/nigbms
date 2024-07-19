@@ -1,0 +1,5 @@
+_target_: src.solvers.pytorch.SOR
+opts:
+  maxiter: 100_000
+  rtol: null
+  omega: 1.9

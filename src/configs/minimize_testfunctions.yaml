@@ -1,0 +1,54 @@
+defaults:
+  - hydra: base
+  - _self_
+problem:
+  test_function: rosenbrock
+  dim: 128
+  num_samples: 100
+  num_iter: 50000
+  initial_range:
+  - -1
+  - 1
+  tensor_type: torch.cuda.DoubleTensor
+surrogate:
+  _target_: src.models.base_models.CNN1D
+  in_channels: 1
+  out_unit: 1
+  base_channels: 64
+  kernel_size: 3
+  hidden_activation: torch.nn.GELU
+  hidden_unit_factor: 1
+wrapper:
+  grad_type: cv_fwd
+  jvp_type: forwardFD
+  jvp_type_s: forwardAD
+  Nv: 1
+  eps: 1.0e-08
+  update_steps: 0
+  output_type: loss
+  v_scale: 1.0
+optimizer:
+  m_opt:
+    _target_: torch.optim.Adam
+    lr: 0.01
+  s_opt:
+    _target_: torch.optim.Adam
+    lr: 0.01
+  m_clip: null
+  s_clip: null
+loss:
+  'y': 0
+  dvf: 1.0
+seed: 0
+log_gradient: true
+
+
+# MULTI RUN
+hydra:
+  mode: MULTIRUN
+  sweeper:
+    params:
+      seed: 0,1,2,3,4,5
+      # problem.dim: 2,8,32,128
+      # wrapper.grad_type: f_true,f_fwd,f_hat_true,cv_fwd
+  

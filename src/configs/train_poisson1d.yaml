@@ -1,0 +1,205 @@
+defaults:
+  - data: poisson1d
+  - m_loss: pytorch/base
+  - _self_
+
+# override defaults
+common:
+  dim: 31
+  params_learn:
+    x0:
+      dim: ${common.dim}
+  dtype: torch.float64
+
+data:
+  root_dir: /workspace/gbms/data/raw/poisson1d/2024-02-01_21-13-24 # default 31-31
+  maxiter: 1 #${common.dim} # > 0
+  maxiter_test: 10_000 #${common.dim}
+  rtol:
+    - 1.0e-3
+    - 1.0e-3
+  batch_size: 256
+  dtype: ${common.dtype}
+  dim: ${common.dim}
+  n_samples:
+    - 5000
+    - 5000
+    - 5000
+  D: 1
+  sparse: False
+
+decoder:
+  _target_: src.models.meta_solvers.SinDecoder
+  out_dim: ${common.dim}
+  in_dim: ${common.dim}
+  
+meta_solver:
+  _target_: src.models.meta_solvers.MetaSolverMLP
+  _recursive_: False
+  params_learn: ${common.params_learn}
+  features:
+    b:
+      dim: ${common.dim}
+  model:
+    _target_: src.models.base_models.MLP
+    layers:
+      - null
+      - 512
+      - ${common.dim}
+    hidden_activation: nn.SiLU
+    output_activation: nn.Identity
+    batch_normalization: False
+    dropout: 0
+
+solver: # Jacobi
+  _target_: src.solvers.fast_solvers.JacobiJit
+  params_fix:
+    omega: 1 #0.6666666666666666
+    criterion: relative_residual
+  params_learn: ${common.params_learn}
+
+# solver: # Multigrid
+#   _target_: src.solvers.fast_solvers.MultigridJit
+#   params_fix:
+#     omega: 0.6666666666666666
+#     niters: [2, 0]
+#     criterion: relative_residual
+#   params_learn: ${common.params_learn}
+
+# solver: # PETScMG
+#   _target_: src.solvers.petsc.PETScGMGSolver
+#   params_fix:
+#     # ksp
+#     ksp_type: richardson
+#     ksp_divtol: 1.0e+10
+#     ksp_initial_guess_nonzero: True
+#     ksp_norm_type: unpreconditioned
+#     # pc
+#     # parameters are based on https://lists.mcs.anl.gov/pipermail/petsc-users/2015-June/025844.html
+#     pc_type: mg
+#     pc_mg_cycle_type: v
+#     pc_mg_levels: 2
+#     # mg
+#     mg_levels_ksp_type: richardson
+#     mg_levels_pc_type: jacobi
+#     mg_levels_ksp_richardson_scale: 0.6666666666666666
+#     mg_levels_ksp_max_it: 2
+#     mg_coarse_ksp_type: richardson
+#     mg_coarse_pc_type: jacobi
+#     mg_coarse_ksp_richardson_scale: 0.6666666666666666
+#     mg_coarse_ksp_max_it: 4
+#   params_learn: ${common.params_learn}
+#   debug: False
+#   parallel: False
+
+
+loss:
+  i:
+    _target_: src.losses.pytorch.SolverIndependentLoss
+    weights:
+      initial_error_relative: 1
+  d:
+    _target_: src.losses.pytorch.SolverDependentLoss
+    weights:
+      number_of_iterations_surrogate: 0
+  s:
+    _target_: src.losses.pytorch.SurrogateSolverLoss
+    weights:
+      dvf_loss: 1
+
+surrogate:
+  _target_: src.models.surrogates.SurrogateSolverMLP
+  _recursive_: False
+  params_fix: null
+  params_learn: ${common.params_learn}
+  features:
+    e0_sin:
+      dim: ${common.dim}
+  model:
+    _target_: src.models.base_models.MLP
+    layers:
+      - null
+      - 1024
+      - 1024
+      - 1024
+      - 1
+    hidden_activation: nn.GELU
+    output_activation: nn.Identity
+    batch_normalization: False
+
+wrapper:
+  grad_type: f_true
+  jvp_type: forwardAD
+  jvp_type_s: forwardAD
+  Nv: 1
+  eps: 1e-12
+  update_steps: 1
+  output_type: loss
+  v_scale: 1.0
+
+train:
+  initialize_parameters_m: True
+  initialize_parameters_s: True
+  log_gradients: False
+  normalize_grad: False
+  save_data: False
+  trainer: 
+    max_epochs: 100
+    fast_dev_run: False
+    check_val_every_n_epoch: 1
+    num_sanity_val_steps: 0
+    log_every_n_steps: 100
+  logger:
+    log_model: False
+    project: non-intrusive
+    mode: disabled
+  clip:
+    m: null # 0 cannot be used
+    s: null # 0 cannot be used
+  optimizer:
+    m_opt:
+      _target_: torch.optim.Adam
+      lr: 1.0e-4
+      betas:
+        - 0.9
+        - 0.999
+    s_opt:
+      _target_: torch.optim.Adam
+      lr: 5.0e-4
+      betas:
+        - 0.9
+        - 0.999
+    lookahead:
+      # k: 10
+      # alpha: 0.5
+    s_lookahead:
+      # k: 10
+      # alpha: 0.5
+    m_sch:
+      _target_: torch.optim.lr_scheduler.MultiStepLR
+      milestones: [100]
+      gamma: 0.1
+      verbose: False
+    s_sch:
+      _target_: torch.optim.lr_scheduler.MultiStepLR
+      milestones: [5000]
+      gamma: 0.2
+      verbose: False
+  callbacks:
+    early_stopping:
+      monitor: ${train.monitor}
+      mode: min
+      patience: ${train.trainer.max_epochs}
+      verbose: True
+      strict: True
+      check_finite: True
+    checkpoint:
+      monitor: ${train.monitor}
+      mode: min
+      save_top_k: 1
+      verbose: True
+      save_last: False
+  seed: 1
+  monitor: val/loss/number_of_iterations/dataloader_idx_0
+  pretrained_model: null
+  test: True

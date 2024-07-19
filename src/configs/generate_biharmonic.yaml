@@ -1,0 +1,17 @@
+hydra:
+  run:
+    dir: /workspace/gbms/data/raw/biharmonic/${now:%Y-%m-%d_%H-%M-%S}
+
+N_data: 30_000
+
+c1: 
+  min: 1.0e-2
+  max: 1.0e+2
+
+c2:
+  min: 1
+  max: 5.0
+
+c3:
+  min: 1
+  max: 5.0

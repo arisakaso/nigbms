@@ -1,0 +1,33 @@
+opts_fixed: 
+    # ksp
+    ksp_type: cg
+    ksp_max_it: 5000
+    ksp_rtol: 1.0e-5
+    ksp_divtol: 1.0e+10
+    ksp_initial_guess_nonzero: True
+    ksp_norm_type: unpreconditioned
+    # pc
+    pc_type: none
+
+opts2learn:
+  diagonal_shift:
+    dim: 1
+    ref: 0.1
+    space: logspace
+    start: 2.5
+    end: 3.5
+    steps: 10
+    relative: True
+  initial_guess:
+    dim: 3
+    ref: 0
+    space: linspace
+    start: -1
+    end: 1
+    steps: 5
+
+params4diff:
+  delta: 1.0e-6
+  type: full
+
+debug: True

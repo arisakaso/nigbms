@@ -1,0 +1,24 @@
+opts_fixed: 
+    # args for IterativeSolver
+    type: SOR
+    maxiter: 10000
+    rtol: null
+    omega: 1.9
+
+opts2learn:
+  initial_guess:
+    dim: 32
+    space: linspace
+    start: -0.1
+    end: 0.1
+    steps: 1
+  
+params4diff:
+  delta: 1.0e-3
+  type: fg_fwAD # tg_BP, fg_fwAD
+  num_v: 1
+  dist: rademacher # uniform, normal, rademacher
+  relative: True
+
+
+debug: False

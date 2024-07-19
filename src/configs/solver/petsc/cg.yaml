@@ -1,0 +1,9 @@
+_target_: src.solvers.petsc.PETScLinearSolver
+params_fix: 
+    # ksp
+    ksp_type: cg
+    ksp_divtol: 1.0e+20
+    ksp_initial_guess_nonzero: True
+    ksp_norm_type: unpreconditioned
+    # pc
+    pc_type: sor    

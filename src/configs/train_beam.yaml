@@ -1,0 +1,275 @@
+defaults:
+  - m_loss: pytorch/base
+  - _self_
+
+# override defaults
+common:
+  dim: 192
+  params_learn:
+    x0:
+      dim: ${common.dim}
+  dtype: torch.float64
+
+data:
+  _target_: src.data.beam.BeamDataModule
+  root_dir: /workspace/gbms/data/raw/beam/2024-02-01_07-39-13
+  maxiter: 100_000 #${common.dim} # > 0
+  maxiter_test: 100_000 #${common.dim}
+  rtol:
+    - 1.0e-5
+    - 1.0e-5
+  batch_size: 100
+  dtype: ${common.dtype}
+  n_samples:
+    - 100
+    - 100
+    - 100
+
+decoder:
+  _target_: torch.nn.Identity
+  # _target_: src.models.meta_solvers.IFFTDecoder
+  # _target_: src.models.meta_solvers.SinDecoder
+  # _target_: src.models.meta_solvers.InterpolateDecoder
+  out_dim: ${common.dim}
+  in_dim: ${common.dim}
+  # in_dim: 16
+
+meta_solver:
+  _target_: src.models.meta_solvers.MetaSolverMLP
+  _recursive_: False
+  params_learn: ${common.params_learn}
+  features:
+    features:
+      dim: 5
+    b:
+      dim: ${common.dim}
+  model:
+    _target_: src.models.base_models.MLP
+    layers:
+      - null
+      - 1024
+      # - 16
+      - ${common.dim}
+    hidden_activation: nn.SiLU
+    output_activation: nn.Identity
+    batch_normalization: False
+    dropout: 0
+
+# solver: # Jacobi
+#   _target_: src.solvers.fast_solvers.JacobiJit
+#   params_fix:
+#     omega: 1 #0.6666666666666666
+#   params_learn: ${common.params_learn}
+
+# solver: # Multigrid
+#   _target_: src.solvers.fast_solvers.MultigridJit
+#   params_fix:
+#     omega: 0.6666666666666666
+#     niters: [2, 4]
+#     criterion: relative_residual
+#   params_learn: ${common.params_learn}
+
+solver: # PETSc
+  _target_: src.solvers.petsc.PETScSolverFixedA
+  params_fix:
+    # ksp
+    ksp_type: richardson
+    ksp_divtol: 1.0e+10
+    ksp_initial_guess_nonzero: True
+    ksp_norm_type: unpreconditioned
+    # pc
+    # parameters are based on https://lists.mcs.anl.gov/pipermail/petsc-users/2015-June/025844.html
+    pc_type: gamg
+  params_learn: ${common.params_learn}
+  debug: False
+  parallel: False
+
+loss:
+  i:
+    _target_: src.losses.pytorch.SolverIndependentLoss
+    weights:
+      # number_of_iterations_error_surrogate: 0
+      # number_of_iterations_error_surrogate_log: 0
+      # number_of_iterations_errorA_surrogate: 1
+      initial_error_relative: 0
+      # initial_error_relative_squared: 1
+  d:
+    _target_: src.losses.pytorch.SolverDependentLoss
+    weights:
+      number_of_iterations_surrogate: 1
+      # last_step_error_relative: 1
+      # number_of_iterations_error_surrogate_log: 1
+      # number_of_iterations_errorA_surrogate: 1
+      # error_relative_sum: 1
+  s:
+    _target_: src.losses.pytorch.SurrogateSolverLoss
+    weights:
+      dvf_loss: 1
+      y_loss: 1
+      # true_loss: 1
+      # cv_square: 1
+
+# surrogate:
+# _target_: src.models.surrogates.SurrogateSolverOperator
+# _recursive_: False
+# params_fix: null
+# params_learn: ${common.params_learn}
+# features:
+#   b_freq:
+#     dim: ${common.dim}
+#   x0:
+#     dim: ${common.dim}
+#   x_sol_freq:
+#     dim: ${common.dim}
+# branch:
+#   _target_: src.models.base_models.MLP
+#   layers:
+#     - 32
+#     - 512
+#     - 512
+#     - 512
+#     - 512
+#     # - 512
+#     # - 512
+#     # - 1
+#     # - 4096
+#     # - 4096
+#     # - 4096
+#   hidden_activation: nn.GELU
+#   output_activation: nn.Identity
+#   batch_normalization: False
+# trunk:
+#   _target_: src.models.base_models.MLP
+#   layers:
+#     # - 4
+#     - 16
+#     - 512
+#     - 512
+#     - 512
+#     - 512
+#     # - 512
+#     # - 512
+#     # - 1
+#     # - 4096
+#     # - 4096
+#   hidden_activation: nn.GELU
+#   output_activation: nn.Identity
+#   batch_normalization: False
+
+surrogate:
+  _target_: src.models.surrogates.SurrogateSolverMLP
+  _recursive_: False
+  params_fix: null
+  params_learn: ${common.params_learn}
+  features:
+    # b_freq:
+    #   dim: ${common.dim}
+    # x0:
+    #   dim: 31 #${common.dim}
+    # x_sol_freq:
+    #   dim: ${common.dim}
+    e0:
+      dim: ${common.dim}
+    b:
+      dim: ${common.dim}
+    # features:
+    #   dim: 5
+    # e0_freq:
+    #   dim: 32 # ${common.dim}
+    # e0_sin:
+    #   dim: ${common.dim}
+  model:
+    _target_: src.models.base_models.MLP
+    layers:
+      - null
+      - 1024
+      - 1024
+      - 1024
+      - 1
+    hidden_activation: nn.SiLU
+    output_activation: nn.Identity
+    batch_normalization: False
+#   # scale: 1.0
+
+wrapper:
+  grad_type: cv_fwd
+  jvp_type: forwardFD
+  jvp_type_s: forwardAD
+  Nv: 1
+  eps: 1e-8
+  update_steps: 1
+  output_type: loss
+  v_scale: 1.0
+
+train:
+  initialize_parameters_m: True
+  initialize_parameters_s: True
+  log_gradients: False
+  normalize_grad: False
+  save_data: False
+  warmup_epochs: 0
+  trainer: # args for pl.Trainer
+    max_epochs: 20000
+    fast_dev_run: False
+    # deterministic: True
+    # limit_train_batches: 0.05
+    # limit_val_batches: 0.1
+    # limit_test_batches: 0.1
+    check_val_every_n_epoch: 10
+    num_sanity_val_steps: 0
+    log_every_n_steps: 100
+    # profiler: simple
+  logger:
+    log_model: True
+    project: non-intrusive-beam
+    mode: online
+  clip:
+    m: 10.0 # 0 cannot be used
+    s: 10.0 # 0 cannot be used
+  optimizer:
+    m_opt:
+      _target_: torch.optim.Adam
+      lr: 1.0e-4
+      betas:
+        - 0.9
+        - 0.999
+    s_opt:
+      _target_: torch.optim.Adam
+      lr: 1.0e-4
+      betas:
+        - 0.9
+        - 0.999
+    lookahead:
+      # k: 10
+      # alpha: 0.5
+    s_lookahead:
+      # k: 10
+      # alpha: 0.5
+    m_sch:
+      _target_: torch.optim.lr_scheduler.MultiStepLR
+      milestones: [10000, 15000]
+      gamma: 0.1
+      verbose: False
+    s_sch:
+      _target_: torch.optim.lr_scheduler.MultiStepLR
+      milestones: [10000, 15000]
+      gamma: 0.1
+      verbose: False
+  callbacks:
+    early_stopping:
+      monitor: ${train.monitor}
+      mode: min
+      patience: ${train.trainer.max_epochs}
+      verbose: True
+      strict: True
+      check_finite: True
+    checkpoint:
+      monitor: ${train.monitor}
+      mode: min
+      save_top_k: 1
+      verbose: True
+      save_last: False
+  seed: 1
+  monitor: val/loss/number_of_iterations/dataloader_idx_0
+  pretrained_model: null
+  test: True

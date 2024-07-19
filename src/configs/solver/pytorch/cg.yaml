@@ -1,0 +1,5 @@
+_target_: src.solvers.pytorch.CG
+params_fix: {}
+params_learn:
+  x0:
+    dim: 32

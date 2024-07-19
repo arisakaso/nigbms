@@ -1,0 +1,11 @@
+hydra:
+  run:
+    dir: /workspace/gbms/data/raw/poisson1d/${now:%Y-%m-%d_%H-%M-%S}
+
+N_data: 100_000
+N_grid: 31 # number of inner grid points, i.e. the size of A
+N_terms: 31
+scale: 10.0
+type: linear
+p: 0.01
+exact: True

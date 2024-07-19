@@ -1,0 +1,12 @@
+_target_: src.data.poisson1d.PoissonDataModule
+root_dir: /workspace/gbms/data/raw/poisson1d/2023-06-27_08-59-45
+n_samples:
+  - 5000
+  - 2500
+  - 2500
+batch_size: 64
+normalize_type: null # minmax, standard, null
+rtol:
+  - 1.0e-2
+  - 1.0e-2
+maxiter: 1_000_000

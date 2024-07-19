@@ -1,0 +1,21 @@
+hydra:
+  run:
+    dir: /workspace/gbms/data/raw/beam/${now:%Y-%m-%d_%H-%M-%S}
+
+N_data: 30_000
+
+W: 
+  min: 1.0
+  max: 1.0
+  const: 1.0
+mu:
+  min: 1.0e-2
+  max: 1.0e+2
+  const: 1.0
+lam:
+  min: 1.0e-2
+  max: 1.0e+2
+  const: 1.0
+rho:
+  min: 1.0e-2
+  max: 1.0e+2

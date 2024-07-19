@@ -1,0 +1,9 @@
+_target_: src.models.base_models.MLP
+layers:
+  - null
+  - 256
+  - 256
+  - null
+hidden_activation: nn.SiLU
+output_activation: nn.Identity
+batch_normalization: False
