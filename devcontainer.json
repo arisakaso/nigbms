@@ -1,0 +1,22 @@
+{
+  "build": { "dockerfile": "docker/Dockerfile" },
+  "runArgs": [
+    "--gpus",
+    "all"
+  ],
+  "customizations": {
+    "vscode": {
+        "extensions": [
+            "eamodio.gitlens",
+            "ms-vscode.live-server",
+            "ms-python.python",
+            "ms-toolsai.jupyter",
+            "redhat.vscode-yaml",
+            "charliermarsh.ruff",
+            "ms-vscode.makefile-tools",
+            "ms-vscode.cpptools",
+            "ms-vscode.cmake-tools"
+        ]
+    }
+  }
+}
