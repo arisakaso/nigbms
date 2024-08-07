@@ -1,7 +1,9 @@
 import torch
-from torch import log, norm, sigmoid
+from torch import Tensor, log, norm, sigmoid
 from torch.nn import Module
 from torch.nn.functional import mse_loss
+
+from nigbms.data.data_modules import Task
 
 
 class SurrogateSolverLoss(Module):
@@ -66,16 +68,16 @@ class MetaSolverLoss(Module):
         self.reduce = reduce
         self.constructor = constructor
 
-    def forward(self, tau, theta, history) -> dict:
+    def forward(self, tau: Task, theta: Tensor, history: Tensor) -> dict:
         """Compute the loss
 
         Args:
-            tau (_type_): dataclass with task data
-            theta (_type_): solver parameters
-            history (_type_): _description_
+            tau (Task): Task dataclass
+            theta (Tensor): solver parameters
+            history (Tensor): convergence history (residuals)
 
         Returns:
-            dict: _description_
+            dict: dict of losses
         """
         theta = self.constructor(theta)
 

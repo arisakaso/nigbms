@@ -1,4 +1,5 @@
 import torch
+from omegaconf import DictConfig
 from torch import Tensor
 
 from nigbms.data.data_modules import Task
@@ -6,7 +7,24 @@ from nigbms.modules.solvers import _Solver
 
 
 class SurrogateSolver(_Solver):
-    def __init__(self, params_fix: dict, params_learn: dict, features: dict, model) -> None:
+    """Surrogate solver class (f_hat)"""
+
+    def __init__(
+        self,
+        params_fix: DictConfig,
+        params_learn: DictConfig,
+        features: DictConfig,
+        model: DictConfig,
+    ) -> None:
+        # TODO: Maybe it is better to pass the corresponding solver instead of params_fix and params_learn
+        """
+
+        Args:
+            params_fix (DictConfig): _description_
+            params_learn (DictConfig): _description_
+            features (DictConfig): _description_
+            model (DictConfig): _description_
+        """
         super().__init__(params_fix, params_learn)
         self.features = features
         self.model = model

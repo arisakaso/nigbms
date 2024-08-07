@@ -1,5 +1,6 @@
 import torch
 from joblib import Parallel, delayed
+from omegaconf import DictConfig
 from petsc4py import PETSc
 from tensordict import TensorDict
 from torch import Tensor
@@ -14,20 +15,44 @@ from nigbms.utils.testfunctions import *  # noqa
 class _Solver(Module):
     """Base class for solvers."""
 
-    def __init__(self, params_fix: dict, params_learn: dict) -> None:
+    def __init__(self, params_fix: DictConfig, params_learn: DictConfig) -> None:
+        """_summary_
+
+        Args:
+            params_fix (DictConfig): fixed solver parameters
+            params_learn (DictConfig): parameters to be learned
+        """
         super().__init__()
         self.params_fix = params_fix
         self.params_learn = params_learn
 
-    def _setup(self, tau: Task, theta: TensorDict):
+    def _setup(self, tau: Task, theta: TensorDict) -> None:
+        """set up the solver with the given parameters.
+
+        Args:
+            tau (Task): Task dataclass
+            theta (TensorDict): Dictionary containing solver parameters
+        """
         raise NotImplementedError
 
-    def forward(self, tau: Task, theta: TensorDict):
+    def forward(self, tau: Task, theta: TensorDict) -> Tensor:
+        """Solve the task with the given parameters.
+        Return the convergence history.
+
+        Args:
+            tau (Task): Task dataclass
+            theta (TensorDict): Dictionary containing solver parameters
+
+        Returns:
+            Tensor: convergence history
+        """
         raise NotImplementedError
 
 
 class TestFunctionSolver(_Solver):
-    def __init__(self, params_fix, params_learn) -> None:
+    """Solver class for minimizing test functions."""
+
+    def __init__(self, params_fix: DictConfig, params_learn: DictConfig) -> None:
         super().__init__(params_fix, params_learn)
         self.f = eval(params_fix["test_function"])
 
@@ -35,7 +60,9 @@ class TestFunctionSolver(_Solver):
         return self.f(theta["x"])
 
 
-class PytorchIterativeSolver(_Solver):
+class _PytorchIterativeSolver(_Solver):
+    """Base class for iterative solvers written in Pytorch."""
+
     def __init__(self, params_fix: dict, params_learn: dict) -> None:
         super().__init__(params_fix, params_learn)
         self.history_length = params_fix.history_length
@@ -88,7 +115,7 @@ class PytorchIterativeSolver(_Solver):
         return self.history  # (bs, history_length)
 
 
-class PyTorchJacobi(PytorchIterativeSolver):
+class PyTorchJacobi(_PytorchIterativeSolver):
     def __init__(self, params_fix: dict, params_learn: dict) -> None:
         super().__init__(params_fix, params_learn)
 
@@ -112,7 +139,7 @@ class PyTorchJacobi(PytorchIterativeSolver):
         self.rnorm = torch.norm(self.r, dim=(1, 2))
 
 
-class PyTorchSOR(PytorchIterativeSolver):
+class PyTorchSOR(_PytorchIterativeSolver):
     def __init__(self, params_fix: dict, params_learn: dict) -> None:
         super().__init__(params_fix, params_learn)
 
@@ -134,7 +161,7 @@ class PyTorchSOR(PytorchIterativeSolver):
         self.rnorm = torch.norm(self.r, dim=(1, 2))
 
 
-class PyTorchCG(PytorchIterativeSolver):
+class PyTorchCG(_PytorchIterativeSolver):
     def __init__(self, params_fix: dict, params_learn: dict) -> None:
         super().__init__(params_fix, params_learn)
 
@@ -164,6 +191,8 @@ class PyTorchCG(PytorchIterativeSolver):
 
 
 class PETScKSP(_Solver):
+    """Solver class for wrapping PETSc KSP solvers."""
+
     def __init__(
         self,
         params_fix: dict,
@@ -234,7 +263,7 @@ class PETScKSP(_Solver):
         self.ksp.setFromOptions()
         self.ksp.setMonitor(lambda ksp, its, rnorm: None)
 
-        if self.parallel:
+        if self.parallel:  # TODO: parallelize
             raise NotImplementedError
             outputs = Parallel(n_jobs=-1)(
                 delayed(self.solve)(A[i], b[i], theta[i], rtol[i], maxiter[i]) for i in range(len(b))
@@ -254,13 +283,15 @@ class PETScKSP(_Solver):
         return history
 
 
-class OpenFOAMSolver(_Solver):
+class OpenFOAMSolver(_Solver):  # TODO: implement OpenFOAM solver
     def __init__(
         self,
         params_fix: dict,
         params_learn: dict,
     ) -> None:
         super().__init__(params_fix, params_learn)
+
+        raise NotImplementedError
 
     def _setup(self, tau: Task, theta: TensorDict):
         pass

@@ -9,6 +9,8 @@ from nigbms.utils.solver import rademacher_like  # noqa
 
 
 class register_custom_grad(Function):
+    """Autograd function for custom gradient computation."""
+
     @staticmethod
     def forward(ctx, wrapper, theta):
         ctx.theta = theta
@@ -39,12 +41,15 @@ class register_custom_grad(Function):
 
             if cfg.grad_type in ["f_hat_true", "cv_fwd"]:
                 wrapper.opt.zero_grad()
+
+                # compute control forward gradient
                 y_hat, dvf_hat = torch.func.jvp(wrapper.f_hat, (theta,), (v,))  # forward AD
                 f_hat_true[i] = grad(y_hat, theta, grad_outputs=grad_y, retain_graph=True)[0]
                 dvL_hat = torch.sum(grad_y * dvf_hat, dim=1, keepdim=True)
                 f_hat_fwd = dvL_hat * v
                 cv_fwd[i] = f_fwd[i] - f_hat_fwd + f_hat_true[i]
 
+                # training surrogate
                 wrapper.loss_dict = wrapper.loss(wrapper.y, y_hat, dvf, dvf_hat, dvL, dvL_hat)
                 wrapper.loss_dict["loss"].backward(inputs=list(wrapper.surrogate.parameters()))
                 if wrapper.clip:
@@ -58,6 +63,8 @@ class register_custom_grad(Function):
 
 
 class WrappedSolver(_Solver):
+    """Wrapper class for the solver and surrogate solver."""
+
     def __init__(self, solver: _Solver, surrogate: _Solver, constructor, opt, loss, clip, cfg: dict) -> None:
         super().__init__(solver.params_fix, surrogate.params_learn)
         self.solver = solver
@@ -70,27 +77,27 @@ class WrappedSolver(_Solver):
         self.loss_dict = None
         self.y = None
 
-    def make_theta_features(self, tau, theta: Tensor) -> Tensor:
+    def make_theta_features(self, tau, theta: Tensor):  # TODO: refactor this ugly function
         encdec = self.constructor.encdecs["x0"]
         theta["x0_sin"] = encdec.encode(theta["x0"])
         theta["xn_sin-x0_sin"] = tau.features["xn_sin"] - theta["x0_sin"]
 
-    def make_tau_features(self, tau: Task) -> None:
+    def make_tau_features(self, tau: Task) -> None:  # TODO: refactor this ugly function
         encdec = self.constructor.encdecs["x0"]
         tau.features["xn"] = self.solver.x.detach()
         tau.features["xn_sin"] = encdec.encode(tau.features["xn"])
 
     def forward(self, tau: Task, theta: Tensor, mode: str = "train") -> Tensor:
-        def f(x):
+        def f(x):  # solve the problem
             x = self.constructor(x)
             y = self.solver(tau, x)
-            return y
+            return y  # y must be a tensor for the custom grad to work
 
-        def f_hat(x):
+        def f_hat(x):  # surrogate solver
             x = self.constructor(x)
             self.make_theta_features(tau, x)
             y = self.surrogate(tau, x)
-            return y
+            return y  # y must be a tensor for the custom grad to work
 
         self.f = f
         self.f_hat = f_hat
@@ -101,5 +108,5 @@ class WrappedSolver(_Solver):
         if mode == "test" or self.cfg.grad_type == "f_true":
             return y
         else:
-            self.y = y.detach()
+            self.y = y.detach()  # y is computed by the black-box solver
             return register_custom_grad.apply(self, theta)
