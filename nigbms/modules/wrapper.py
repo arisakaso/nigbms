@@ -31,7 +31,7 @@ class register_custom_grad(Function):
         cv_fwd = torch.zeros(cfg.Nv, *theta.shape, device=theta.device)
 
         for i in range(cfg.Nv):
-            with torch.no_grad():
+            with torch.no_grad():  # compute forward gradients
                 v = rademacher_like(theta)
 
                 if cfg.jvp_type == "forwardAD":
