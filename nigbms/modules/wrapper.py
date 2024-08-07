@@ -9,7 +9,9 @@ from nigbms.utils.solver import rademacher_like  # noqa
 
 
 class register_custom_grad(Function):
-    """Autograd function for custom gradient computation."""
+    """Autograd function for custom gradient computation.
+    During backward, the surrogate model in wrapper is trained.
+    """
 
     @staticmethod
     def forward(ctx, wrapper, theta):
