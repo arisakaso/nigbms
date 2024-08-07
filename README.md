@@ -4,7 +4,7 @@
     <img src="https://img.shields.io/badge/CCDS-Project%20template-328F97?logo=cookiecutter" />
 </a>
 
-Non-intrusive Gradient-based Meta-solving
+Repository for Non-intrusive Gradient-based Meta-solving
 
 ## Project Organization
 
@@ -34,29 +34,13 @@ Non-intrusive Gradient-based Meta-solving
 ├── reports            <- Generated analysis as HTML, PDF, LaTeX, etc.
 │   └── figures        <- Generated graphics and figures to be used in reporting
 │
-├── requirements.txt   <- The requirements file for reproducing the analysis environment, e.g.
-│                         generated with `pip freeze > requirements.txt`
-│
-├── setup.cfg          <- Configuration file for flake8
-│
-└── nigbms                <- Source code for use in this project.
-    │
-    ├── __init__.py    <- Makes nigbms a Python module
-    │
-    ├── data           <- Scripts to download or generate data
-    │   └── make_dataset.py
-    │
-    ├── features       <- Scripts to turn raw data into features for modeling
-    │   └── build_features.py
-    │
-    ├── models         <- Scripts to train models and then use trained models to make
-    │   │                 predictions
-    │   ├── predict_model.py
-    │   └── train_model.py
-    │
-    └── visualization  <- Scripts to create exploratory and results oriented visualizations
-        └── visualize.py
-```
-
+└── nigbms
+    ├── __init__.py
+    ├── configs         <- Configuration files (.yaml) used by hydra
+    ├── data            <- Data generation scripts and Pytorch data modules
+    ├── modules         <- Core modules (see README.md in the directory)
+    ├── train           <- Training scripts
+    ├── utils           <- Utilities
+    └── visualization   <- Visualization
 --------
 
