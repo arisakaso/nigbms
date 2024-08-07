@@ -5,12 +5,34 @@ from torch.nn.functional import mse_loss
 
 
 class SurrogateSolverLoss(Module):
+    """Loss function for training surrogate solvers (f_hat)"""
+
     def __init__(self, weights: dict, reduce: bool) -> None:
+        """
+
+        Args:
+            weights (dict): weights for each loss term
+            reduce (bool): whether to reduce the loss to a scalar
+        """
         super().__init__()
         self.weights = weights
         self.reduce = reduce
 
-    def forward(self, y, y_hat, dvf, dvf_hat, dvL, dvL_hat):
+    def forward(self, y, y_hat, dvf, dvf_hat, dvL, dvL_hat) -> dict:
+        """Compute the loss
+
+        Args:
+            y (_type_): output of the solver
+            y_hat (_type_): output of the surrogate solver
+            dvf (_type_): directional derivative of the solver
+            dvf_hat (_type_): directional derivative of the surrogate solver
+            dvL (_type_): dL/dy * dvf
+            dvL_hat (_type_): dL/dy * dvf_hat
+
+        Returns:
+            dict: dict of losses
+        """
+
         losses = {
             "y_loss": mse_loss(y, y_hat),
             "dvf_loss": mse_loss(dvf, dvf_hat),
@@ -29,13 +51,32 @@ class SurrogateSolverLoss(Module):
 
 
 class MetaSolverLoss(Module):
+    """Loss function for training meta solvers (f)"""
+
     def __init__(self, weights: dict, reduce: bool, constructor) -> None:
+        """
+
+        Args:
+            weights (dict): weights for each loss term
+            reduce (bool): whether to reduce the loss to a scalar
+            constructor (_type_): theta constructor
+        """
         super().__init__()
         self.weights = weights
         self.reduce = reduce
         self.constructor = constructor
 
-    def forward(self, tau, theta, history):
+    def forward(self, tau, theta, history) -> dict:
+        """Compute the loss
+
+        Args:
+            tau (_type_): dataclass with task data
+            theta (_type_): solver parameters
+            history (_type_): _description_
+
+        Returns:
+            dict: _description_
+        """
         theta = self.constructor(theta)
 
         bnorm = norm(tau.b, dim=(1, 2))  # (bs,)
