@@ -79,7 +79,7 @@ def main(cfg):
 
         # clip gradients
         if cfg.clip:
-            torch.nn.utils.clip_grad_norm_(theta["x"], cfg.clip)
+            torch.nn.utils.clip_grad_norm_(meta_solver.parameters(), cfg.clip)
 
         # update
         opt.step()
