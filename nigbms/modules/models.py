@@ -1,6 +1,6 @@
 import torch
 from torch import Tensor, nn
-from torch.nn import Module
+from torch.nn import Module, Parameter
 from torch.nn import functional as F
 
 ### activation functions
@@ -20,6 +20,18 @@ class Square(Module):
 
     def forward(self, x):
         return torch.square(x)
+
+
+### Constant
+
+
+class Constant(Module):
+    def __init__(self, theta: Tensor):
+        super().__init__()
+        self.weight = Parameter(theta)
+
+    def forward(self, x):
+        return self.weight
 
 
 ### MLPs

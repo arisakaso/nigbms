@@ -97,7 +97,7 @@ class WrappedSolver(_Solver):
 
         def f_hat(x):  # surrogate solver
             x = self.constructor(x)
-            self.make_theta_features(tau, x)
+            # self.make_theta_features(tau, x)
             y = self.surrogate(tau, x)
             return y  # y must be a tensor for the custom grad to work
 
@@ -105,7 +105,7 @@ class WrappedSolver(_Solver):
         self.f_hat = f_hat
 
         y = self.f(theta)
-        self.make_tau_features(tau)
+        # self.make_tau_features(tau)
 
         if mode == "test" or self.cfg.grad_type == "f_true":
             return y

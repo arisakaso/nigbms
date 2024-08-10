@@ -1,17 +1,42 @@
 import hydra
-import pytorch_lightning as pl
+import lightning as pl
 import torch
 import wandb
 from hydra.utils import instantiate
 from omegaconf import OmegaConf
 
-from nigbms.modules.data import PyTorchLinearSystemTask
+from nigbms.modules.data import MinimizeTestFunctionTask
+from nigbms.modules.models import Constant
 from nigbms.modules.wrapper import WrappedSolver
 from nigbms.utils.resolver import calc_in_channels, calc_in_dim
 
 OmegaConf.register_new_resolver("calc_in_dim", calc_in_dim)
 OmegaConf.register_new_resolver("calc_in_channels", calc_in_channels)
 OmegaConf.register_new_resolver("eval", eval)
+
+
+#### TEST FUNCTIONS ####
+def sphere(x):
+    return torch.sum(x**2, dim=-1, keepdim=True)
+
+
+def rosenbrock(x):
+    x1 = x[..., :-1]
+    x2 = x[..., 1:]
+    return torch.sum(100 * (x2 - x1**2) ** 2 + (1 - x1) ** 2, dim=-1, keepdim=True)
+
+
+def rosenbrock_separate(x):
+    assert x.shape[-1] % 2 == 0, "Dimension must be even."
+    x1 = x[..., ::2]
+    x2 = x[..., 1::2]
+    return torch.sum((1 - x1) ** 2 + 100 * (x2 - x1**2) ** 2, dim=-1, keepdim=True)
+
+
+def rastrigin(x):
+    A = 10
+    n = x.shape[-1]
+    return A * n + torch.sum(x**2 - A * torch.cos(x * torch.pi * 2), dim=-1, keepdim=True)
 
 
 ### MAIN ###
@@ -24,14 +49,15 @@ def main(cfg):
     torch.set_default_device(cfg.device)
     pl.seed_everything(seed=cfg.seed, workers=True)
 
-    tau = PyTorchLinearSystemTask()
+    test_func = eval(cfg.problem.test_function)
+    tau = MinimizeTestFunctionTask(test_func)
     theta = torch.distributions.Uniform(*cfg.problem.initial_range).sample((cfg.problem.num_samples, cfg.problem.dim))
-    theta.requires_grad = True
+    meta_solver = Constant(theta)
     solver = instantiate(cfg.solver)
     surrogate = instantiate(cfg.surrogate)
     constructor = instantiate(cfg.constructor)
     loss = torch.sum
-    opt = instantiate(cfg.opt, params=[theta])
+    opt = instantiate(cfg.opt, params=list(meta_solver.parameters()))
     wrapped_solver = WrappedSolver(solver=solver, surrogate=surrogate, constructor=constructor, **cfg.wrapper)
 
     for i in range(1, cfg.problem.num_iter + 1):
@@ -39,6 +65,7 @@ def main(cfg):
         opt.zero_grad()
 
         # forward pass
+        theta = meta_solver(tau)
         y = wrapped_solver(tau, theta)
 
         # backprop for theta
@@ -46,7 +73,7 @@ def main(cfg):
 
         # logging
         ref = theta.clone()  # copy to get the true gradient
-        f_true = torch.autograd.grad(solver.f(ref).sum(), ref)[0]
+        f_true = torch.autograd.grad(test_func(ref).sum(), ref)[0]
         sim = torch.cosine_similarity(f_true, theta.grad, dim=1, eps=1e-20).detach()
         wandb.log({"ymean": y.mean(), "ymax": y.max(), "ymin": y.min(), "cos_sim": sim.mean()})
         if i % 100 == 0:

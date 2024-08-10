@@ -9,7 +9,6 @@ from torch.nn import Module
 from nigbms.modules.data import MinimizeTestFunctionTask, PETScLinearSystemTask, PyTorchLinearSystemTask, _Task
 from nigbms.utils.convert import tensor2petscvec, torchcoo2petscmat
 from nigbms.utils.solver import clear_petsc_options, eyes_like, set_petsc_options
-from nigbms.utils.testfunctions import *  # noqa
 
 
 class _Solver(Module):
