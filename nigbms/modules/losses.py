@@ -3,7 +3,7 @@ from torch import Tensor, log, norm, sigmoid
 from torch.nn import Module
 from torch.nn.functional import mse_loss
 
-from nigbms.data.data_modules import Task
+from nigbms.modules.data import Task
 
 
 class SurrogateSolverLoss(Module):

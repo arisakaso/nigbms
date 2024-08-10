@@ -6,7 +6,7 @@ from tensordict import TensorDict
 from torch import Tensor
 from torch.nn import Module
 
-from nigbms.data.data_modules import Task
+from nigbms.modules.data import Task
 from nigbms.utils.convert import tensor2petscvec, torchcoo2petscmat
 from nigbms.utils.solver import clear_petsc_options, eyes_like, set_petsc_options
 from nigbms.utils.testfunctions import *  # noqa

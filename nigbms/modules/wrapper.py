@@ -4,7 +4,7 @@ from torch import Tensor, randn_like  # noqa
 from torch.autograd import Function, grad
 from hydra.utils import instantiate
 from nigbms.modules.solvers import _Solver
-from nigbms.data.data_modules import Task
+from nigbms.modules.data import Task
 from nigbms.utils.solver import rademacher_like  # noqa
 
 

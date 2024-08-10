@@ -4,7 +4,7 @@ from tensordict import TensorDict
 from torch import Tensor
 from torch.nn import Module
 
-from nigbms.data.data_modules import Task
+from nigbms.modules.data import Task
 
 
 class MetaSolver(Module):

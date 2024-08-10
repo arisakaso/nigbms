@@ -2,7 +2,7 @@ import torch
 from omegaconf import DictConfig
 from torch import Tensor
 
-from nigbms.data.data_modules import Task
+from nigbms.modules.data import Task
 from nigbms.modules.solvers import _Solver
 
 

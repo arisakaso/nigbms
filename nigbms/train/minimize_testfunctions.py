@@ -5,7 +5,7 @@ import wandb
 from hydra.utils import instantiate
 from omegaconf import OmegaConf
 
-from nigbms.data.data_modules import Task
+from nigbms.modules.data import Task
 from nigbms.modules.wrapper import WrappedSolver
 from nigbms.utils.resolver import calc_in_channels, calc_in_dim
 
