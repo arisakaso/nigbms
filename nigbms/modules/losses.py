@@ -3,7 +3,7 @@ from torch import Tensor, log, norm, sigmoid
 from torch.nn import Module
 from torch.nn.functional import mse_loss
 
-from nigbms.modules.data import PyTorchTask
+from nigbms.modules.data import PyTorchLinearSystemTask
 
 
 class SurrogateSolverLoss(Module):
@@ -68,7 +68,7 @@ class MetaSolverLoss(Module):
         self.reduce = reduce
         self.constructor = constructor
 
-    def forward(self, tau: PyTorchTask, theta: Tensor, history: Tensor) -> dict:
+    def forward(self, tau: PyTorchLinearSystemTask, theta: Tensor, history: Tensor) -> dict:
         """Compute the loss
 
         Args:

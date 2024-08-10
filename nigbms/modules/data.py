@@ -1,6 +1,6 @@
 # %%
 from dataclasses import astuple, dataclass
-from typing import Any, List, Tuple, Union
+from typing import Any, Callable, List, Tuple, Union
 
 import pandas as pd
 import torch
@@ -15,7 +15,17 @@ from nigbms.utils.distributions import Constant, LogUniform
 
 
 @dataclass
-class Task:
+class _Task:
+    pass
+
+
+@dataclass
+class MinimizeTestFunctionTask(_Task):
+    f: Callable = None  # Test function to minimize
+
+
+@dataclass
+class LinearSystemTask(_Task):
     A: Any = None
     b: Any = None
     x: Any = None  # Ground Truth if applicable
@@ -25,7 +35,7 @@ class Task:
 
 
 @dataclass
-class PyTorchTask(Task):
+class PyTorchLinearSystemTask(LinearSystemTask):
     A: Tensor = None
     b: Tensor = None
     x: Tensor = None  # Ground Truth if applicable
@@ -35,13 +45,19 @@ class PyTorchTask(Task):
 
 
 @dataclass
-class PETScTask(Task):
+class PETScLinearSystemTask(LinearSystemTask):
     A: PETSc.Mat = None
     b: PETSc.Vec = None
     x: PETSc.Vec = None  # Ground Truth if applicable
     rtol: float = None
     maxiter: int = None
     features: TensorDict = TensorDict({})  # used as meta-solver input
+
+
+@dataclass
+class OpenFOAMTask:
+    u: Any = None
+    p: Any = None
 
 
 class OfflineDataset(Dataset):
@@ -96,7 +112,7 @@ class OfflineDataset(Dataset):
             }
         )
 
-        tau = PyTorchTask(A, b, x, rtol, maxiter, features)
+        tau = PyTorchLinearSystemTask(A, b, x, rtol, maxiter, features)
 
         return astuple(tau)
 
@@ -112,7 +128,7 @@ class OnlineDataset(Dataset):
 
 def offline_collate_fn(batch: List[Any]) -> Any:
     batch = [torch.stack(x) for x in zip(*batch, strict=False)]
-    tau = PyTorchTask(*batch)
+    tau = PyTorchLinearSystemTask(*batch)
     return tau
 
 
