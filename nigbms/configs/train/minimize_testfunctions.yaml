@@ -18,6 +18,17 @@ problem:
     - 1
   tensor_type: torch.cuda.DoubleTensor
 
+meta_solver:
+  _target_: nigbms.modules.meta_solvers.MetaSolver
+  params_learn: null
+  features: null
+  model:
+    _target_: nigbms.modules.models.Constant
+    shape:
+      - ${problem.num_samples}
+      - ${problem.dim}
+    range: ${problem.initial_range}
+
 solver:
   _target_: nigbms.modules.solvers.TestFunctionSolver
   params_fix: 

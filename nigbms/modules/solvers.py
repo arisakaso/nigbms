@@ -6,7 +6,7 @@ from tensordict import TensorDict
 from torch import Tensor
 from torch.nn import Module
 
-from nigbms.modules.data import MinimizeTestFunctionTask, PETScLinearSystemTask, PyTorchLinearSystemTask, _Task
+from nigbms.modules.data import MinimizeTestFunctionTask, PETScLinearSystemTask, PyTorchLinearSystemTask, Task
 from nigbms.utils.convert import tensor2petscvec, torchcoo2petscmat
 from nigbms.utils.solver import clear_petsc_options, eyes_like, set_petsc_options
 
@@ -25,7 +25,7 @@ class _Solver(Module):
         self.params_fix = params_fix
         self.params_learn = params_learn
 
-    def _setup(self, tau: _Task, theta: TensorDict) -> None:
+    def _setup(self, tau: Task, theta: TensorDict) -> None:
         """set up the solver with the given parameters.
 
         Args:
@@ -34,7 +34,7 @@ class _Solver(Module):
         """
         raise NotImplementedError
 
-    def forward(self, tau: _Task, theta: TensorDict) -> Tensor:
+    def forward(self, tau: Task, theta: TensorDict) -> Tensor:
         """Solve the task with the given parameters.
         Return the convergence history.
 

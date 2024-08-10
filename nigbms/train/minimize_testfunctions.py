@@ -6,7 +6,6 @@ from hydra.utils import instantiate
 from omegaconf import OmegaConf
 
 from nigbms.modules.data import MinimizeTestFunctionTask
-from nigbms.modules.models import Constant
 from nigbms.modules.wrapper import WrappedSolver
 from nigbms.utils.resolver import calc_in_channels, calc_in_dim
 
@@ -51,8 +50,7 @@ def main(cfg):
 
     test_func = eval(cfg.problem.test_function)
     tau = MinimizeTestFunctionTask(test_func)
-    theta = torch.distributions.Uniform(*cfg.problem.initial_range).sample((cfg.problem.num_samples, cfg.problem.dim))
-    meta_solver = Constant(theta)
+    meta_solver = instantiate(cfg.meta_solver)
     solver = instantiate(cfg.solver)
     surrogate = instantiate(cfg.surrogate)
     constructor = instantiate(cfg.constructor)

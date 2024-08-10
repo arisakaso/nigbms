@@ -15,17 +15,17 @@ from nigbms.utils.distributions import Constant, LogUniform
 
 
 @dataclass
-class _Task:
+class Task:
     pass
 
 
 @dataclass
-class MinimizeTestFunctionTask(_Task):
+class MinimizeTestFunctionTask(Task):
     f: Callable = None  # Test function to minimize
 
 
 @dataclass
-class LinearSystemTask(_Task):
+class LinearSystemTask(Task):
     A: Any = None
     b: Any = None
     x: Any = None  # Ground Truth if applicable

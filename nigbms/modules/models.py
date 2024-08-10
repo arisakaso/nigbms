@@ -26,8 +26,9 @@ class Square(Module):
 
 
 class Constant(Module):
-    def __init__(self, theta: Tensor):
+    def __init__(self, shape, range):
         super().__init__()
+        theta = torch.distributions.Uniform(*range).sample(shape)
         self.weight = Parameter(theta)
 
     def forward(self, x):
