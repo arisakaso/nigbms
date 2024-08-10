@@ -18,5 +18,6 @@
             "ms-vscode.cmake-tools"
         ]
     }
-  }
+  },
+  "postCreateCommand": "pip install -e ."
 }

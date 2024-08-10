@@ -16,7 +16,6 @@ def rosenbrock_separate(x):
     assert x.shape[-1] % 2 == 0, "Dimension must be even."
     x1 = x[..., ::2]
     x2 = x[..., 1::2]
-
     return torch.sum((1 - x1) ** 2 + 100 * (x2 - x1**2) ** 2, dim=-1, keepdim=True)
 
 

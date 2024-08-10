@@ -6,7 +6,7 @@ from tensordict import TensorDict
 from torch import Tensor
 from torch.nn import Module
 
-from nigbms.modules.data import PETScLinearSystemTask, PyTorchLinearSystemTask, _Task
+from nigbms.modules.data import MinimizeTestFunctionTask, PETScLinearSystemTask, PyTorchLinearSystemTask, _Task
 from nigbms.utils.convert import tensor2petscvec, torchcoo2petscmat
 from nigbms.utils.solver import clear_petsc_options, eyes_like, set_petsc_options
 from nigbms.utils.testfunctions import *  # noqa
@@ -54,10 +54,9 @@ class TestFunctionSolver(_Solver):
 
     def __init__(self, params_fix: DictConfig, params_learn: DictConfig) -> None:
         super().__init__(params_fix, params_learn)
-        self.f = eval(params_fix["test_function"])
 
-    def forward(self, tau: _Task, theta: Tensor) -> Tensor:
-        return self.f(theta["x"])
+    def forward(self, tau: MinimizeTestFunctionTask, theta: TensorDict) -> Tensor:
+        return tau.f(theta["x"])
 
 
 class _PytorchIterativeSolver(_Solver):
