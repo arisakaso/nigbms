@@ -5,7 +5,9 @@ from typing import Any, List, Tuple, Union
 import pandas as pd
 import torch
 from lightning import LightningDataModule
+from petsc4py import PETSc
 from tensordict import TensorDict
+from torch import Tensor
 from torch.utils.data.dataloader import DataLoader
 from torch.utils.data.dataset import Dataset
 
@@ -14,12 +16,32 @@ from nigbms.utils.distributions import Constant, LogUniform
 
 @dataclass
 class Task:
-    A: torch.Tensor = None
-    b: torch.Tensor = None
-    x: torch.Tensor = None
-    rtol: torch.Tensor = None
-    maxiter: torch.Tensor = None
-    features: TensorDict = TensorDict({})
+    A: Any = None
+    b: Any = None
+    x: Any = None  # Ground Truth if applicable
+    rtol: Any = None
+    maxiter: Any = None
+    features: Any = None  # used as meta-solver input
+
+
+@dataclass
+class PyTorchTask(Task):
+    A: Tensor = None
+    b: Tensor = None
+    x: Tensor = None  # Ground Truth if applicable
+    rtol: Tensor = None
+    maxiter: Tensor = None
+    features: TensorDict = TensorDict({})  # used as meta-solver input
+
+
+@dataclass
+class PETScTask(Task):
+    A: PETSc.Mat = None
+    b: PETSc.Vec = None
+    x: PETSc.Vec = None  # Ground Truth if applicable
+    rtol: float = None
+    maxiter: int = None
+    features: TensorDict = TensorDict({})  # used as meta-solver input
 
 
 class OfflineDataset(Dataset):
@@ -56,7 +78,7 @@ class OfflineDataset(Dataset):
         return len(self.meta_df)
 
     def __getitem__(self, idx):
-        if isinstance(self.fixed_A, torch.Tensor):
+        if isinstance(self.fixed_A, Tensor):
             A = self.fixed_A
         else:
             A = torch.load(self.data_dir + f"/{idx}_A.pt")
@@ -74,14 +96,23 @@ class OfflineDataset(Dataset):
             }
         )
 
-        tau = Task(A, b, x, rtol, maxiter, features)
+        tau = PyTorchTask(A, b, x, rtol, maxiter, features)
 
+        return astuple(tau)
+
+
+class OnlineDataset(Dataset):
+    def __init__(self, task_generator) -> None:
+        self.task_generator = task_generator
+
+    def __getitem__(self, idx):
+        tau = self.task_generator(idx)
         return astuple(tau)
 
 
 def offline_collate_fn(batch: List[Any]) -> Any:
     batch = [torch.stack(x) for x in zip(*batch, strict=False)]
-    tau = Task(*batch)
+    tau = PyTorchTask(*batch)
     return tau
 
 

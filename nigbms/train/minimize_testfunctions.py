@@ -5,7 +5,7 @@ import wandb
 from hydra.utils import instantiate
 from omegaconf import OmegaConf
 
-from nigbms.modules.data import Task
+from nigbms.modules.data import PyTorchTask
 from nigbms.modules.wrapper import WrappedSolver
 from nigbms.utils.resolver import calc_in_channels, calc_in_dim
 
@@ -24,7 +24,7 @@ def main(cfg):
     torch.set_default_device(cfg.device)
     pl.seed_everything(seed=cfg.seed, workers=True)
 
-    tau = Task()
+    tau = PyTorchTask()
     theta = torch.distributions.Uniform(*cfg.problem.initial_range).sample((cfg.problem.num_samples, cfg.problem.dim))
     theta.requires_grad = True
     solver = instantiate(cfg.solver)

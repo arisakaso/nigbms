@@ -4,7 +4,7 @@ from tensordict import TensorDict
 from torch import Tensor
 from torch.nn import Module
 
-from nigbms.modules.data import Task
+from nigbms.modules.data import PyTorchTask
 
 
 class MetaSolver(Module):
@@ -20,7 +20,7 @@ class MetaSolver(Module):
         self.features = features
         self.model = model
 
-    def get_mlp_features(self, tau: Task) -> Tensor:
+    def get_mlp_features(self, tau: PyTorchTask) -> Tensor:
         """Arrange input feature for MLP model from Task
 
         Args:
@@ -36,7 +36,7 @@ class MetaSolver(Module):
         features = torch.cat(features, dim=1).squeeze()  # (bs, dim)
         return features
 
-    def forward(self, tau: Task) -> TensorDict:
+    def forward(self, tau: PyTorchTask) -> TensorDict:
         """Generate theta (solver parameters) from Task
 
         Args:

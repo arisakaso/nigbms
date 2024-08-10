@@ -4,7 +4,7 @@ from torch import Tensor, randn_like  # noqa
 from torch.autograd import Function, grad
 from hydra.utils import instantiate
 from nigbms.modules.solvers import _Solver
-from nigbms.modules.data import Task
+from nigbms.modules.data import PyTorchTask
 from nigbms.utils.solver import rademacher_like  # noqa
 
 
@@ -84,12 +84,12 @@ class WrappedSolver(_Solver):
         theta["x0_sin"] = encdec.encode(theta["x0"])
         theta["xn_sin-x0_sin"] = tau.features["xn_sin"] - theta["x0_sin"]
 
-    def make_tau_features(self, tau: Task) -> None:  # TODO: refactor this ugly function
+    def make_tau_features(self, tau: PyTorchTask) -> None:  # TODO: refactor this ugly function
         encdec = self.constructor.encdecs["x0"]
         tau.features["xn"] = self.solver.x.detach()
         tau.features["xn_sin"] = encdec.encode(tau.features["xn"])
 
-    def forward(self, tau: Task, theta: Tensor, mode: str = "train") -> Tensor:
+    def forward(self, tau: PyTorchTask, theta: Tensor, mode: str = "train") -> Tensor:
         def f(x):  # solve the problem
             x = self.constructor(x)
             y = self.solver(tau, x)

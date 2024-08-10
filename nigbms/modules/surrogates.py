@@ -2,7 +2,7 @@ import torch
 from omegaconf import DictConfig
 from torch import Tensor
 
-from nigbms.modules.data import Task
+from nigbms.modules.data import PyTorchTask
 from nigbms.modules.solvers import _Solver
 
 
@@ -29,7 +29,7 @@ class SurrogateSolver(_Solver):
         self.features = features
         self.model = model
 
-    def get_mlp_features(self, tau: Task, theta: Tensor) -> Tensor:
+    def get_mlp_features(self, tau: PyTorchTask, theta: Tensor) -> Tensor:
         features = []
         for k in self.features.keys():
             if k in theta:
@@ -39,7 +39,7 @@ class SurrogateSolver(_Solver):
         features = torch.cat(features, dim=1).squeeze()  # (bs, dim)
         return features
 
-    def get_conv_features(self, tau: Task, theta: Tensor) -> Tensor:
+    def get_conv_features(self, tau: PyTorchTask, theta: Tensor) -> Tensor:
         features = []
         for k in self.features.keys():
             if k in theta:
@@ -50,7 +50,7 @@ class SurrogateSolver(_Solver):
 
         return features
 
-    def forward(self, tau: Task, theta: Tensor) -> Tensor:
+    def forward(self, tau: PyTorchTask, theta: Tensor) -> Tensor:
         if self.model._get_name() == "MLP":
             x = self.get_mlp_features(tau, theta)
         elif self.model._get_name() == "CNN1D":
