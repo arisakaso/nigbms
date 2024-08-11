@@ -28,13 +28,16 @@ class Poisson2DParams(TaskParams):
     maxiter: int
 
 
-def generate_petsc_poisson2d_problem(u_ex, N=10, degree=1) -> LinearProblem:
+def generate_petsc_poisson2d_task(params: Poisson2DParams) -> PETScLinearSystemTask:
+    def u_ex(mod):
+        return lambda x: mod.cos(params.coef1 * mod.pi * x[0]) * mod.cos(params.coef2 * mod.pi * x[1])
+
     u_numpy = u_ex(np)
     u_ufl = u_ex(ufl)
-    mesh = create_unit_square(MPI.COMM_WORLD, N, N)
+    mesh = create_unit_square(MPI.COMM_WORLD, params.N, params.N)
     x = SpatialCoordinate(mesh)
     f = -div(grad(u_ufl(x)))
-    V = functionspace(mesh, ("Lagrange", degree))
+    V = functionspace(mesh, ("Lagrange", params.degree))
     u = TrialFunction(V)
     v = TestFunction(V)
     a = inner(grad(u), grad(v)) * dx
@@ -46,15 +49,8 @@ def generate_petsc_poisson2d_problem(u_ex, N=10, degree=1) -> LinearProblem:
     bcs = [dirichletbc(u_bc, dofs)]
     problem = LinearProblem(a, L, bcs=bcs)
     problem.assemble_system()
-    return problem
 
-
-def generate_petsc_poisson2d_task(params: Poisson2DParams) -> PETScLinearSystemTask:
-    def _u_ex(mod):
-        return lambda x: mod.cos(params.coef1 * mod.pi * x[0]) * mod.cos(params.coef2 * mod.pi * x[1])
-
-    p = generate_petsc_poisson2d_problem(_u_ex, params.N, params.degree)
-    task = PETScLinearSystemTask(params, p.A, p.b, None, params.rtol, params.maxiter)
+    task = PETScLinearSystemTask(params, problem.A, problem.b, None, params.rtol, params.maxiter)
     return task
 
 
