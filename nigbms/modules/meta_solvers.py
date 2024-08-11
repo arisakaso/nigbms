@@ -1,10 +1,9 @@
 import torch
 from omegaconf import DictConfig
-from tensordict import TensorDict
 from torch import Tensor
 from torch.nn import Module
 
-from nigbms.modules.data import Task
+from nigbms.modules.tasks import Task
 
 
 class MetaSolver(Module):
@@ -36,7 +35,7 @@ class MetaSolver(Module):
         features = torch.cat(features, dim=1).squeeze()  # (bs, dim)
         return features
 
-    def forward(self, tau: Task) -> TensorDict:
+    def forward(self, tau: Task) -> Tensor:
         """Generate theta (solver parameters) from Task
 
         Args:
@@ -46,7 +45,7 @@ class MetaSolver(Module):
             NotImplementedError: _description_
 
         Returns:
-            TensorDict: theta (solver parameters)
+            Tensor: theta (solver parameters)
         """
         if self.model._get_name() == "MLP":
             x = self.make_features(tau)

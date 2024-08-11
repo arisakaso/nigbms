@@ -5,7 +5,7 @@ import wandb
 from hydra.utils import instantiate
 from omegaconf import OmegaConf
 
-from nigbms.modules.data import MinimizeTestFunctionTask
+from nigbms.modules.tasks import MinimizeTestFunctionTask
 from nigbms.modules.wrapper import WrappedSolver
 from nigbms.utils.resolver import calc_in_channels, calc_in_dim
 
@@ -49,7 +49,7 @@ def main(cfg):
     pl.seed_everything(seed=cfg.seed, workers=True)
 
     test_func = eval(cfg.problem.test_function)
-    tau = MinimizeTestFunctionTask(test_func)
+    tau = MinimizeTestFunctionTask(None, test_func)
     meta_solver = instantiate(cfg.meta_solver)
     solver = instantiate(cfg.solver)
     surrogate = instantiate(cfg.surrogate)

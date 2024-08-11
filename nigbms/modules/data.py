@@ -10,7 +10,7 @@ from torch import Tensor
 from torch.utils.data.dataloader import DataLoader
 from torch.utils.data.dataset import Dataset
 
-from nigbms.modules.data import PyTorchLinearSystemTask
+from nigbms.modules.tasks import PyTorchLinearSystemTask
 from nigbms.utils.distributions import Constant, LogUniform
 
 
