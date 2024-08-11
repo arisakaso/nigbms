@@ -49,6 +49,7 @@ class PETScLinearSystemTask(LinearSystemTask):
     x: PETSc.Vec = None  # Ground Truth if applicable, otherwise the solution provided by the solver
     rtol: float = None
     maxiter: int = None
+    problem: Any = None  # This is a placeholder for the problem object to keep it alive TODO: remove this
 
 
 @dataclass

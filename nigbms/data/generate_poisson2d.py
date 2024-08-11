@@ -1,3 +1,4 @@
+# %%
 # Reference: https://jsdokken.com/dolfinx-tutorial/chapter4/solvers.html
 
 from dataclasses import dataclass
@@ -29,11 +30,11 @@ class Poisson2DParams(TaskParams):
 
 
 def generate_petsc_poisson2d_task(params: Poisson2DParams) -> PETScLinearSystemTask:
-    def u_ex(mod):
+    def _u_ex(mod):
         return lambda x: mod.cos(params.coef1 * mod.pi * x[0]) * mod.cos(params.coef2 * mod.pi * x[1])
 
-    u_numpy = u_ex(np)
-    u_ufl = u_ex(ufl)
+    u_numpy = _u_ex(np)
+    u_ufl = _u_ex(ufl)
     mesh = create_unit_square(MPI.COMM_WORLD, params.N, params.N)
     x = SpatialCoordinate(mesh)
     f = -div(grad(u_ufl(x)))
@@ -50,11 +51,14 @@ def generate_petsc_poisson2d_task(params: Poisson2DParams) -> PETScLinearSystemT
     problem = LinearProblem(a, L, bcs=bcs)
     problem.assemble_system()
 
-    task = PETScLinearSystemTask(params, problem.A, problem.b, None, params.rtol, params.maxiter)
+    # TODO: remove problem
+    # If the problem object is not passed to the task, it will be garbage collected and A and b will be empty
+    # This is a workaround to keep the problem object alive.
+    # A and b should be created without the problem object in the future.
+    task = PETScLinearSystemTask(params, problem.A, problem.b, None, params.rtol, params.maxiter, problem)
     return task
 
 
-generate_petsc_poisson2d_task(Poisson2DParams(1, 1, 10, 1, 1e-6, 100))
-
-
-# %%
+params = Poisson2DParams(1, 1, 10, 1, 1e-6, 100)
+task = generate_petsc_poisson2d_task(params)
+task.A.view()
