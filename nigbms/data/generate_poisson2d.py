@@ -18,8 +18,14 @@ from nigbms.data.petsc import LinearProblem
 from nigbms.modules.tasks import PETScLinearSystemTask, TaskParams
 
 
-def u_ex(mod, coefs):
-    return lambda x: mod.cos(coefs[0] * mod.pi * x[0]) * mod.cos(coefs[1] * mod.pi * x[1])
+@dataclass
+class Poisson2DParams(TaskParams):
+    coef1: float
+    coef2: float
+    N: int
+    degree: int
+    rtol: float
+    maxiter: int
 
 
 def generate_petsc_poisson2d_problem(u_ex, N=10, degree=1) -> LinearProblem:
@@ -41,16 +47,6 @@ def generate_petsc_poisson2d_problem(u_ex, N=10, degree=1) -> LinearProblem:
     problem = LinearProblem(a, L, bcs=bcs)
     problem.assemble_system()
     return problem
-
-
-@dataclass
-class Poisson2DParams(TaskParams):
-    coef1: float
-    coef2: float
-    N: int
-    degree: int
-    rtol: float
-    maxiter: int
 
 
 def generate_petsc_poisson2d_task(params: Poisson2DParams) -> PETScLinearSystemTask:
