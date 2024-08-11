@@ -1,63 +1,17 @@
 # %%
-from dataclasses import astuple, dataclass
-from typing import Any, Callable, List, Tuple, Union
+from dataclasses import astuple
+from typing import Any, List, Tuple, Union
 
 import pandas as pd
 import torch
 from lightning import LightningDataModule
-from petsc4py import PETSc
 from tensordict import TensorDict
 from torch import Tensor
 from torch.utils.data.dataloader import DataLoader
 from torch.utils.data.dataset import Dataset
 
+from nigbms.modules.data import PyTorchLinearSystemTask
 from nigbms.utils.distributions import Constant, LogUniform
-
-
-@dataclass
-class Task:
-    pass
-
-
-@dataclass
-class MinimizeTestFunctionTask(Task):
-    f: Callable = None  # Test function to minimize
-
-
-@dataclass
-class LinearSystemTask(Task):
-    A: Any = None
-    b: Any = None
-    x: Any = None  # Ground Truth if applicable
-    rtol: Any = None
-    maxiter: Any = None
-    features: Any = None  # used as meta-solver input
-
-
-@dataclass
-class PyTorchLinearSystemTask(LinearSystemTask):
-    A: Tensor = None
-    b: Tensor = None
-    x: Tensor = None  # Ground Truth if applicable
-    rtol: Tensor = None
-    maxiter: Tensor = None
-    features: TensorDict = TensorDict({})  # used as meta-solver input
-
-
-@dataclass
-class PETScLinearSystemTask(LinearSystemTask):
-    A: PETSc.Mat = None
-    b: PETSc.Vec = None
-    x: PETSc.Vec = None  # Ground Truth if applicable
-    rtol: float = None
-    maxiter: int = None
-    features: TensorDict = TensorDict({})  # used as meta-solver input
-
-
-@dataclass
-class OpenFOAMTask:
-    u: Any = None
-    p: Any = None
 
 
 class OfflineDataset(Dataset):

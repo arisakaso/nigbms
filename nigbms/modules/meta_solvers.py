@@ -20,14 +20,14 @@ class MetaSolver(Module):
         self.features = features
         self.model = model
 
-    def get_mlp_features(self, tau: Task) -> Tensor:
+    def make_features(self, tau: Task) -> Tensor:
         """Arrange input feature for MLP model from Task
 
         Args:
             tau (Task): Task dataclass
 
         Returns:
-            Tensor: input feature
+            Tensor: input features
         """
         features = []
         for k in self.features.keys():
@@ -49,7 +49,7 @@ class MetaSolver(Module):
             TensorDict: theta (solver parameters)
         """
         if self.model._get_name() == "MLP":
-            x = self.get_mlp_features(tau)
+            x = self.make_features(tau)
         elif self.model._get_name() == "Constant":
             x = None
         else:

@@ -1,6 +1,7 @@
 {
   "build": { "dockerfile": "docker/Dockerfile" },
   "runArgs": [
+    "--shm-size=128g",
     "--gpus",
     "all"
   ],
