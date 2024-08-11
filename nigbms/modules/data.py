@@ -1,15 +1,18 @@
 # %%
 from dataclasses import astuple
-from typing import Any, List, Tuple, Union
+from typing import Any, Callable, List, Tuple, Union
 
 import pandas as pd
 import torch
 from lightning import LightningDataModule
+from omegaconf import DictConfig
 from tensordict import TensorDict
 from torch import Tensor
 from torch.utils.data.dataloader import DataLoader
 from torch.utils.data.dataset import Dataset
 
+import nigbms  # noqa
+import nigbms.data.generate_poisson2d  # noqa
 from nigbms.modules.tasks import PyTorchLinearSystemTask
 from nigbms.utils.distributions import Constant, LogUniform
 
@@ -72,12 +75,18 @@ class OfflineDataset(Dataset):
 
 
 class OnlineDataset(Dataset):
-    def __init__(self, task_generator) -> None:
-        self.task_generator = task_generator
+    def __init__(self, task_params_class: str, task_constructor: Callable, distributions: DictConfig) -> None:
+        self.task_params_class = eval(task_params_class)
+        self.task_constructor = eval(task_constructor)
+        self.distributions = distributions
 
     def __getitem__(self, idx):
-        tau = self.task_generator(idx)
-        return astuple(tau)
+        params = {}
+        for k, dist in self.distributions.items():
+            params[k] = dist.sample(idx)
+        task_params = self.task_params_class(**params)
+        tau = self.task_constructor(task_params)
+        return tau
 
 
 def offline_collate_fn(batch: List[Any]) -> Any:

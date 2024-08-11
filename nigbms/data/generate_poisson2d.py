@@ -1,8 +1,6 @@
-# %%
-# Reference: https://jsdokken.com/dolfinx-tutorial/chapter4/solvers.html
-
 from dataclasses import dataclass
 
+import hydra
 import numpy as np
 import ufl
 from dolfinx.fem import (
@@ -12,26 +10,29 @@ from dolfinx.fem import (
     locate_dofs_topological,
 )
 from dolfinx.mesh import create_unit_square, locate_entities_boundary
+from hydra.utils import instantiate
 from mpi4py import MPI
 from ufl import SpatialCoordinate, TestFunction, TrialFunction, div, dx, grad, inner
 
+import nigbms  # noqa
 from nigbms.data.petsc import LinearProblem
 from nigbms.modules.tasks import PETScLinearSystemTask, TaskParams
 
 
 @dataclass
 class Poisson2DParams(TaskParams):
-    coef1: float
-    coef2: float
+    coef: np.ndarray
     N: int
     degree: int
     rtol: float
     maxiter: int
 
 
-def generate_petsc_poisson2d_task(params: Poisson2DParams) -> PETScLinearSystemTask:
+def construct_petsc_poisson2d_task(params: Poisson2DParams) -> PETScLinearSystemTask:
+    # Reference: https://jsdokken.com/dolfinx-tutorial/chapter4/solvers.html
+
     def _u_ex(mod):
-        return lambda x: mod.cos(params.coef1 * mod.pi * x[0]) * mod.cos(params.coef2 * mod.pi * x[1])
+        return lambda x: mod.cos(params.coef[0] * mod.pi * x[0]) * mod.cos(params.coef[1] * mod.pi * x[1])
 
     u_numpy = _u_ex(np)
     u_ufl = _u_ex(ufl)
@@ -52,13 +53,19 @@ def generate_petsc_poisson2d_task(params: Poisson2DParams) -> PETScLinearSystemT
     problem.assemble_system()
 
     # TODO: remove problem
-    # If the problem object is not passed to the task, it will be garbage collected and A and b will be empty
+    # If the problem object is not passed to the task, it will be garbage collected and A and b will be empty.
     # This is a workaround to keep the problem object alive.
     # A and b should be created without the problem object in the future.
     task = PETScLinearSystemTask(params, problem.A, problem.b, None, params.rtol, params.maxiter, problem)
     return task
 
 
-params = Poisson2DParams(1, 1, 10, 1, 1e-6, 100)
-task = generate_petsc_poisson2d_task(params)
-task.A.view()
+@hydra.main(version_base="1.3", config_path="../configs/data", config_name="generate_poisson2d")
+def main(cfg):
+    ds = instantiate(cfg.dataset)
+    task = ds[1]
+    task.b.view()
+
+
+if __name__ == "__main__":
+    main()
