@@ -37,7 +37,7 @@ class LinearSystemTask(Task):
 
 @dataclass
 class PyTorchLinearSystemTask(LinearSystemTask):
-    A: Tensor = None  # Dense matrix
+    A: Tensor = None  # currentyl only support dense matrix
     b: Tensor = None
     x: Tensor = None  # Ground Truth if applicable, otherwise the solution provided by the solver
     rtol: Tensor = None
@@ -55,7 +55,7 @@ class PyTorchLinearSystemTask(LinearSystemTask):
 
 @dataclass
 class PETScLinearSystemTask(LinearSystemTask):
-    A: PETSc.Mat = None  # Sparse matrix (AIJ)
+    A: PETSc.Mat = None  # currently only support sparse matrix (AIJ)
     b: PETSc.Vec = None
     x: PETSc.Vec = None  # Ground Truth if applicable, otherwise the solution provided by the solver
     rtol: float = None
@@ -93,7 +93,6 @@ def petsc2torch(task: PETScLinearSystemTask) -> PyTorchLinearSystemTask:
     )
 
 
-# TODO: check this function (Copilot generated)
 def torch2petsc(task: PyTorchLinearSystemTask) -> PETScLinearSystemTask:
     A_sp = task.A.cpu().to_sparse_csr()
     A = PETSc.Mat().createAIJ(size=A_sp.shape, nnz=A_sp._nnz())

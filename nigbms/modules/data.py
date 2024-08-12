@@ -1,20 +1,17 @@
 # %%
-from dataclasses import astuple
 from typing import Any, Callable, List, Tuple, Union
 
 import pandas as pd
 import torch
 from lightning import LightningDataModule
 from omegaconf import DictConfig
-from tensordict import TensorDict
-from torch import Tensor
 from torch.utils.data.dataloader import DataLoader
 from torch.utils.data.dataset import Dataset
 
 import nigbms  # noqa
 import nigbms.data.generate_poisson2d  # noqa
 from nigbms.modules.tasks import PyTorchLinearSystemTask
-from nigbms.utils.distributions import Constant, LogUniform
+from nigbms.utils.distributions import Distribution
 
 
 class OfflineDataset(Dataset):
@@ -22,58 +19,48 @@ class OfflineDataset(Dataset):
         self,
         data_dir: str,
         meta_df: pd.DataFrame,
-        fixed_A: bool = True,
-        rtol: Union[float, Tuple[float, float]] = 1.0e-6,
-        maxiter: Union[int, Tuple[int, int]] = 1000,
+        rtol_dist: Distribution,
+        maxiter_dist: Distribution,
+        data_format: str,
+        is_A_fixed: bool = True,
     ) -> None:
         self.data_dir = data_dir
         self.meta_df = meta_df
+        self.rtol_dist = rtol_dist
+        self.maxiter_dist = maxiter_dist
+        self.data_format = data_format
+        self.fixed_A = self.load(data_dir + "/A") if is_A_fixed else None
 
-        if fixed_A:
-            self.fixed_A = torch.load(data_dir + "/A.pt")
-            self.fixed_A = self.fixed_A.to_dense()  # TODO: remove this line
-
-        if isinstance(rtol, tuple):
-            self.rtol_dist = LogUniform(rtol[0], rtol[1])
-        elif isinstance(rtol, float):
-            self.rtol_dist = Constant(rtol)
+    def load(self, path):
+        if self.data_format == "pt":
+            return torch.load(path + ".pt")
         else:
-            raise ValueError("rtol must be a float or a tuple of floats")
-
-        if isinstance(maxiter, tuple):
-            self.maxiter_dist = Constant(maxiter[0], maxiter[1])
-        elif isinstance(maxiter, int):
-            self.maxiter_dist = Constant(maxiter)
-        else:
-            raise ValueError("maxiter must be an int or a tuple of ints")
+            raise ValueError(f"Unknown data format: {self.data_format}")
 
     def __len__(self) -> int:
         return len(self.meta_df)
 
     def __getitem__(self, idx):
-        if isinstance(self.fixed_A, Tensor):
+        if self.fixed_A is not None:
             A = self.fixed_A
         else:
-            A = torch.load(self.data_dir + f"/{idx}_A.pt")
+            A = self.load(self.data_dir + f"/{idx}_A")
 
-        b = torch.load(self.data_dir + f"/{idx}_b.pt").reshape(-1, 1)
-        x = torch.load(self.data_dir + f"/{idx}_x.pt").reshape(-1, 1)
-        rtol = self.rtol_dist.sample()
-        maxiter = self.maxiter_dist.sample().type(torch.int)
-        features = TensorDict(
-            {
-                "rtol": rtol.clone(),
-                "maxiter": maxiter.clone(),
-                "b": b.clone(),
-                "x": x.clone(),
-            }
-        )
+        b = self.load(self.data_dir + f"/{idx}_b").reshape(-1, 1)
+        x = self.load(self.data_dir + f"/{idx}_x").reshape(-1, 1)
+        rtol = self.rtol_dist.sample(idx)
+        maxiter = self.maxiter_dist.sample(idx)
+        params = self.meta_df.iloc[idx].to_dict()
+        params["rtol"] = rtol
+        params["maxiter"] = maxiter
 
-        tau = PyTorchLinearSystemTask(A, b, x, rtol, maxiter, features)
+        tau = PyTorchLinearSystemTask(params, A, b, x, rtol, maxiter)
 
-        return astuple(tau)
+        return tau
 
 
+# TODO: Is IterableDataset more appropriate?
+# see https://pytorch.org/docs/stable/data.html#iterable-style-datasets
 class OnlineDataset(Dataset):
     def __init__(self, task_params_class: str, task_constructor: Callable, distributions: DictConfig) -> None:
         self.task_params_class = eval(task_params_class)
