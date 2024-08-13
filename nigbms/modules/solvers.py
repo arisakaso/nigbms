@@ -1,5 +1,6 @@
+from typing import List
+
 import torch
-from joblib import Parallel, delayed
 from omegaconf import DictConfig
 from petsc4py import PETSc
 from tensordict import TensorDict
@@ -7,7 +8,7 @@ from torch import Tensor
 from torch.nn import Module
 
 from nigbms.modules.tasks import MinimizeTestFunctionTask, PETScLinearSystemTask, PyTorchLinearSystemTask, Task
-from nigbms.utils.convert import tensor2petscvec, torchcoo2petscmat
+from nigbms.utils.convert import tensor2petscvec
 from nigbms.utils.solver import clear_petsc_options, eyes_like, set_petsc_options
 
 
@@ -112,6 +113,9 @@ class _PytorchIterativeSolver(_Solver):
             if all(self.rnorm < self.rtol * self.bnorm):
                 break
 
+        if tau.x is None:
+            tau.x = self.x  # save the solution if not provided
+
         return self.history  # (bs, history_length)
 
 
@@ -203,13 +207,14 @@ class PETScKSP(_Solver):
         params_fix: dict,
         params_learn: dict,
         debug: bool = False,
-        parallel: bool = False,
     ) -> None:
         super().__init__(params_fix, params_learn)
-        self.parallel = parallel
-        self.opts = PETSc.Options()
+
+        # this is different from maxiter provided in tau, which is used as a stopping criterion.
+        self.history_length = params_fix.history_length
 
         # set fixed PETSc options
+        self.opts = PETSc.Options()
         clear_petsc_options()
         set_petsc_options(params_fix)
 
@@ -225,67 +230,49 @@ class PETScKSP(_Solver):
 
         self.opts.view()
 
-    def _setup(self, tau: PETScLinearSystemTask, theta: TensorDict):
-        pass
-
-    def solve(self, A: Tensor, b: Tensor, theta: TensorDict, rtol, maxiter):
-        A = torchcoo2petscmat(A)
-        b = tensor2petscvec(b)
-
-        # set initial guess
-        if "x0" in self.params_learn:
-            assert self.opts["ksp_initial_guess_nonzero"] == "true"
-            x0 = tensor2petscvec(theta["x0"])
-        else:
-            x0 = b.copy()
-            x0.set(0)
-
-        # setup ksp
-        self.ksp.setOperators(A)
-        self.ksp.setTolerances(rtol=rtol, max_it=maxiter)
-        self.ksp.setConvergenceHistory(length=maxiter + 1)
-
-        # solve
-        self.ksp.solve(b, x0)
-
-        # return history
-        history = torch.zeros(maxiter + 1, dtype=theta.dtype, device=theta.device)
-        history[: self.ksp.getIterationNumber() + 1] = torch.from_numpy(self.ksp.getConvergenceHistory() / b.norm())
-
-        return history
-
-    def forward(self, tau: PyTorchLinearSystemTask, theta: TensorDict) -> Tensor:
-        A = tau["A"].cpu()
-        b = tau["b"].cpu()
-        rtol = tau["rtol"].cpu().numpy()
-        maxiter = tau["maxiter"].cpu().numpy()
-        theta = theta.detach().cpu()
-        if A.layout != torch.sparse_coo:
-            A = A.to_sparse_coo()
-
+    def solve(self, tau: PETScLinearSystemTask, theta: TensorDict):
         # setup ksp
         self.ksp = PETSc.KSP().create()
         self.ksp.setFromOptions()
         self.ksp.setMonitor(lambda ksp, its, rnorm: None)
+        self.ksp.setOperators(tau.A)
+        self.ksp.setTolerances(rtol=tau.rtol, max_it=tau.maxiter)
+        self.ksp.setConvergenceHistory(length=tau.maxiter + 1)
 
-        if self.parallel:  # TODO: parallelize
-            raise NotImplementedError
-            outputs = Parallel(n_jobs=-1)(
-                delayed(self.solve)(A[i], b[i], theta[i], rtol[i], maxiter[i]) for i in range(len(b))
-            )
-            history = torch.stack(outputs)
-
+        # set initial guess
+        if "x0" in self.params_learn:
+            assert self.opts["ksp_initial_guess_nonzero"] == "true"
+            x = tensor2petscvec(theta["x0"])
         else:
-            history = []
-            for i in range(len(b)):
-                history.append(self.solve(A[i], b[i], theta[i], rtol[i], maxiter[i]))
-            history = torch.stack(history)
+            x = tau.b.copy()
+            x.set(0)
 
-        history = history.to(device=tau["b"].device, dtype=tau["b"].dtype)
+        # solve
+        self.ksp.solve(tau.b, x)
+        self.x.append(x)
+        if tau.x is None:
+            tau.x = x  # save the solution if not provided
 
+        # return history
+        history = torch.zeros(self.history_length, dtype=theta.dtype, device=theta.device)
+        history[: self.ksp.getIterationNumber() + 1] = torch.from_numpy(
+            self.ksp.getConvergenceHistory() / tau.b.norm()
+        )
+
+        # clean up
         self.ksp.destroy()
 
         return history
+
+    def forward(self, batched_tau: List[PyTorchLinearSystemTask], theta: TensorDict) -> Tensor:
+        self.x = []
+        theta = theta.detach().cpu()
+        histories = []
+        for i in range(len(batched_tau)):
+            histories.append(self.solve(batched_tau[i], theta[i]))
+        histories = torch.stack(histories).to(device=theta.device, dtype=theta.dtype)
+
+        return histories
 
 
 class OpenFOAMSolver(_Solver):  # TODO: implement OpenFOAM solver
