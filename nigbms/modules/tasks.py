@@ -105,3 +105,15 @@ def torch2petsc(task: PyTorchLinearSystemTask) -> PETScLinearSystemTask:
     b = PETSc.Vec().createWithArray(task.b.numpy())
     x = PETSc.Vec().createWithArray(task.x.numpy()) if task.x is not None else None
     return PETScLinearSystemTask(A=A, b=b, x=x, rtol=float(task.rtol), maxiter=int(task.maxiter))
+
+
+def generate_sample_pytorch_task(seed=0):
+    torch.manual_seed(seed)
+    params = torch.randn(5)
+    root_A = torch.randn(5, 5, dtype=torch.float64)
+    A = root_A @ root_A.T + 10 * torch.eye(5)  # SPD and diagonally dominant
+    x = torch.ones(5, 1, dtype=torch.float64)
+    b = A @ x
+    rtol = torch.tensor(1.0e-6)
+    maxiter = torch.tensor(100)
+    return PyTorchLinearSystemTask(params=params, A=A, b=b, x=x, rtol=rtol, maxiter=maxiter)
