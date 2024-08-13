@@ -1,4 +1,4 @@
 Getting started
 ===============
 
-how to start?
+Let's start!

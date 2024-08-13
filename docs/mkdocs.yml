@@ -5,9 +5,15 @@ site_author: Sohei Arisaka
 theme: material
 plugins:
 - search
-- mkdocstrings
+- gen-files:
+    scripts:
+    - scripts/gen_ref_pages.py
+- literate-nav:
+    nav_file: SUMMARY.md
+- mkdocstrings:
+    default_handler: python 
 
 nav:
   - Home: index.md
   - Getting Started: getting-started.md
-  - Reference: reference.md
+  - Code Reference: reference/

@@ -1,4 +1,4 @@
-from nigbms.data.generate_clamed_beam3d import ClampedBeam3DParams, construct_petsc_clamped_beam3d
+from nigbms.data.generate_clamped_beam3d import ClampedBeam3DParams, construct_petsc_clamped_beam3d
 from nigbms.modules.tasks import PETScLinearSystemTask
 
 

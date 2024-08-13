@@ -45,7 +45,13 @@ RUN pip install \
     dvc \
     pydevd \
     pdoc3 \
-    mkdocs
+    mkdocs \
+    mkdocs-material \
+    mkdocs-gen-files \
+    mkdocs-literate-nav \
+    mkdocstrings \
+    mkdocstrings-python
+
 
 # MPI
 ENV LD_LIBRARY_PATH $LD_LIBRARY_PATH:/usr/local/mpi/lib:/opt/hpcx/ucx/lib
