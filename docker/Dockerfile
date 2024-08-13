@@ -48,4 +48,4 @@ RUN pip install \
     mkdocs
 
 # MPI
-ENV LD_LIBRARY_PATH $LD_LIBRARY_PATH:/usr/local/mpi/lib
+ENV LD_LIBRARY_PATH $LD_LIBRARY_PATH:/usr/local/mpi/lib:/opt/hpcx/ucx/lib
