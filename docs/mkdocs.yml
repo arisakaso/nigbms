@@ -2,3 +2,12 @@ site_name: Non-intrusive Gradient-based Meta-solving
 # 
 site_author: Sohei Arisaka
 # 
+theme: material
+plugins:
+- search
+- mkdocstrings
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Reference: reference.md
