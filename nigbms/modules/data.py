@@ -6,7 +6,7 @@ import torch
 from lightning import LightningDataModule
 from omegaconf import DictConfig
 from torch.utils.data.dataloader import DataLoader
-from torch.utils.data.dataset import Dataset
+from torch.utils.data.dataset import Dataset, IterableDataset
 
 import nigbms  # noqa
 import nigbms.data.generate_poisson2d  # noqa
@@ -71,6 +71,21 @@ class OnlineDataset(Dataset):
         params = {}
         for k, dist in self.distributions.items():
             params[k] = dist.sample(idx)
+        task_params = self.task_params_class(**params)
+        tau = self.task_constructor(task_params)
+        return tau
+
+
+class OnlineIterableDataset(IterableDataset):
+    def __init__(self, task_params_class: str, task_constructor: Callable, distributions: DictConfig) -> None:
+        self.task_params_class = eval(task_params_class)
+        self.task_constructor = eval(task_constructor)
+        self.distributions = distributions
+
+    def __iter__(self):
+        params = {}
+        for k, dist in self.distributions.items():
+            params[k] = dist.sample()
         task_params = self.task_params_class(**params)
         tau = self.task_constructor(task_params)
         return tau

@@ -1,6 +1,6 @@
 offline_dataset:
   _target_: nigbms.modules.data.OfflineDataset
-  data_dir: /workspaces/nigbms/data/raw/poisson1d/2024-08-12_12-53-14
+  data_dir: /workspaces/nigbms/data/raw/poisson1d/sample
   meta_df: null
   rtol_dist:
     _target_: nigbms.utils.distributions.NumpyConstant
@@ -12,3 +12,30 @@ offline_dataset:
     val: 1000
   data_format: pt
   is_A_fixed: True
+
+online_dataset:
+  _target_: nigbms.modules.data.OnlineDataset
+  task_params_class: nigbms.data.generate_poisson2d.Poisson2DParams
+  task_constructor: nigbms.data.generate_poisson2d.construct_petsc_poisson2d_task
+  distributions:
+    coef:
+      _target_: nigbms.utils.distributions.NumpyNormal
+      shape: [2,]
+      mean: 0
+      std: 1
+    N:
+      _target_: nigbms.utils.distributions.NumpyConstant
+      shape: null
+      val: 10
+    degree:
+      _target_: nigbms.utils.distributions.NumpyConstant
+      shape: null
+      val: 1
+    rtol:
+      _target_: nigbms.utils.distributions.NumpyConstant
+      shape: null
+      val: 1.0e-6
+    maxiter:
+      _target_: nigbms.utils.distributions.NumpyConstant
+      shape: null
+      val: 1000

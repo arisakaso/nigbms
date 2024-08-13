@@ -21,7 +21,7 @@ class Distribution(object):
     def __init__(self, shape):
         self.shape = shape
 
-    def sample(self, seed) -> np.ndarray:
+    def sample(self, seed=None) -> np.ndarray:
         raise NotImplementedError
 
 
@@ -31,8 +31,9 @@ class NumpyLogUniform(Distribution):
         self.log_lb = np.log(lb)
         self.log_ub = np.log(ub)
 
-    def sample(self, seed) -> np.ndarray:
-        np.random.seed(seed)
+    def sample(self, seed=None) -> np.ndarray:
+        if seed is not None:
+            np.random.seed(seed)
         return np.exp(np.random.uniform(self.log_lb, self.log_ub, self.shape))
 
 
@@ -44,7 +45,7 @@ class NumpyConstant(Distribution):
         else:
             self.const = val
 
-    def sample(self, seed) -> np.ndarray:
+    def sample(self, seed=None) -> np.ndarray:
         return self.const
 
 
@@ -54,8 +55,9 @@ class NumpyUniform(Distribution):
         self.lb = lb
         self.ub = ub
 
-    def sample(self, seed) -> np.ndarray:
-        np.random.seed(seed)
+    def sample(self, seed=None) -> np.ndarray:
+        if seed is not None:
+            np.random.seed(seed)
         return np.random.uniform(self.lb, self.ub, self.shape)
 
 
@@ -65,9 +67,7 @@ class NumpyNormal(Distribution):
         self.mean = mean
         self.std = std
 
-    def sample(self, seed) -> np.ndarray:
-        np.random.seed(seed)
+    def sample(self, seed=None) -> np.ndarray:
+        if seed is not None:
+            np.random.seed(seed)
         return np.random.normal(self.mean, self.std, self.shape)
-
-
-# %%
