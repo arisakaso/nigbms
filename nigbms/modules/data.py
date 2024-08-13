@@ -1,5 +1,6 @@
 # %%
-from typing import Any, Callable, List, Tuple, Union
+from dataclasses import astuple
+from typing import Callable, List, Tuple, Union
 
 import pandas as pd
 import torch
@@ -91,7 +92,8 @@ class OnlineIterableDataset(IterableDataset):
         return tau
 
 
-def offline_collate_fn(batch: List[Any]) -> Any:
+def pytorch_task_collate_fn(batch: List[PyTorchLinearSystemTask]) -> PyTorchLinearSystemTask:
+    batch = [astuple(tau) for tau in batch]
     batch = [torch.stack(x) for x in zip(*batch, strict=False)]
     tau = PyTorchLinearSystemTask(*batch)
     return tau
@@ -150,7 +152,7 @@ class OfflineDataModule(LightningDataModule):
             self.train_ds,
             batch_size=self.batch_size,
             shuffle=True,
-            collate_fn=offline_collate_fn,
+            collate_fn=pytorch_task_collate_fn,
             num_workers=self.num_workers,
         )
 
@@ -159,7 +161,7 @@ class OfflineDataModule(LightningDataModule):
             self.val_ds,
             batch_size=self.batch_size,
             shuffle=False,
-            collate_fn=offline_collate_fn,
+            collate_fn=pytorch_task_collate_fn,
             num_workers=self.num_workers,
         )
 
@@ -168,7 +170,7 @@ class OfflineDataModule(LightningDataModule):
             self.test_ds,
             batch_size=self.batch_size,
             shuffle=False,
-            collate_fn=offline_collate_fn,
+            collate_fn=pytorch_task_collate_fn,
             generator=torch.Generator(device="cuda"),
         )
 

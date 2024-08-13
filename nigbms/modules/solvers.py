@@ -63,7 +63,9 @@ class _PytorchIterativeSolver(_Solver):
 
     def __init__(self, params_fix: dict, params_learn: dict) -> None:
         super().__init__(params_fix, params_learn)
-        self.history_length = params_fix.history_length
+        self.history_length = (
+            params_fix.history_length
+        )  # this is different from maxiter provided in tau, which is used as a stopping criterion.
 
     def _step(self):
         raise NotImplementedError
@@ -143,7 +145,12 @@ class PyTorchSOR(_PytorchIterativeSolver):
 
     def _setup(self, tau: PyTorchLinearSystemTask, theta: TensorDict):
         super()._setup(tau, theta)
-        omega = theta["omega"]
+        if "omega" in self.params_fix:
+            omega = self.params_fix.omega
+        elif "omega" in self.params_learn:
+            omega = theta["omega"]
+        else:
+            raise ValueError("omega not found in params_fix or params_learn")
 
         D = torch.diag_embed(self.A.diagonal(dim1=1, dim2=2), dim1=1, dim2=2)
         L = torch.tril(self.A, -1)

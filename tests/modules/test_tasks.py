@@ -21,7 +21,7 @@ def petsc_task():
 
 
 @pytest.fixture
-def torch_task():
+def pytorch_task():
     A = torch.tensor([[1.0, 0.0, 0.0], [0.0, 2.0, 0.0], [0.0, 0.0, 3.0]], dtype=torch.float64)
     b = torch.tensor([1.0, 2.0, 3.0], dtype=torch.float64)
     rtol = torch.tensor(1.0e-6)
@@ -29,9 +29,9 @@ def torch_task():
     return PyTorchLinearSystemTask(params=None, A=A, b=b, x=None, rtol=rtol, maxiter=maxiter)
 
 
-def test_petsc2torch(petsc_task, torch_task):
-    assert torch_task == petsc2torch(petsc_task)
+def test_petsc2torch(petsc_task, pytorch_task):
+    assert pytorch_task == petsc2torch(petsc_task)
 
 
-def test_torch2petsc(torch_task, petsc_task):
-    assert petsc_task == torch2petsc(torch_task)
+def test_torch2petsc(pytorch_task, petsc_task):
+    assert petsc_task == torch2petsc(pytorch_task)
