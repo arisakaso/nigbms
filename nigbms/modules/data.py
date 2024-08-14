@@ -1,7 +1,8 @@
 # %%
 from dataclasses import astuple
-from typing import Callable, List, Tuple, Union
+from typing import Callable, Dict, List
 
+import numpy as np
 import pandas as pd
 import torch
 from lightning import LightningDataModule
@@ -22,7 +23,7 @@ class OfflineDataset(Dataset):
         meta_df: pd.DataFrame,
         rtol_dist: Distribution,
         maxiter_dist: Distribution,
-        data_format: str,
+        data_format: str = "pt",
         is_A_fixed: bool = True,
     ) -> None:
         self.data_dir = data_dir
@@ -103,48 +104,56 @@ class OfflineDataModule(LightningDataModule):
     def __init__(
         self,
         data_dir: str,
-        ds_sizes: List[int],
-        fixed_A: bool,
-        train_rtol: Union[float, Tuple[float, float]],
-        test_rtol: Union[float, Tuple[float, float]],
-        train_maxiter: Union[int, Tuple[int, int]],
-        test_maxiter: Union[int, Tuple[int, int]],
+        dataset_sizes: Dict[str, int],
+        rtol_dists: Dict[str, Distribution],
+        maxiter_dists: Dict[str, Distribution],
+        data_format: str,
+        is_A_fixed: bool,
         batch_size: int,
         num_workers: int,
     ) -> None:
         super().__init__()
         self.data_dir = data_dir
-        self.ds_sizes = ds_sizes
-        self.fixed_A = fixed_A
-        self.train_rtol = train_rtol
-        self.test_rtol = test_rtol
-        self.train_maxiter = train_maxiter
-        self.test_maxiter = test_maxiter
+        self.dataset_sizes = dataset_sizes
+        self.rtol_dists = rtol_dists
+        self.maxiter_dits = maxiter_dists
+        self.data_format = data_format
+        self.is_A_fixed = is_A_fixed
         self.batch_size = batch_size
         self.num_workers = num_workers
 
     def prepare_data(self) -> None:
         meta_df = pd.read_csv(self.data_dir + "/meta_df.csv")
-        self.meta_dfs = {
-            "train": meta_df.iloc[0 : self.ds_sizes[0]],
-            "val": meta_df.iloc[self.ds_sizes[0] : self.ds_sizes[0] + self.ds_sizes[1]],
-            "test": meta_df.iloc[
-                self.ds_sizes[0] + self.ds_sizes[1] : self.ds_sizes[0] + self.ds_sizes[1] + self.ds_sizes[2]
-            ],
-        }
+        keys, sizes = zip(*self.dataset_sizes.items(), strict=False)
+        self.meta_dfs = dict(zip(keys, np.split(meta_df, sizes), strict=False))
 
     def setup(self, stage: str = None):
         if stage == "fit" or stage is None:
             self.train_ds = OfflineDataset(
-                self.data_dir, self.meta_dfs["train"], self.fixed_A, self.train_rtol, self.train_maxiter
+                self.data_dir,
+                self.meta_dfs["train"],
+                self.rtol_dists["train"],
+                self.maxiter_dits["train"],
+                self.data_format,
+                self.is_A_fixed,
             )
             self.val_ds = OfflineDataset(
-                self.data_dir, self.meta_dfs["val"], self.fixed_A, self.test_rtol, self.test_maxiter
+                self.data_dir,
+                self.meta_dfs["val"],
+                self.rtol_dists["val"],
+                self.maxiter_dits["val"],
+                self.data_format,
+                self.is_A_fixed,
             )
 
         if stage == "test":
             self.test_ds = OfflineDataset(
-                self.data_dir, self.meta_dfs["test"], self.fixed_A, self.test_rtol, self.test_maxiter
+                self.data_dir,
+                self.meta_dfs["test"],
+                self.rtol_dists["test"],
+                self.maxiter_dits["test"],
+                self.data_format,
+                self.is_A_fixed,
             )
 
     def train_dataloader(self):

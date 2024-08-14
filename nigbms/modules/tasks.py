@@ -35,6 +35,7 @@ class LinearSystemTask(Task):
     maxiter: Any = None
 
 
+# TODO: add `is_batched` flag?
 @dataclass
 class PyTorchLinearSystemTask(LinearSystemTask):
     A: Tensor = None  # currentyl only support dense matrix

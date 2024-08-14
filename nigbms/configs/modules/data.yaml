@@ -39,3 +39,23 @@ online_dataset:
       _target_: nigbms.utils.distributions.NumpyConstant
       shape: null
       val: 1000
+
+offline_datamodule:
+  _target_: nigbms.modules.data.OfflineDataModule
+  data_dir: ${offline_dataset.data_dir}
+  dataset_sizes: 
+    train: 100
+    val: 100
+    test: 100
+  rtol_dists:
+    train: ${offline_dataset.rtol_dist}
+    val: ${offline_dataset.rtol_dist}
+    test: ${offline_dataset.rtol_dist}
+  maxiter_dists:
+    train: ${offline_dataset.maxiter_dist}
+    val: ${offline_dataset.maxiter_dist}
+    test: ${offline_dataset.maxiter_dist}
+  is_A_fixed: ${offline_dataset.is_A_fixed}
+  data_format: ${offline_dataset.data_format}
+  batch_size: 32
+  num_workers: 0

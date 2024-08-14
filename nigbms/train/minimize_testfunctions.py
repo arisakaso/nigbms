@@ -16,16 +16,19 @@ OmegaConf.register_new_resolver("eval", eval)
 
 #### TEST FUNCTIONS ####
 def sphere(x):
+    """Sphere function."""
     return torch.sum(x**2, dim=-1, keepdim=True)
 
 
 def rosenbrock(x):
+    """Rosenbrock function."""
     x1 = x[..., :-1]
     x2 = x[..., 1:]
     return torch.sum(100 * (x2 - x1**2) ** 2 + (1 - x1) ** 2, dim=-1, keepdim=True)
 
 
 def rosenbrock_separate(x):
+    """Rosenbrock function (easy)."""
     assert x.shape[-1] % 2 == 0, "Dimension must be even."
     x1 = x[..., ::2]
     x2 = x[..., 1::2]
@@ -33,6 +36,7 @@ def rosenbrock_separate(x):
 
 
 def rastrigin(x):
+    """Rastrigin function."""
     A = 10
     n = x.shape[-1]
     return A * n + torch.sum(x**2 - A * torch.cos(x * torch.pi * 2), dim=-1, keepdim=True)

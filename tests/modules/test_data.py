@@ -34,3 +34,15 @@ class TestOnlineDataset:
     def test_iter(self, init_dataset):
         tau = next(iter(self.ds))
         assert isinstance(tau, PETScLinearSystemTask)
+
+
+class TestOfflineDataModule:
+    @pytest.fixture
+    def init_datamodule(self):
+        with initialize(version_base="1.3", config_path="../configs/modules"):
+            cfg = compose(config_name="data")
+            self.dm = instantiate(cfg.offline_datamodule)
+
+    def test_prepare_data(self, init_datamodule):
+        self.dm.prepare_data()
+        assert isinstance(self.dm.meta_dfs["train"], pd.DataFrame)

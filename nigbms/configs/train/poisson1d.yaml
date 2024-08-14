@@ -6,11 +6,11 @@ hydra:
 
 wandb: 
   project: nigbms_poisson1d
-  mode: online
+  mode: disabled
 
 data:
-  _target_: nigbms.data.data_modules.OfflineDataModule
-  data_dir: /home/arisaka/nigbms/data/raw/poisson1d/2024-05-12_12-33-14
+  _target_: nigbms.modules.data.OfflineDataModule
+  data_dir: /workspaces/nigbms/data/raw/poisson1d/sample
   ds_sizes: [5000, 5000, 0]
   fixed_A: True
   train_rtol: 1.0e-3
