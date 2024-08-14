@@ -1,6 +1,6 @@
 # Non-intrusive Gradient-based Meta-solving documentation!
 
-## Description
+## Overview
 
-Non-intrusive Gradient-based Meta-solving
-
+Architecture
+![](figures/architecture.svg)
