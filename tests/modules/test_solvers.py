@@ -61,9 +61,9 @@ def test_petsc_default(batched_petsc_tasks):
 
 
 def test_petsc_cg(batched_petsc_tasks):
-    with initialize(version_base="1.3", config_path="../configs/modules"):
-        cfg = compose(config_name="solvers")
-    solver = instantiate(cfg.petsc_cg)
+    with initialize(version_base="1.3", config_path="../configs/modules/solvers"):
+        cfg = compose(config_name="petsc_cg")
+    solver = instantiate(cfg)
     theta = TensorDict({}, batch_size=3)
     solver.forward(batched_petsc_tasks, theta)
     assert all([np.allclose(solver.x[i].getArray(), batched_petsc_tasks[i].x.getArray()) for i in range(3)])

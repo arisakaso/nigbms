@@ -10,9 +10,9 @@ from nigbms.modules.tasks import PETScLinearSystemTask, PyTorchLinearSystemTask
 class TestOfflineDataset:
     @pytest.fixture
     def init_dataset(self):
-        with initialize(version_base="1.3", config_path="../configs/modules"):
-            cfg = compose(config_name="data")
-            self.ds = instantiate(cfg.offline_dataset)
+        with initialize(version_base="1.3", config_path="../configs/modules/data"):
+            cfg = compose(config_name="offline_dataset")
+            self.ds = instantiate(cfg)
             self.ds.meta_df = pd.read_csv(self.ds.data_dir + "/meta_df.csv")
 
     def test_load(self, init_dataset):
@@ -27,9 +27,9 @@ class TestOfflineDataset:
 class TestOnlineDataset:
     @pytest.fixture
     def init_dataset(self):
-        with initialize(version_base="1.3", config_path="../configs/modules"):
-            cfg = compose(config_name="data")
-            self.ds = instantiate(cfg.online_dataset)
+        with initialize(version_base="1.3", config_path="../configs/modules/data"):
+            cfg = compose(config_name="online_dataset")
+            self.ds = instantiate(cfg)
 
     def test_iter(self, init_dataset):
         tau = next(iter(self.ds))
@@ -39,9 +39,9 @@ class TestOnlineDataset:
 class TestOfflineDataModule:
     @pytest.fixture
     def init_datamodule(self):
-        with initialize(version_base="1.3", config_path="../configs/modules"):
-            cfg = compose(config_name="data")
-            self.dm = instantiate(cfg.offline_datamodule)
+        with initialize(version_base="1.3", config_path="../configs/modules/data"):
+            cfg = compose(config_name="offline_datamodule")
+            self.dm = instantiate(cfg)
 
     def test_prepare_data(self, init_datamodule):
         self.dm.prepare_data()

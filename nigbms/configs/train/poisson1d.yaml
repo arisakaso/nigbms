@@ -1,3 +1,6 @@
+defaults:
+  - ../modules/data@data
+
 hydra:
   run:
     dir: outputs/poisson1d/${now:%Y-%m-%d_%H-%M-%S}
@@ -8,154 +11,154 @@ wandb:
   project: nigbms_poisson1d
   mode: disabled
 
-data:
-  _target_: nigbms.modules.data.OfflineDataModule
-  data_dir: /workspaces/nigbms/data/raw/poisson1d/sample
-  ds_sizes: [5000, 5000, 0]
-  fixed_A: True
-  train_rtol: 1.0e-3
-  test_rtol: 1.0e-3
-  train_maxiter: 1_000
-  test_maxiter: 1_000
-  batch_size: 256
-  num_workers: 32
+# data:
+#   _target_: nigbms.modules.data.OfflineDataModule
+#   data_dir: /workspaces/nigbms/data/raw/poisson1d/sample
+#   ds_sizes: [5000, 5000, 0]
+#   fixed_A: True
+#   train_rtol: 1.0e-3
+#   test_rtol: 1.0e-3
+#   train_maxiter: 1_000
+#   test_maxiter: 1_000
+#   batch_size: 256
+#   num_workers: 32
 
-meta_solver:
-  _target_: nigbms.modules.meta_solvers.MetaSolver
-  params_learn: 
-    theta: 
-      - ${dim}
-  features:
-    b: 
-      - ${dim}
-  model:
-    _target_: nigbms.modules.models.MLP
-    in_dim: ${dim}
-    out_dim: ${dim}
-    num_layers: 0
-    num_neurons: 512
-    hidden_activation: nn.SiLU
-    output_activation: nn.Identity
-    batch_normalization: False
-    init_weight: 
-      dist: uniform
-      scale: 1.0e-3
+# meta_solver:
+#   _target_: nigbms.modules.meta_solvers.MetaSolver
+#   params_learn: 
+#     theta: 
+#       - ${dim}
+#   features:
+#     b: 
+#       - ${dim}
+#   model:
+#     _target_: nigbms.modules.models.MLP
+#     in_dim: ${dim}
+#     out_dim: ${dim}
+#     num_layers: 0
+#     num_neurons: 512
+#     hidden_activation: nn.SiLU
+#     output_activation: nn.Identity
+#     batch_normalization: False
+#     init_weight: 
+#       dist: uniform
+#       scale: 1.0e-3
 
-solver:
-  _target_: nigbms.modules.solvers.PyTorchJacobi
-  params_fix: 
-    omega: 1.0
-    history_length: ${eval:${data.test_maxiter} + 1}
-  params_learn: 
-    x0: 
-      - ${dim}
-      - 1
+# solver:
+#   _target_: nigbms.modules.solvers.PyTorchJacobi
+#   params_fix: 
+#     omega: 1.0
+#     history_length: ${eval:${data.test_maxiter} + 1}
+#   params_learn: 
+#     x0: 
+#       - ${dim}
+#       - 1
 
-surrogate:
-  _target_: nigbms.modules.surrogates.SurrogateSolver
-  params_fix: ${solver.params_fix}
-  params_learn: ${solver.params_learn}
-  features: 
-    b: 
-      - ${dim}
-    x0: 
-      - ${dim}
-    xn: 
-      - ${dim}
-    xn_sin-x0_sin:
-      - ${dim}
-    # xn-x0:
-    #   - ${dim}
-    # x: 
-    #   - ${dim}
-  model:
-    _target_: nigbms.modules.models.MLP
-    in_dim: ${calc_in_dim:${surrogate.features}}
-    out_dim: ${solver.params_fix.history_length}
-    num_layers: 0
-    num_neurons: 1024
-    hidden_activation: nn.GELU
-    output_activation: nn.GELU
-    batch_normalization: False
-    init_weight: 
-      dist: uniform
-      scale: 1.0e-3
+# surrogate:
+#   _target_: nigbms.modules.surrogates.SurrogateSolver
+#   params_fix: ${solver.params_fix}
+#   params_learn: ${solver.params_learn}
+#   features: 
+#     b: 
+#       - ${dim}
+#     x0: 
+#       - ${dim}
+#     xn: 
+#       - ${dim}
+#     xn_sin-x0_sin:
+#       - ${dim}
+#     # xn-x0:
+#     #   - ${dim}
+#     # x: 
+#     #   - ${dim}
+#   model:
+#     _target_: nigbms.modules.models.MLP
+#     in_dim: ${calc_in_dim:${surrogate.features}}
+#     out_dim: ${solver.params_fix.history_length}
+#     num_layers: 0
+#     num_neurons: 1024
+#     hidden_activation: nn.GELU
+#     output_activation: nn.GELU
+#     batch_normalization: False
+#     init_weight: 
+#       dist: uniform
+#       scale: 1.0e-3
 
-constructor:
-  _target_: nigbms.modules.constructors.ThetaConstructor
-  _recursive_: False
-  params: 
-    x0:
-      encdec: 
-        _target_: nigbms.modules.constructors.SinEncDec
-        enc_dim: ${dim}
-        dec_dim: ${dim}
-      shape: ${solver.params_learn.x0}
+# constructor:
+#   _target_: nigbms.modules.constructors.ThetaConstructor
+#   _recursive_: False
+#   params: 
+#     x0:
+#       encdec: 
+#         _target_: nigbms.modules.constructors.SinEncDec
+#         enc_dim: ${dim}
+#         dec_dim: ${dim}
+#       shape: ${solver.params_learn.x0}
     
 
-wrapper:
-  opt:
-    _target_: torch.optim.Adam
-    lr: 1.0e-3
-    # momentum: 0.9
-  loss:
-    _target_: nigbms.modules.losses.SurrogateSolverLoss
-    weights:
-      y_loss: 0
-      # dvf_loss: 1
-      dvL_loss: 1
-    reduce: True
-  clip: 10.0
-  cfg:
-    grad_type: cv_fwd
-    jvp_type: forwardAD
-    eps: 1.0e-10
-    Nv: 1
-    v_scale: 1.0
-    v_dist: rademacher
+# wrapper:
+#   opt:
+#     _target_: torch.optim.Adam
+#     lr: 1.0e-3
+#     # momentum: 0.9
+#   loss:
+#     _target_: nigbms.modules.losses.SurrogateSolverLoss
+#     weights:
+#       y_loss: 0
+#       # dvf_loss: 1
+#       dvL_loss: 1
+#     reduce: True
+#   clip: 10.0
+#   cfg:
+#     grad_type: cv_fwd
+#     jvp_type: forwardAD
+#     eps: 1.0e-10
+#     Nv: 1
+#     v_scale: 1.0
+#     v_dist: rademacher
   
-loss:
-  _target_: nigbms.modules.losses.MetaSolverLoss
-  weights:
-    iter_r_proxy: 1
-    # r0: 1
-  reduce: True
+# loss:
+#   _target_: nigbms.modules.losses.MetaSolverLoss
+#   weights:
+#     iter_r_proxy: 1
+#     # r0: 1
+#   reduce: True
   
-opt:
-  _target_: torch.optim.Adam
-  lr: 0 # 1.0e-4
-sch:
-  _target_: torch.optim.lr_scheduler.MultiStepLR
-  milestones: [100]
-  gamma: 0.1
+# opt:
+#   _target_: torch.optim.Adam
+#   lr: 0 # 1.0e-4
+# sch:
+#   _target_: torch.optim.lr_scheduler.MultiStepLR
+#   milestones: [100]
+#   gamma: 0.1
   
-callbacks:
-  - _target_: lightning.pytorch.callbacks.EarlyStopping
-    monitor: ${monitor}
-    patience: 10
-    mode: min
-    verbose: True
-  - _target_: lightning.pytorch.callbacks.LearningRateMonitor
-    logging_interval: epoch
-  - _target_: lightning.pytorch.callbacks.ModelCheckpoint
-    monitor: ${monitor}
-    mode: min
-    save_top_k: 0
-    save_last: False
+# callbacks:
+#   - _target_: lightning.pytorch.callbacks.EarlyStopping
+#     monitor: ${monitor}
+#     patience: 10
+#     mode: min
+#     verbose: True
+#   - _target_: lightning.pytorch.callbacks.LearningRateMonitor
+#     logging_interval: epoch
+#   - _target_: lightning.pytorch.callbacks.ModelCheckpoint
+#     monitor: ${monitor}
+#     mode: min
+#     save_top_k: 0
+#     save_last: False
 
-trainer:
-  max_epochs: 20
-  accelerator: gpu
-  devices: 1
-  check_val_every_n_epoch: 20
-  log_every_n_steps: 1
-  fast_dev_run: False
+# trainer:
+#   max_epochs: 20
+#   accelerator: gpu
+#   devices: 1
+#   check_val_every_n_epoch: 20
+#   log_every_n_steps: 1
+#   fast_dev_run: False
 
-seed: 0
-monitor: val/iter_r
-dtype: torch.float64
-test: False
-dim: 31
-compile: False
-logging: True
-warmup: 0
+# seed: 0
+# monitor: val/iter_r
+# dtype: torch.float64
+# test: False
+# dim: 31
+# compile: False
+# logging: True
+# warmup: 0
