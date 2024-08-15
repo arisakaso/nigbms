@@ -1,6 +1,10 @@
 _target_: nigbms.modules.data.OnlineDataset
-task_params_class: nigbms.data.generate_poisson2d.Poisson2DParams
-task_constructor: nigbms.data.generate_poisson2d.construct_petsc_poisson2d_task
+task_params_type: 
+  _target_: hydra.utils.get_class
+  path: nigbms.data.generate_poisson2d.Poisson2DParams
+task_constructor: 
+  _target_: hydra.utils.get_method
+  path: nigbms.data.generate_poisson2d.construct_petsc_poisson2d_task
 distributions:
   coef:
     _target_: nigbms.utils.distributions.NumpyNormal

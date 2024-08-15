@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Callable, Dict
+from typing import Any, Callable, Dict, Type
 
 import numpy as np
 import torch
@@ -20,18 +20,16 @@ class TaskParams:
 class TaskDistribution:
     """Base class for task distributions"""
 
-    def __init__(self, task_params_class: str, distributions: Dict[str, Distribution]):
-        self.task_params_class = eval(task_params_class)
+    def __init__(self, task_params_type: Type, distributions: Dict[str, Distribution]):
+        self.task_params_type = eval(task_params_type)
         self.distributions = distributions
 
     def sample(self, seed: int = None) -> TaskParams:
         params = {}
         for key, dist in self.distributions.items():
             params[key] = dist.sample(seed)
-        task_params = self.task_params_class(**params)
+        task_params = self.task_params_type(**params)
         return task_params
-
-    pass
 
 
 @dataclass
@@ -65,7 +63,7 @@ class PyTorchLinearSystemTask(LinearSystemTask):
     rtol: Tensor = None
     maxiter: Tensor = None
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:  # TODO: add `params` to the comparisonss
         return (
             torch.equal(self.A, other.A)
             and torch.equal(self.b, other.b)
@@ -82,9 +80,9 @@ class PETScLinearSystemTask(LinearSystemTask):
     x: PETSc.Vec = None  # Ground Truth if applicable, otherwise the solution provided by the solver
     rtol: float = None
     maxiter: int = None
-    problem: Any = None  # This is a placeholder for the problem object to keep it alive TODO: remove this
+    problem: Any = None  # TODO: Remove this. This is a placeholder for the problem object to keep it alive.
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         return (
             self.A.equal(other.A)
             and self.b.equal(other.b)
@@ -129,7 +127,7 @@ def torch2petsc(task: PyTorchLinearSystemTask) -> PETScLinearSystemTask:
     return PETScLinearSystemTask(A=A, b=b, x=x, rtol=float(task.rtol), maxiter=int(task.maxiter))
 
 
-def generate_sample_pytorch_task(seed=0):
+def generate_sample_pytorch_task(seed=0) -> PyTorchLinearSystemTask:
     torch.manual_seed(seed)
     params = torch.randn(5)
     root_A = torch.randn(5, 5, dtype=torch.float64)

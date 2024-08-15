@@ -1,6 +1,6 @@
 # %%
 from dataclasses import astuple
-from typing import Callable, Dict, List
+from typing import Callable, Dict, List, Type
 
 import numpy as np
 import pandas as pd
@@ -72,31 +72,31 @@ class OfflineDataset(Dataset):
 # TODO: Is IterableDataset more appropriate?
 # see https://pytorch.org/docs/stable/data.html#iterable-style-datasets
 class OnlineDataset(Dataset):
-    def __init__(self, task_params_class: str, task_constructor: Callable, distributions: DictConfig) -> None:
-        self.task_params_class = eval(task_params_class)
-        self.task_constructor = eval(task_constructor)
+    def __init__(self, task_params_type: Type, task_constructor: Callable, distributions: DictConfig) -> None:
+        self.task_params_type = task_params_type
+        self.task_constructor = task_constructor
         self.distributions = distributions
 
     def __getitem__(self, idx):
         params = {}
         for k, dist in self.distributions.items():
             params[k] = dist.sample(idx)
-        task_params = self.task_params_class(**params)
+        task_params = self.task_params_type(**params)
         tau = self.task_constructor(task_params)
         return tau
 
 
 class OnlineIterableDataset(IterableDataset):
-    def __init__(self, task_params_class: str, task_constructor: Callable, distributions: DictConfig) -> None:
-        self.task_params_class = eval(task_params_class)
-        self.task_constructor = eval(task_constructor)
+    def __init__(self, task_params_type: Type, task_constructor: Callable, distributions: DictConfig) -> None:
+        self.task_params_type = task_params_type
+        self.task_constructor = task_constructor
         self.distributions = distributions
 
     def __iter__(self):
         params = {}
         for k, dist in self.distributions.items():
             params[k] = dist.sample()
-        task_params = self.task_params_class(**params)
+        task_params = self.task_params_type(**params)
         tau = self.task_constructor(task_params)
         return tau
 
