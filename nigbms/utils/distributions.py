@@ -32,8 +32,7 @@ class NumpyLogUniform(Distribution):
         self.log_ub = np.log(ub)
 
     def sample(self, seed=None) -> np.ndarray:
-        if seed is not None:
-            np.random.seed(seed)
+        np.random.seed(seed)
         return np.exp(np.random.uniform(self.log_lb, self.log_ub, self.shape))
 
 
@@ -56,8 +55,7 @@ class NumpyUniform(Distribution):
         self.ub = ub
 
     def sample(self, seed=None) -> np.ndarray:
-        if seed is not None:
-            np.random.seed(seed)
+        np.random.seed(seed)
         return np.random.uniform(self.lb, self.ub, self.shape)
 
 
@@ -68,6 +66,5 @@ class NumpyNormal(Distribution):
         self.std = std
 
     def sample(self, seed=None) -> np.ndarray:
-        if seed is not None:
-            np.random.seed(seed)
+        np.random.seed(seed)
         return np.random.normal(self.mean, self.std, self.shape)

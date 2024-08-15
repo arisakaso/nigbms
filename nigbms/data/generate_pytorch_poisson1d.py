@@ -6,6 +6,7 @@ from tensordict import TensorDict
 from torch import tensor
 
 from nigbms.modules.tasks import PyTorchLinearSystemTask, TaskParams
+from nigbms.utils.distributions import Distribution
 
 
 @dataclass
@@ -15,6 +16,22 @@ class Poisson1DParams(TaskParams):
     coefs: np.ndarray = np.ones(10)
     rtol: float = 1e-6
     maxiter: int = 100
+
+
+class CoefsDistribution(Distribution):
+    def __init__(self, shape, p: float, scale: float):
+        assert len(shape) == 1
+        super().__init__(shape)
+        self.p = p
+        self.scale = scale
+
+    def sample(self, seed: int = None) -> np.ndarray:
+        np.random.seed(seed)
+        is_difficult = np.random.choice([True, False], p=[self.p, 1 - self.p])
+        if is_difficult:
+            return np.random.normal(0, self.scale * np.linspace(-1, 1, self.shape[0]) ** 2, self.shape[0])
+        else:
+            return np.random.normal(0, self.scale * (1 - np.abs(np.linspace(-1, 1, self.shape[0]))), self.shape[0])
 
 
 def laplacian_matrix(N: int) -> np.ndarray:

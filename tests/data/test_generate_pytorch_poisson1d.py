@@ -3,6 +3,7 @@ from numpy.testing import assert_array_equal
 from sympy import pi, sin, symbols
 
 from nigbms.data.generate_pytorch_poisson1d import (
+    CoefsDistribution,
     Poisson1DParams,
     construct_pytorch_poisson1d_task,
     construct_sym_u,
@@ -47,3 +48,11 @@ def test_construct_pytorch_poisson1d_task() -> None:
     parasm = Poisson1DParams()
     task = construct_pytorch_poisson1d_task(parasm)
     assert isinstance(task, PyTorchLinearSystemTask)
+
+
+class TestCoefsDistribution:
+    def test_sample_multiple(self) -> None:
+        dist = CoefsDistribution([10], 0.1, 1)
+        coefs = dist.sample(0)
+        assert isinstance(coefs, np.ndarray)
+        assert coefs.shape == (10,)
