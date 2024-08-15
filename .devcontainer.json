@@ -17,8 +17,7 @@
           "ms-vscode.makefile-tools",
           "ms-vscode.cpptools",
           "ms-vscode.cmake-tools",
-          "njpwerner.autodocstring",
-          "ms-python.mypy-type-checker"
+          "njpwerner.autodocstring"
         ],
         "settings": {
           "python.testing.pytestArgs": [
