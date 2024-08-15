@@ -19,7 +19,7 @@ class ThetaConstructor(Module):
 
     """
 
-    def __init__(self, params):
+    def __init__(self, params) -> None:
         super().__init__()
         self.params = params
         self.encdecs = {k: instantiate(v.encdec) for k, v in self.params.items() if hasattr(v, "encdec")}
