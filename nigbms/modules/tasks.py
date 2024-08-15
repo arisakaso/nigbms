@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any, Callable, Dict
 
 import numpy as np
 import torch
@@ -7,10 +7,29 @@ from petsc4py import PETSc
 from tensordict import TensorDict
 from torch import Tensor, sparse_csr_tensor, tensor
 
+from nigbms.utils.distributions import Distribution
+
 
 @dataclass
 class TaskParams:
     """Parameters to generate a task"""
+
+    pass
+
+
+class TaskDistribution:
+    """Base class for task distributions"""
+
+    def __init__(self, task_params_class: str, distributions: Dict[str, Distribution]):
+        self.task_params_class = eval(task_params_class)
+        self.distributions = distributions
+
+    def sample(self, seed: int = None) -> TaskParams:
+        params = {}
+        for key, dist in self.distributions.items():
+            params[key] = dist.sample(seed)
+        task_params = self.task_params_class(**params)
+        return task_params
 
     pass
 

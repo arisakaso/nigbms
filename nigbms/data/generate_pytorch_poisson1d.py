@@ -75,6 +75,3 @@ def construct_pytorch_poisson1d_task(params: Poisson1DParams) -> PyTorchLinearSy
         tensor(params.maxiter),
     )
     return task
-
-
-# %%

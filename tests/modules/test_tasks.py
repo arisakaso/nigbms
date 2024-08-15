@@ -12,7 +12,7 @@ from nigbms.modules.tasks import (
 
 
 @pytest.fixture
-def petsc_task():
+def petsc_task() -> PETScLinearSystemTask:
     A = PETSc.Mat().createAIJ([3, 3])
     A.setUp()
     A[0, 0] = 1.0
@@ -27,7 +27,7 @@ def petsc_task():
 
 
 @pytest.fixture
-def pytorch_task():
+def pytorch_task() -> PyTorchLinearSystemTask:
     A = torch.tensor([[1.0, 0.0, 0.0], [0.0, 2.0, 0.0], [0.0, 0.0, 3.0]], dtype=torch.float64)
     b = torch.tensor([1.0, 2.0, 3.0], dtype=torch.float64)
     rtol = torch.tensor(1.0e-6)
