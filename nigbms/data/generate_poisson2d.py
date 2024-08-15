@@ -26,7 +26,6 @@ class Poisson2DParams(TaskParams):
     degree: int = 1
     rtol: float = 1e-6
     maxiter: int = 100
-    a
 
 
 def construct_petsc_poisson2d_task(params: Poisson2DParams) -> PETScLinearSystemTask:
