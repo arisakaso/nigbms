@@ -4,10 +4,10 @@ meta_df: null
 rtol_dist:
   _target_: nigbms.utils.distributions.NumpyConstant
   shape: null
-  val: 1.0e-6
+  value: 1.0e-6
 maxiter_dist:
   _target_: nigbms.utils.distributions.NumpyConstant
   shape: null
-  val: 1000
+  value: 1000
 data_format: pt
 is_A_fixed: True

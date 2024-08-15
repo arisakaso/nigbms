@@ -8,16 +8,16 @@ rtol_dists:
   train:
     _target_: nigbms.utils.distributions.NumpyConstant
     shape: null
-    val: 1.0e-6
-  val: ${rtol_dists.train}
-  test: ${rtol_dists.train}
+    value: 1.0e-6
+  val: ${.train}
+  test: ${.train}
 maxiter_dists:
   train: 
     _target_: nigbms.utils.distributions.NumpyConstant
     shape: null
-    val: 1000
-  val: ${maxiter_dists.train}
-  test: ${maxiter_dists.train}
+    value: 1000
+  val: ${.train}
+  test: ${.train}
 is_A_fixed: True
 data_format: pt
 batch_size: 32

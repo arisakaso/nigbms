@@ -4,6 +4,7 @@ from typing import Any, Callable
 import numpy as np
 import torch
 from petsc4py import PETSc
+from tensordict import TensorDict
 from torch import Tensor, sparse_csr_tensor, tensor
 
 
@@ -38,6 +39,7 @@ class LinearSystemTask(Task):
 # TODO: add `is_batched` flag?
 @dataclass
 class PyTorchLinearSystemTask(LinearSystemTask):
+    params: TensorDict = None  # override the base class to use TensorDict
     A: Tensor = None  # currentyl only support dense matrix
     b: Tensor = None
     x: Tensor = None  # Ground Truth if applicable, otherwise the solution provided by the solver

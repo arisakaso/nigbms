@@ -30,8 +30,9 @@ class MetaSolver(Module):
         """
         features = []
         for k in self.features.keys():
-            if k in tau.features:
-                features.append(tau.features[k])
+            if k in tau.__dataclass_fields__.keys():
+                features.append(tau.__getattribute__(k))
+
         features = torch.cat(features, dim=1).squeeze()  # (bs, dim)
         return features
 

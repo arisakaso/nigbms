@@ -38,12 +38,12 @@ class NumpyLogUniform(Distribution):
 
 
 class NumpyConstant(Distribution):
-    def __init__(self, shape, val):
+    def __init__(self, shape, value):
         super().__init__(shape)
         if shape is not None:
-            self.const = np.full(shape, val)
+            self.const = np.full(shape, value)
         else:
-            self.const = val
+            self.const = value
 
     def sample(self, seed=None) -> np.ndarray:
         return self.const

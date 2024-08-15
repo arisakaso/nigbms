@@ -10,16 +10,16 @@ distributions:
   N:
     _target_: nigbms.utils.distributions.NumpyConstant
     shape: null
-    val: 10
+    value: 10
   degree:
     _target_: nigbms.utils.distributions.NumpyConstant
     shape: null
-    val: 1
+    value: 1
   rtol:
     _target_: nigbms.utils.distributions.NumpyConstant
     shape: null
-    val: 1.0e-6
+    value: 1.0e-6
   maxiter:
     _target_: nigbms.utils.distributions.NumpyConstant
     shape: null
-    val: 1000
+    value: 1000

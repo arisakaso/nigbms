@@ -46,3 +46,15 @@ class TestOfflineDataModule:
     def test_prepare_data(self, init_datamodule):
         self.dm.prepare_data()
         assert isinstance(self.dm.meta_dfs["train"], pd.DataFrame)
+
+    def test_setup(self, init_datamodule):
+        self.dm.prepare_data()
+        self.dm.setup()
+        assert isinstance(self.dm.train_ds, torch.utils.data.Dataset)
+
+    def test_train_dataloader(self, init_datamodule):
+        self.dm.prepare_data()
+        self.dm.setup()
+        dl = self.dm.train_dataloader()
+        batch = next(iter(dl))
+        assert isinstance(batch, PyTorchLinearSystemTask)

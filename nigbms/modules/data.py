@@ -25,6 +25,7 @@ class OfflineDataset(Dataset):
         maxiter_dist: Distribution,
         data_format: str = "pt",
         is_A_fixed: bool = True,
+        task_type: str = "PyTorchLinearSystemTask",
     ) -> None:
         self.data_dir = data_dir
         self.meta_df = meta_df
@@ -32,6 +33,7 @@ class OfflineDataset(Dataset):
         self.maxiter_dist = maxiter_dist
         self.data_format = data_format
         self.fixed_A = self.load(data_dir + "/A") if is_A_fixed else None
+        self.task_type = task_type
 
     def load(self, path):
         if self.data_format == "pt":
@@ -56,7 +58,13 @@ class OfflineDataset(Dataset):
         params["rtol"] = rtol
         params["maxiter"] = maxiter
 
-        tau = PyTorchLinearSystemTask(params, A, b, x, rtol, maxiter)
+        if self.task_type == "PyTorchLinearSystemTask":
+            params = torch.tensor(list(params.values()))  # TODO: should be tensordict?
+            rtol = torch.tensor(rtol, dtype=torch.float32)
+            maxiter = torch.tensor(maxiter, dtype=torch.int32)
+            tau = PyTorchLinearSystemTask(params, A, b, x, rtol, maxiter)
+        else:
+            raise ValueError(f"Unknown task type: {self.task_type}")
 
         return tau
 
