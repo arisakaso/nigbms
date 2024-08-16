@@ -1,22 +1,71 @@
 import pickle
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Dict, Type
 
-import numpy as np
 import torch
 from petsc4py import PETSc
-from tensordict import TensorDict
+from tensordict import tensorclass
 from torch import Tensor, sparse_csr_tensor, tensor
 
 from nigbms.utils.distributions import Distribution
 
 
-@dataclass
+@tensorclass
 class TaskParams:
     """Parameters to generate a task"""
 
     pass
+
+
+@tensorclass
+class Task:
+    """Base class for tasks"""
+
+    params: TaskParams | None = None
+
+
+@tensorclass
+class MinimizeTestFunctionTask(Task):
+    f: Callable = None  # Test function to minimize
+
+
+@tensorclass
+class LinearSystemTask(Task):
+    A: Any = None
+    b: Any = None
+    x: Any = None  # Ground Truth if applicable, otherwise the solution provided by the solver
+    rtol: Any = None
+    maxiter: Any = None
+
+
+# TODO: add `is_batched` flag?
+@tensorclass
+class PyTorchLinearSystemTask(LinearSystemTask):
+    """PyTorch Linear System Task"""
+
+    A: Tensor = None  # currentyl only support dense matrix
+    b: Tensor = None
+    x: Tensor = None  # Ground Truth if applicable, otherwise the solution provided by the solver
+    rtol: Tensor = None
+    maxiter: Tensor = None
+
+
+@tensorclass
+class PETScLinearSystemTask(LinearSystemTask):
+    """PETSc Linear System Task"""
+
+    A: PETSc.Mat = None  # currently only support sparse matrix (AIJ)
+    b: PETSc.Vec = None
+    x: PETSc.Vec = None  # Ground Truth if applicable, otherwise the solution provided by the solver
+    rtol: float = None
+    maxiter: int = None
+    problem: Any = None  # TODO: Remove this. This is a placeholder for the problem object to keep it alive.
+
+
+@tensorclass
+class OpenFOAMTask:
+    u: Any = None
+    p: Any = None
 
 
 class TaskDistribution:
@@ -32,72 +81,6 @@ class TaskDistribution:
             params[key] = dist.sample(seed)
         task_params = self.task_params_type(**params)
         return task_params
-
-
-@dataclass
-class Task:
-    """Base class for tasks"""
-
-    params: TaskParams = None
-
-
-@dataclass
-class MinimizeTestFunctionTask(Task):
-    f: Callable = None  # Test function to minimize
-
-
-@dataclass
-class LinearSystemTask(Task):
-    A: Any = None
-    b: Any = None
-    x: Any = None  # Ground Truth if applicable, otherwise the solution provided by the solver
-    rtol: Any = None
-    maxiter: Any = None
-
-
-# TODO: add `is_batched` flag?
-@dataclass
-class PyTorchLinearSystemTask(LinearSystemTask):
-    params: TensorDict = None  # override the base class to use TensorDict
-    A: Tensor = None  # currentyl only support dense matrix
-    b: Tensor = None
-    x: Tensor = None  # Ground Truth if applicable, otherwise the solution provided by the solver
-    rtol: Tensor = None
-    maxiter: Tensor = None
-
-    def __eq__(self, other) -> bool:  # TODO: add `params` to the comparisonss
-        return (
-            torch.equal(self.A, other.A)
-            and torch.equal(self.b, other.b)
-            and ((self.x is None and other.x is None) or torch.equal(self.x, other.x))
-            and torch.equal(self.rtol, other.rtol)
-            and torch.equal(self.maxiter, other.maxiter)
-        )
-
-
-@dataclass
-class PETScLinearSystemTask(LinearSystemTask):
-    A: PETSc.Mat = None  # currently only support sparse matrix (AIJ)
-    b: PETSc.Vec = None
-    x: PETSc.Vec = None  # Ground Truth if applicable, otherwise the solution provided by the solver
-    rtol: float = None
-    maxiter: int = None
-    problem: Any = None  # TODO: Remove this. This is a placeholder for the problem object to keep it alive.
-
-    def __eq__(self, other) -> bool:
-        return (
-            self.A.equal(other.A)
-            and self.b.equal(other.b)
-            and ((self.x is None and other.x is None) or self.x.equal(other.x))
-            and np.isclose(self.rtol, other.rtol)  # can't use == for float
-            and self.maxiter == other.maxiter
-        )
-
-
-@dataclass
-class OpenFOAMTask:
-    u: Any = None
-    p: Any = None
 
 
 def petsc2torch(task: PETScLinearSystemTask) -> PyTorchLinearSystemTask:
