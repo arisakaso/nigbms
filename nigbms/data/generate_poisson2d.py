@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 
-import hydra
 import numpy as np
 import ufl
 from dolfinx.fem import (
@@ -10,7 +9,6 @@ from dolfinx.fem import (
     locate_dofs_topological,
 )
 from dolfinx.mesh import create_unit_square, locate_entities_boundary
-from hydra.utils import instantiate
 from mpi4py import MPI
 from ufl import SpatialCoordinate, TestFunction, TrialFunction, div, dx, grad, inner
 
@@ -58,14 +56,3 @@ def construct_petsc_poisson2d_task(params: Poisson2DParams) -> PETScLinearSystem
     # A and b should be created without the problem object in the future.
     task = PETScLinearSystemTask(params, problem.A, problem.b, None, params.rtol, params.maxiter, problem)
     return task
-
-
-@hydra.main(version_base="1.3", config_path="../configs/data", config_name="generate_poisson2d")
-def main(cfg):
-    ds = instantiate(cfg.dataset)
-    task = ds[1]
-    task.b.view()
-
-
-if __name__ == "__main__":
-    main()

@@ -1,3 +1,4 @@
+# %%
 import pytest
 import torch
 from petsc4py import PETSc
