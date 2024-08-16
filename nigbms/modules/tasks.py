@@ -1,4 +1,6 @@
+import pickle
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Callable, Dict, Type
 
 import numpy as np
@@ -124,7 +126,7 @@ def torch2petsc(task: PyTorchLinearSystemTask) -> PETScLinearSystemTask:
     A.assemble()
     b = PETSc.Vec().createWithArray(task.b.numpy())
     x = PETSc.Vec().createWithArray(task.x.numpy()) if task.x is not None else None
-    return PETScLinearSystemTask(A=A, b=b, x=x, rtol=float(task.rtol), maxiter=int(task.maxiter))
+    return PETScLinearSystemTask(params=task.params, A=A, b=b, x=x, rtol=float(task.rtol), maxiter=int(task.maxiter))
 
 
 def generate_sample_pytorch_task(seed=0) -> PyTorchLinearSystemTask:
@@ -137,3 +139,69 @@ def generate_sample_pytorch_task(seed=0) -> PyTorchLinearSystemTask:
     rtol = torch.tensor(1.0e-6)
     maxiter = torch.tensor(100)
     return PyTorchLinearSystemTask(params=params, A=A, b=b, x=x, rtol=rtol, maxiter=maxiter)
+
+
+def save_petsc_task(task: PETScLinearSystemTask, path: Path) -> None:
+    """Save PETScLinearSystemTask to disk.
+    `pickle.dump` cannot be used to save PETSc objects.
+
+    Args:
+        task (PETScLinearSystemTask): task
+        idx (int): index
+    """
+    path.mkdir(parents=True, exist_ok=True)
+    viewer_A = PETSc.Viewer().createBinary(str(path / "A.dat"), "w")
+    task.A.view(viewer_A)
+    viewer_A.destroy()
+
+    viewer_b = PETSc.Viewer().createBinary(str(path / "b.dat"), "w")
+    task.b.view(viewer_b)
+    viewer_b.destroy()
+
+    if task.x is not None:
+        viewer_x = PETSc.Viewer().createBinary(str(path / "x.dat"), "w")
+        task.x.view(viewer_x)
+        viewer_x.destroy()
+
+    pickle.dump(task.params, (path / "params.pkl").open("wb"))
+
+
+def load_petsc_task(path: Path) -> PETScLinearSystemTask:
+    """Load PETScLinearSystemTask from disk.
+    Note that rtol and maxiter are not saved, and they need to be set later.
+
+    Args:
+        path (Path): path to the task
+
+    Returns:
+        PETScLinearSystemTask: task
+    """
+    viewer_A = PETSc.Viewer().createBinary(str(path / "A.dat"), "r")
+    A = PETSc.Mat().create()
+    A.load(viewer_A)
+    viewer_A.destroy()
+
+    viewer_b = PETSc.Viewer().createBinary(str(path / "b.dat"), "r")
+    b = PETSc.Vec().create()
+    b.load(viewer_b)
+    viewer_b.destroy()
+
+    if (path / "x.dat").exists():
+        viewer_x = PETSc.Viewer().createBinary(str(path / "x.dat"), "r")
+        x = PETSc.Vec().create()
+        x.load(viewer_x)
+        viewer_x.destroy()
+    else:
+        x = None
+
+    params = pickle.load((path / "params.pkl").open("rb"))
+
+    return PETScLinearSystemTask(params=params, A=A, b=b, x=x, rtol=None, maxiter=None)
+
+
+def save_pytorch_task(path: Path) -> None:
+    pass
+
+
+def load_pytorch_task(path: Path) -> PyTorchLinearSystemTask:
+    pass
