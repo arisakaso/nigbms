@@ -1,6 +1,6 @@
-from dataclasses import dataclass
-
+# %%
 import numpy as np
+import torch
 import ufl
 from dolfinx.fem import (
     Function,
@@ -10,6 +10,8 @@ from dolfinx.fem import (
 )
 from dolfinx.mesh import create_unit_square, locate_entities_boundary
 from mpi4py import MPI
+from tensordict import tensorclass
+from torch import Tensor
 from ufl import SpatialCoordinate, TestFunction, TrialFunction, div, dx, grad, inner
 
 import nigbms  # noqa
@@ -17,20 +19,21 @@ from nigbms.data.petsc import LinearProblem
 from nigbms.modules.tasks import PETScLinearSystemTask, TaskParams
 
 
-@dataclass
+@tensorclass(autocast=True)
 class Poisson2DParams(TaskParams):
-    coef: np.ndarray = np.array([1.0, 1.0])
-    N: int = 10
-    degree: int = 1
-    rtol: float = 1e-6
-    maxiter: int = 100
+    coef: Tensor = torch.ones(2)
+    N: Tensor = 10
+    degree: Tensor = 1
+    rtol: Tensor = 1e-6
+    maxiter: Tensor = 100
 
 
 def construct_petsc_poisson2d_task(params: Poisson2DParams) -> PETScLinearSystemTask:
     # Reference: https://jsdokken.com/dolfinx-tutorial/chapter4/solvers.html
+    coef = params.coef.numpy()  # this is a workaround for the issue that ufl cannot handle torch.Tensor
 
     def _u_ex(mod):
-        return lambda x: mod.cos(params.coef[0] * mod.pi * x[0]) * mod.cos(params.coef[1] * mod.pi * x[1])
+        return lambda x: mod.cos(coef[0] * mod.pi * x[0]) * mod.cos(coef[1] * mod.pi * x[1])
 
     u_numpy = _u_ex(np)
     u_ufl = _u_ex(ufl)
@@ -56,3 +59,6 @@ def construct_petsc_poisson2d_task(params: Poisson2DParams) -> PETScLinearSystem
     # A and b should be created without the problem object in the future.
     task = PETScLinearSystemTask(params, problem.A, problem.b, None, params.rtol, params.maxiter, problem)
     return task
+
+
+# %%
