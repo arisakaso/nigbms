@@ -12,8 +12,10 @@ from nigbms.modules.tasks import (
     PyTorchLinearSystemTask,
     generate_sample_pytorch_task,
     load_petsc_task,
+    load_pytorch_task,
     petsc2torch,
     save_petsc_task,
+    save_pytorch_task,
     torch2petsc,
 )
 
@@ -62,12 +64,20 @@ def test_save_petsc_task(petsc_task):
     path = Path("tmp")
     save_petsc_task(petsc_task, path)
     task = load_petsc_task(path)
+    assert isinstance(task, PETScLinearSystemTask)
     assert petsc_task.A.equal(task.A)
     assert petsc_task.b.equal(task.b)
     shutil.rmtree(path)
 
 
-# def test_save_pytorch_task(pytorch_task):
-#     save_pytorch_task(pytorch_task, tmp_path / "task")
-#     task = load_pytorch_task(tmp_path / "task")
-#     assert pytorch_task == task
+def test_save_pytorch_task(pytorch_task):
+    path = Path("tmp")
+    save_pytorch_task(pytorch_task, path)
+    task = load_pytorch_task(path)
+    assert isinstance(task, PyTorchLinearSystemTask)
+    assert torch.equal(pytorch_task.A, task.A)
+    assert torch.equal(pytorch_task.b, task.b)
+    shutil.rmtree(path)
+
+
+# %%

@@ -182,9 +182,15 @@ def load_petsc_task(path: Path) -> PETScLinearSystemTask:
     return PETScLinearSystemTask(params=params, A=A, b=b, x=x, rtol=None, maxiter=None)
 
 
-def save_pytorch_task(path: Path) -> None:
-    pass
+def save_pytorch_task(task: PyTorchLinearSystemTask, path: Path) -> None:
+    """Save PyTorchLinearSystemTask to disk."""
+    # task.memmap(path)
+    path.mkdir(parents=True, exist_ok=True)
+    pickle.dump(task, (path / "task.pkl").open("wb"))
 
 
 def load_pytorch_task(path: Path) -> PyTorchLinearSystemTask:
-    pass
+    """Load PyTorchLinearSystemTask from disk."""
+    # FIXME: load_memmap gives an error: /usr/local/lib/python3.10/dist-packages/tensordict/_td.py:2390: KeyError
+    # return TensorDict.load_memmap(path)
+    return pickle.load((path / "task.pkl").open("rb"))
