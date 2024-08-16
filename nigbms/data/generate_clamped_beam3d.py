@@ -1,28 +1,28 @@
-from dataclasses import dataclass
-
 import numpy as np
 import ufl
 from dolfinx import default_scalar_type, fem, mesh
 from mpi4py import MPI
+from tensordict import tensorclass
+from torch import Tensor
 
 import nigbms  # noqa
 from nigbms.data.petsc import LinearProblem
 from nigbms.modules.tasks import PETScLinearSystemTask, TaskParams
 
 
-@dataclass
+@tensorclass
 class ClampedBeam3DParams(TaskParams):
-    L: float = 1.0
-    W: float = 0.2
-    mu: float = 1.0
-    rho: float = 1.0
-    lambda_: float = 1.25
+    L: Tensor = 1.0
+    W: Tensor = 0.2
+    mu: Tensor = 1.0
+    rho: Tensor = 1.0
+    lambda_: Tensor = 1.25
 
-    N_L: int = 20
-    N_W: int = 6
-    degree: int = 1
-    rtol: float = 1e-6
-    maxiter: int = 100
+    N_L: Tensor = 20
+    N_W: Tensor = 6
+    degree: Tensor = 1
+    rtol: Tensor = 1e-6
+    maxiter: Tensor = 100
 
 
 def construct_petsc_clamped_beam3d(params: ClampedBeam3DParams) -> PETScLinearSystemTask:
