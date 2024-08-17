@@ -1,5 +1,5 @@
 _target_: nigbms.modules.data.OfflineDataset
-data_dir: /workspaces/nigbms/data/raw/poisson2d/2024-08-16_09-28-22
+data_dir: /workspaces/nigbms/data/raw/poisson2d/sample
 idcs: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 rtol_dist:
   _target_: nigbms.utils.distributions.NumpyConstant

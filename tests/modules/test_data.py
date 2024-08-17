@@ -1,10 +1,9 @@
-import pandas as pd
 import pytest
 import torch
 from hydra import compose, initialize
 from hydra.utils import instantiate
 
-from nigbms.modules.tasks import PETScLinearSystemTask, PyTorchLinearSystemTask
+from nigbms.modules.tasks import PETScLinearSystemTask
 
 
 class TestOfflineDataset:
@@ -44,7 +43,7 @@ class TestOfflineDataModule:
 
     def test_prepare_data(self, init_datamodule):
         self.dm.prepare_data()
-        assert isinstance(self.dm.meta_dfs["train"], pd.DataFrame)
+        assert len(self.dm.indcs["test"]) == self.dm.dataset_sizes["test"]
 
     def test_setup(self, init_datamodule):
         self.dm.prepare_data()
@@ -56,4 +55,4 @@ class TestOfflineDataModule:
         self.dm.setup()
         dl = self.dm.train_dataloader()
         batch = next(iter(dl))
-        assert isinstance(batch, PyTorchLinearSystemTask)
+        assert isinstance(batch[0], PETScLinearSystemTask)

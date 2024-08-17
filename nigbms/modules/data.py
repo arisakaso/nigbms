@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Callable, Dict, List, Type
 
 import numpy as np
-import pandas as pd
 import torch
 from lightning import LightningDataModule
 from omegaconf import DictConfig
@@ -85,60 +84,63 @@ def pytorch_task_collate_fn(batch: List[PyTorchLinearSystemTask]) -> PyTorchLine
     return tau
 
 
+def petsc_task_collate_fn(batch: List[PETScLinearSystemTask]) -> List[PETScLinearSystemTask]:
+    return batch
+
+
 class OfflineDataModule(LightningDataModule):
     def __init__(
         self,
-        data_dir: str,
+        data_dir: Path,
         dataset_sizes: Dict[str, int],
         rtol_dists: Dict[str, Distribution],
         maxiter_dists: Dict[str, Distribution],
-        data_format: str,
-        is_A_fixed: bool,
+        task_type: Type,
         batch_size: int,
         num_workers: int,
     ) -> None:
         super().__init__()
-        self.data_dir = data_dir
+        self.data_dir = Path(data_dir)
         self.dataset_sizes = dataset_sizes
         self.rtol_dists = rtol_dists
         self.maxiter_dits = maxiter_dists
-        self.data_format = data_format
-        self.is_A_fixed = is_A_fixed
+        self.task_type = task_type
+        if task_type == PyTorchLinearSystemTask:
+            self.collate_fn = pytorch_task_collate_fn
+        elif task_type == PETScLinearSystemTask:
+            self.collate_fn = petsc_task_collate_fn
         self.batch_size = batch_size
         self.num_workers = num_workers
 
     def prepare_data(self) -> None:
-        meta_df = pd.read_csv(self.data_dir + "/meta_df.csv")
-        keys, sizes = zip(*self.dataset_sizes.items(), strict=False)
-        self.meta_dfs = dict(zip(keys, np.split(meta_df, sizes), strict=False))
+        dataset_names, dataset_sizes = zip(*self.dataset_sizes.items(), strict=False)
+        indices_ranges = np.split(np.arange(sum(dataset_sizes)), np.cumsum(dataset_sizes)[:-1])
+        self.indcs = dict(zip(dataset_names, indices_ranges, strict=False))
 
     def setup(self, stage: str = None):
         if stage == "fit" or stage is None:
             self.train_ds = OfflineDataset(
                 self.data_dir,
-                self.meta_dfs["train"],
+                self.indcs["train"],
                 self.rtol_dists["train"],
                 self.maxiter_dits["train"],
-                self.data_format,
-                self.is_A_fixed,
+                self.task_type,
             )
             self.val_ds = OfflineDataset(
                 self.data_dir,
-                self.meta_dfs["val"],
+                self.indcs["val"],
                 self.rtol_dists["val"],
                 self.maxiter_dits["val"],
-                self.data_format,
-                self.is_A_fixed,
+                self.task_type,
             )
 
         if stage == "test":
             self.test_ds = OfflineDataset(
                 self.data_dir,
-                self.meta_dfs["test"],
+                self.indcs["test"],
                 self.rtol_dists["test"],
                 self.maxiter_dits["test"],
-                self.data_format,
-                self.is_A_fixed,
+                self.task_type,
             )
 
     def train_dataloader(self):
@@ -146,7 +148,7 @@ class OfflineDataModule(LightningDataModule):
             self.train_ds,
             batch_size=self.batch_size,
             shuffle=True,
-            collate_fn=pytorch_task_collate_fn,
+            collate_fn=self.collate_fn,
             num_workers=self.num_workers,
         )
 
@@ -155,7 +157,7 @@ class OfflineDataModule(LightningDataModule):
             self.val_ds,
             batch_size=self.batch_size,
             shuffle=False,
-            collate_fn=pytorch_task_collate_fn,
+            collate_fn=self.collate_fn,
             num_workers=self.num_workers,
         )
 
@@ -164,7 +166,7 @@ class OfflineDataModule(LightningDataModule):
             self.test_ds,
             batch_size=self.batch_size,
             shuffle=False,
-            collate_fn=pytorch_task_collate_fn,
+            collate_fn=self.collate_fn,
             generator=torch.Generator(device="cuda"),
         )
 

@@ -1,9 +1,9 @@
 _target_: nigbms.modules.data.OfflineDataModule
-data_dir: /workspaces/nigbms/data/raw/poisson1d/sample
+data_dir: /workspaces/nigbms/data/raw/poisson2d/sample
 dataset_sizes: 
-  train: 100
-  val: 100
-  test: 100
+  train: 30
+  val: 20
+  test: 10
 rtol_dists:
   train:
     _target_: nigbms.utils.distributions.NumpyConstant
@@ -18,7 +18,8 @@ maxiter_dists:
     value: 1000
   val: ${.train}
   test: ${.train}
-is_A_fixed: True
-data_format: pt
-batch_size: 32
+task_type:
+  _target_: hydra.utils.get_class
+  path: nigbms.modules.tasks.PETScLinearSystemTask
+batch_size: 4
 num_workers: 0
