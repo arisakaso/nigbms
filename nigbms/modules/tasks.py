@@ -1,3 +1,4 @@
+# %%
 import pickle
 from pathlib import Path
 from typing import Any, Callable, Dict, Type
@@ -194,3 +195,6 @@ def load_pytorch_task(path: Path) -> PyTorchLinearSystemTask:
     # FIXME: load_memmap gives an error: /usr/local/lib/python3.10/dist-packages/tensordict/_td.py:2390: KeyError
     # return TensorDict.load_memmap(path)
     return pickle.load((path / "task.pkl").open("rb"))
+
+
+# %%

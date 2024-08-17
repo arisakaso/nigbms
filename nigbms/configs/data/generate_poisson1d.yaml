@@ -4,7 +4,7 @@ hydra:
   job:
     chdir: True
 
-N_data: 100
+N_data: 10000
 
 dataset:
   _target_: nigbms.modules.data.OnlineDataset
@@ -18,14 +18,15 @@ dataset:
     N_terms:
       _target_: nigbms.utils.distributions.NumpyConstant
       shape: null
-      value: 16
+      value: 31
     N_grid:
       _target_: nigbms.utils.distributions.NumpyConstant
       shape: null
-      value: 16
+      value: ${dataset.distributions.N_terms.value}
     coefs:
       _target_: nigbms.data.generate_poisson1d.CoefsDistribution
-      shape: [16]
+      shape: 
+        - ${dataset.distributions.N_terms.value}
       p: 0.01
       scale: 1
     rtol:
