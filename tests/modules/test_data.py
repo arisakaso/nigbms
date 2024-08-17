@@ -13,15 +13,14 @@ class TestOfflineDataset:
         with initialize(version_base="1.3", config_path="../configs/modules/data"):
             cfg = compose(config_name="offline_dataset")
             self.ds = instantiate(cfg)
-            self.ds.meta_df = pd.read_csv(self.ds.data_dir + "/meta_df.csv")
 
     def test_load(self, init_dataset):
-        A = self.ds.load(self.ds.data_dir + "/A")
-        assert isinstance(A, torch.Tensor)
+        task = self.ds.load(self.ds.data_dir / "0")
+        assert isinstance(task, PETScLinearSystemTask)
 
     def test_getitem(self, init_dataset):
         tau = self.ds[0]
-        assert isinstance(tau, PyTorchLinearSystemTask)
+        assert isinstance(tau, PETScLinearSystemTask)
 
 
 class TestOnlineDataset:

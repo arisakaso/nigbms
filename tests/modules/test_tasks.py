@@ -78,6 +78,3 @@ def test_save_pytorch_task(pytorch_task):
     assert torch.equal(pytorch_task.A, task.A)
     assert torch.equal(pytorch_task.b, task.b)
     shutil.rmtree(path)
-
-
-# %%

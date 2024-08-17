@@ -1,5 +1,6 @@
 # %%
 from dataclasses import astuple
+from pathlib import Path
 from typing import Callable, Dict, List, Type
 
 import numpy as np
@@ -10,62 +11,38 @@ from omegaconf import DictConfig
 from torch.utils.data.dataloader import DataLoader
 from torch.utils.data.dataset import Dataset, IterableDataset
 
-import nigbms  # noqa
-import nigbms.data.generate_poisson2d  # noqa
-from nigbms.modules.tasks import PyTorchLinearSystemTask
+from nigbms.modules.tasks import PETScLinearSystemTask, PyTorchLinearSystemTask, load_petsc_task, load_pytorch_task
 from nigbms.utils.distributions import Distribution
 
 
 class OfflineDataset(Dataset):
     def __init__(
         self,
-        data_dir: str,
-        meta_df: pd.DataFrame,
+        data_dir: Path,
+        idcs: List[int],
         rtol_dist: Distribution,
         maxiter_dist: Distribution,
-        data_format: str = "pt",
-        is_A_fixed: bool = True,
-        task_type: str = "PyTorchLinearSystemTask",
+        task_type: Type,
     ) -> None:
-        self.data_dir = data_dir
-        self.meta_df = meta_df
+        self.data_dir = Path(data_dir)
+        self.idcs = idcs
         self.rtol_dist = rtol_dist
         self.maxiter_dist = maxiter_dist
-        self.data_format = data_format
-        self.fixed_A = self.load(data_dir + "/A") if is_A_fixed else None
         self.task_type = task_type
 
-    def load(self, path):
-        if self.data_format == "pt":
-            return torch.load(path + ".pt")
-        else:
-            raise ValueError(f"Unknown data format: {self.data_format}")
+    def load(self, path: Path) -> PyTorchLinearSystemTask | PETScLinearSystemTask:
+        if self.task_type == PyTorchLinearSystemTask:
+            return load_pytorch_task(path)
+        elif self.task_type == PETScLinearSystemTask:
+            return load_petsc_task(path)
 
     def __len__(self) -> int:
-        return len(self.meta_df)
+        return len(self.idcs)
 
-    def __getitem__(self, idx):
-        if self.fixed_A is not None:
-            A = self.fixed_A
-        else:
-            A = self.load(self.data_dir + f"/{idx}_A")
-
-        b = self.load(self.data_dir + f"/{idx}_b").reshape(-1, 1)
-        x = self.load(self.data_dir + f"/{idx}_x").reshape(-1, 1)
-        rtol = self.rtol_dist.sample(idx)
-        maxiter = self.maxiter_dist.sample(idx)
-        params = self.meta_df.iloc[idx].to_dict()
-        params["rtol"] = rtol
-        params["maxiter"] = maxiter
-
-        if self.task_type == "PyTorchLinearSystemTask":
-            params = torch.tensor(list(params.values()))  # TODO: should be tensordict?
-            rtol = torch.tensor(rtol, dtype=torch.float32)
-            maxiter = torch.tensor(maxiter, dtype=torch.int32)
-            tau = PyTorchLinearSystemTask(params, A, b, x, rtol, maxiter)
-        else:
-            raise ValueError(f"Unknown task type: {self.task_type}")
-
+    def __getitem__(self, idx) -> PyTorchLinearSystemTask | PETScLinearSystemTask:
+        tau = self.load(self.data_dir / str(self.idcs[idx]))
+        tau.rtol = self.rtol_dist.sample()
+        tau.maxiter = self.maxiter_dist.sample()
         return tau
 
 

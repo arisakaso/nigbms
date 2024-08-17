@@ -1,6 +1,6 @@
 _target_: nigbms.modules.data.OfflineDataset
-data_dir: /workspaces/nigbms/data/raw/poisson1d/sample
-meta_df: null
+data_dir: /workspaces/nigbms/data/raw/poisson2d/2024-08-16_09-28-22
+idcs: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 rtol_dist:
   _target_: nigbms.utils.distributions.NumpyConstant
   shape: null
@@ -9,5 +9,6 @@ maxiter_dist:
   _target_: nigbms.utils.distributions.NumpyConstant
   shape: null
   value: 1000
-data_format: pt
-is_A_fixed: True
+task_type:
+  _target_: hydra.utils.get_class
+  path: nigbms.modules.tasks.PETScLinearSystemTask
