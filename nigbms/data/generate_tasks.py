@@ -4,14 +4,19 @@ import hydra
 from hydra.utils import instantiate
 from tqdm import tqdm
 
-from nigbms.modules.tasks import save_petsc_task
+from nigbms.modules.tasks import save_petsc_task, save_pytorch_task
 
 
-@hydra.main(version_base="1.3", config_path="../configs/data", config_name="generate_poisson2d")
+@hydra.main(version_base="1.3", config_path="../configs/data", config_name="generate_poisson1d")
 def main(cfg) -> None:
     dataset = instantiate(cfg.dataset)
     for i in tqdm(range(cfg.N_data)):
-        save_petsc_task(dataset[i], Path(str(i)))
+        if "petsc" in cfg.dataset.task_constructor.path:
+            save_petsc_task(dataset[i], Path(str(i)))
+        elif "pytorch" in cfg.dataset.task_constructor.path:
+            save_pytorch_task(dataset[i], Path(str(i)))
+        else:
+            raise ValueError("Unknown task constructor.")
 
 
 if __name__ == "__main__":

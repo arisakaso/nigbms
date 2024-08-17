@@ -1,18 +1,39 @@
-# %%
-import hydra
 import numpy as np
-import pandas as pd
 import torch
-from joblib import Parallel, delayed
-from scipy.sparse import diags
-from sympy import Expr, IndexedBase, lambdify, pi, sin, symbols
-from tqdm import tqdm
+from sympy import Expr, S, lambdify, pi, sin, symbols
+from tensordict import tensorclass
+from torch import Tensor, tensor
 
-x = symbols("x")
-a = IndexedBase("a")
+from nigbms.modules.tasks import PyTorchLinearSystemTask, TaskParams
+from nigbms.utils.distributions import Distribution
 
 
-def laplacian_matrix(N: int, out_type="numpy"):
+@tensorclass(autocast=True)
+class Poisson1DParams(TaskParams):
+    N_terms: Tensor = 10
+    N_grid: Tensor = 100
+    coefs: Tensor = torch.ones(10)
+    rtol: Tensor = 1e-6
+    maxiter: Tensor = 100
+
+
+class CoefsDistribution(Distribution):
+    def __init__(self, shape, p: float, scale: float):
+        assert len(shape) == 1
+        super().__init__(shape)
+        self.p = p
+        self.scale = scale
+
+    def sample(self, seed: int = None) -> np.ndarray:
+        np.random.seed(seed)
+        is_difficult = np.random.choice([True, False], p=[self.p, 1 - self.p])
+        if is_difficult:
+            return np.random.normal(0, self.scale * np.linspace(-1, 1, self.shape[0]) ** 2, self.shape[0])
+        else:
+            return np.random.normal(0, self.scale * (1 - np.abs(np.linspace(-1, 1, self.shape[0]))), self.shape[0])
+
+
+def laplacian_matrix(N: int) -> np.ndarray:
     """
     Generate a Laplacian matrix of size N.
 
@@ -25,44 +46,11 @@ def laplacian_matrix(N: int, out_type="numpy"):
 
     """
 
-    D = diags([-1, 2, -1], [-1, 0, 1], shape=(N, N))
-
-    if out_type == "numpy":
-        return D.toarray()
-
-    else:
-        return D
-
-
-def get_sympy_u(N_terms: int) -> Expr:
-    """Calculate the symbolic representation of u.
-
-    This function calculates the symbolic representation of u based on the given number of terms.
-
-    Args:
-        N_terms (int, optional): The number of terms to consider in the calculation. Defaults to 10.
-
-    Returns:
-        Expr: The symbolic representation of u.
-    """
-    u_sym = 0
-    for i in range(1, N_terms + 1):
-        u_sym += a[i] * sin(i * pi * x)
-    return u_sym
-
-
-def get_sympy_f(u_sym: Expr) -> Expr:
-    """
-    Calculate the symbolic representation of f.
-
-    Parameters:
-        u_sym (sympy.Symbol): The symbolic representation of u.
-
-    Returns:
-        Expr: The symbolic representation of f.
-    """
-
-    return u_sym.diff(x, x)
+    D = np.zeros((N, N))
+    D += np.diag([-1] * (N - 1), k=-1)
+    D += np.diag([2] * N, k=0)
+    D += np.diag([-1] * (N - 1), k=1)
+    return D
 
 
 def discretize(expr: Expr, N_grid: int) -> np.ndarray:
@@ -81,104 +69,25 @@ def discretize(expr: Expr, N_grid: int) -> np.ndarray:
     return lambdified_expr(np.linspace(0, 1, N_grid))
 
 
-def sample_random_coeffs(N_terms: int, p: float, distribution: str, scale: float = 1.0) -> np.ndarray:
-    """
-    Generate random coefficients for a given number of terms.
-
-    Args:
-        N_terms (int): Number of terms to generate coefficients for. Default is 10.
-        p (float): Probability of generating difficult coefficients. Default is 0.5.
-        distribution (str): distribution of coefficients to generate. Options are "quadratic" (default) and "constant".
-        scale (float): Scaling factor for the coefficients. Default is 1.
-
-    Returns:
-        numpy.ndarray: Array of generated coefficients, with an additional element indicating difficulty.
-    """
-
-    is_difficult = np.random.binomial(1, p=p)
-
-    if distribution == "quadratic":
-        if is_difficult == 1:
-            ais = np.random.normal(0, scale * np.linspace(-1, 1, N_terms) ** 2, N_terms)  # difficult
-        else:
-            ais = np.random.normal(0, scale * (1 - np.linspace(-1, 1, N_terms) ** 2), N_terms)  # easy
-
-    elif distribution == "constant":
-        ais = np.random.normal(0, scale, N_terms)
-
-    elif distribution == "linear":
-        if is_difficult == 1:
-            ais = np.random.normal(0, scale * np.abs(np.linspace(-1, 1, N_terms)), N_terms)  # difficult
-        else:
-            ais = np.random.normal(0, scale * (1 - np.abs(np.linspace(-1, 1, N_terms))), N_terms)  # easy
-
-    else:
-        raise ValueError("Invalid type")
-
-    return np.append(ais, is_difficult)
+def construct_sym_u(N_terms: int, coefs: np.ndarray) -> Expr:
+    x = symbols("x")
+    u_sym = S(0)
+    for i in range(N_terms):
+        u_sym += coefs[i] * sin((i + 1) * pi * x)
+    return u_sym
 
 
-def get_meta_df(N_data: int, N_terms: int, p: float, distribution: str, scale: float = 1.0) -> pd.DataFrame:
-    """
-    Generate a meta dataframe with random coefficients.
-
-    Parameters:
-    - N_data (int): Number of data points to generate.
-    - N_terms (int): Number of terms in each data point.
-    - p (float): Probability of a term being difficult in a data point.
-    - distribution (str): Type of distribution for generating coefficients.
-    - scale (float, optional): Scaling factor for the coefficients. Default is 1.0.
-
-    Returns:
-    - meta_df (pandas.DataFrame): Meta dataframe with randomly generated coefficients.
-    """
-    coeffs = [sample_random_coeffs(N_terms, p, distribution, scale) for _ in range(N_data)]
-    column_names = [a[i] for i in range(1, N_terms + 1)] + ["is_difficult"]
-    meta_df = pd.DataFrame(coeffs, columns=column_names)
-    return meta_df
-
-
-def generate_poisson1d(A: np.ndarray, u_sym: Expr, i: int, coeffs: np.ndarray) -> None:
-    """
-    Generate 1D Poisson equation data.
-
-    Args:
-        u_sym (Expr): The symbolic expression representing the function u(x).
-        i (int): The index of the data.
-        coeffs (np.ndarray): The coefficients to substitute in the symbolic expression.
-
-    Returns:
-        None
-    """
-    coeffs.pop("is_difficult")  # delete
-    N_terms = len(coeffs)
-
-    u_sym = u_sym.xreplace(coeffs)
-    x = discretize(u_sym, N_terms + 2)[1:-1]  # exclude boundary because it is fixed to 0
+def construct_pytorch_poisson1d_task(params: Poisson1DParams) -> PyTorchLinearSystemTask:
+    u_sym = construct_sym_u(params.N_terms, params.coefs)
+    x = discretize(u_sym, params.N_grid + 2)[1:-1]  # exclude boundary because it is fixed to 0
+    A = laplacian_matrix(params.N_grid)
     b = A @ x
-    assert np.allclose(A @ x, b)
-
-    torch.save(torch.tensor(x), f"{i}_x.pt")
-    torch.save(torch.tensor(b), f"{i}_b.pt")
-
-    return None
-
-
-@hydra.main(version_base="1.3", config_path="../configs/data", config_name="generate_poisson1d")
-def main(cfg):
-    u_sym = get_sympy_u(N_terms=cfg.N_terms)
-    meta_df = get_meta_df(cfg.N_data, cfg.N_grid, cfg.p, cfg.distribution, cfg.scale)
-    meta_df.to_csv("meta_df.csv", index=False)
-    A = laplacian_matrix(cfg.N_grid)
-    torch.save(torch.tensor(A).to_sparse_coo(), "A.pt")  # save in torch COO format
-    Parallel(verbose=10, n_jobs=-1)(
-        [
-            delayed(generate_poisson1d)(A, u_sym, i, coeffs.to_dict())
-            for i, coeffs in tqdm(meta_df.iterrows(), total=len(meta_df))
-        ]
+    task = PyTorchLinearSystemTask(
+        params,
+        tensor(A),
+        tensor(b),
+        tensor(x),
+        params.rtol,
+        params.maxiter,
     )
-
-
-# %%
-if __name__ == "__main__":
-    main()
+    return task

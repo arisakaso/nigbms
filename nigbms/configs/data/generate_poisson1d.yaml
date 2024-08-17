@@ -1,13 +1,38 @@
 hydra:
   run:
-    # dir: data/raw/poisson1d/${now:%Y-%m-%d_%H-%M-%S}
-    dir: data/raw/poisson1d/sample
+    dir: data/raw/poisson1d/${now:%Y-%m-%d_%H-%M-%S}
   job:
     chdir: True
 
-N_data: 1_000
-N_grid: 31 # number of inner grid points, i.e. the size of A
-N_terms: 31
-scale: 1.0
-distribution: linear
-p: 0.01
+N_data: 100
+
+dataset:
+  _target_: nigbms.modules.data.OnlineDataset
+  task_params_type: 
+    _target_: hydra.utils.get_class
+    path: nigbms.data.generate_poisson1d.Poisson1DParams
+  task_constructor: 
+    _target_: hydra.utils.get_method
+    path: nigbms.data.generate_poisson1d.construct_pytorch_poisson1d_task
+  distributions:
+    N_terms:
+      _target_: nigbms.utils.distributions.NumpyConstant
+      shape: null
+      value: 16
+    N_grid:
+      _target_: nigbms.utils.distributions.NumpyConstant
+      shape: null
+      value: 16
+    coefs:
+      _target_: nigbms.data.generate_poisson1d.CoefsDistribution
+      shape: [16]
+      p: 0.01
+      scale: 1
+    rtol:
+      _target_: nigbms.utils.distributions.NumpyConstant
+      shape: null
+      value: 1.0e-6
+    maxiter:
+      _target_: nigbms.utils.distributions.NumpyConstant
+      shape: null
+      value: 1000

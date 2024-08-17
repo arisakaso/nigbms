@@ -10,7 +10,13 @@ from omegaconf import DictConfig
 from torch.utils.data.dataloader import DataLoader
 from torch.utils.data.dataset import Dataset, IterableDataset
 
-from nigbms.modules.tasks import PETScLinearSystemTask, PyTorchLinearSystemTask, load_petsc_task, load_pytorch_task
+from nigbms.modules.tasks import (
+    PETScLinearSystemTask,
+    PyTorchLinearSystemTask,
+    Task,
+    load_petsc_task,
+    load_pytorch_task,
+)
 from nigbms.utils.distributions import Distribution
 
 
@@ -53,7 +59,7 @@ class OnlineDataset(Dataset):
         self.task_constructor = task_constructor
         self.distributions = distributions
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx) -> Task:
         params = {}
         for k, dist in self.distributions.items():
             params[k] = dist.sample(idx)
@@ -68,7 +74,7 @@ class OnlineIterableDataset(IterableDataset):
         self.task_constructor = task_constructor
         self.distributions = distributions
 
-    def __iter__(self):
+    def __iter__(self) -> Task:
         params = {}
         for k, dist in self.distributions.items():
             params[k] = dist.sample()
