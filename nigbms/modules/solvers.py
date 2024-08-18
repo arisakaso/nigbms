@@ -1,5 +1,3 @@
-from typing import List
-
 import torch
 from omegaconf import DictConfig
 from petsc4py import PETSc
@@ -264,12 +262,15 @@ class PETScKSP(_Solver):
 
         return history
 
-    def forward(self, batched_tau: List[PyTorchLinearSystemTask], theta: TensorDict) -> Tensor:
+    def forward(self, batched_tau: PyTorchLinearSystemTask, theta: TensorDict) -> Tensor:
+        assert batched_tau.is_batched, "batched_tau must be a batched task."
+        assert batched_tau.batch_size == theta.batch_size, "batch_size of tau and theta must match."
+
         self.x = []
         theta = theta.detach().cpu()
         histories = []
         for i in range(len(batched_tau)):
-            histories.append(self.solve(batched_tau[i], theta[i]))
+            histories.append(self.solve(batched_tau.get_task(i), theta[i]))
         histories = torch.stack(histories).to(device=theta.device, dtype=theta.dtype)
 
         return histories

@@ -10,28 +10,23 @@ from hydra.utils import instantiate
 from omegaconf import OmegaConf
 from tensordict import TensorDict
 
-from nigbms.modules.data import petsc_task_collate_fn, pytorch_task_collate_fn
 from nigbms.modules.solvers import PETScKSP, PyTorchCG, PyTorchSOR
 from nigbms.modules.tasks import (
     PETScLinearSystemTask,
     PyTorchLinearSystemTask,
-    generate_sample_petsc_task,
-    generate_sample_pytorch_task,
+    generate_sample_batched_petsc_task,
+    generate_sample_batched_pytorch_task,
 )
 
 
 @pytest.fixture
 def batched_pytorch_tasks() -> PyTorchLinearSystemTask:
-    pytorch_tasks = [generate_sample_pytorch_task(seed) for seed in range(3)]
-    batched_tasks = pytorch_task_collate_fn(pytorch_tasks)
-    return batched_tasks
+    return generate_sample_batched_pytorch_task()
 
 
 @pytest.fixture
 def batched_petsc_tasks() -> List[PETScLinearSystemTask]:
-    petsc_tasks = [generate_sample_petsc_task(seed) for seed in range(3)]
-    batched_tasks = petsc_task_collate_fn(petsc_tasks)
-    return batched_tasks
+    return generate_sample_batched_petsc_task()
 
 
 def test_pytorch_jacobi(batched_pytorch_tasks):
@@ -63,7 +58,7 @@ def test_petsc_default(batched_petsc_tasks):
     solver = PETScKSP(params_fix=OmegaConf.create({"history_length": 100}), params_learn={})
     theta = TensorDict({}, batch_size=3)
     solver.forward(batched_petsc_tasks, theta)
-    assert all([np.allclose(solver.x[i].getArray(), batched_petsc_tasks[i].x.getArray()) for i in range(3)])
+    assert all([np.allclose(solver.x[i].getArray(), batched_petsc_tasks.get_task(i).x.getArray()) for i in range(3)])
 
 
 def test_petsc_ksp_default(batched_petsc_tasks):
@@ -74,7 +69,7 @@ def test_petsc_ksp_default(batched_petsc_tasks):
     solver = instantiate(cfg)
     theta = TensorDict({}, batch_size=3)
     solver.forward(batched_petsc_tasks, theta)
-    assert all([np.allclose(solver.x[i].getArray(), batched_petsc_tasks[i].x.getArray()) for i in range(3)])
+    assert all([np.allclose(solver.x[i].getArray(), batched_petsc_tasks.get_task(i).x.getArray()) for i in range(3)])
 
 
 def test_petsc_cg(batched_petsc_tasks):
@@ -85,4 +80,4 @@ def test_petsc_cg(batched_petsc_tasks):
     solver = instantiate(cfg)
     theta = TensorDict({}, batch_size=3)
     solver.forward(batched_petsc_tasks, theta)
-    assert all([np.allclose(solver.x[i].getArray(), batched_petsc_tasks[i].x.getArray()) for i in range(3)])
+    assert all([np.allclose(solver.x[i].getArray(), batched_petsc_tasks.get_task(i).x.getArray()) for i in range(3)])

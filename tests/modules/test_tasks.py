@@ -7,6 +7,8 @@ import torch
 from nigbms.modules.tasks import (
     PETScLinearSystemTask,
     PyTorchLinearSystemTask,
+    generate_sample_batched_petsc_task,
+    generate_sample_batched_pytorch_task,
     generate_sample_petsc_task,
     generate_sample_pytorch_task,
     load_petsc_task,
@@ -24,6 +26,18 @@ def test_generate_sample_pytorch_task():
 
 def test_generate_sample_petsc_task():
     assert isinstance(generate_sample_petsc_task(), PETScLinearSystemTask)
+
+
+def test_generate_sample_batched_pytorch_task():
+    batched_task = generate_sample_batched_pytorch_task()
+    assert isinstance(batched_task, PyTorchLinearSystemTask)
+    assert batched_task.is_batched
+
+
+def test_generate_sample_batched_petsc_task():
+    batched_task = generate_sample_batched_petsc_task()
+    assert isinstance(batched_task, PETScLinearSystemTask)
+    assert batched_task.is_batched
 
 
 def test_petsc2torch():

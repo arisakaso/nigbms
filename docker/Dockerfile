@@ -1,5 +1,7 @@
 # ベースイメージを指定
 FROM nvcr.io/nvidia/pytorch:24.07-py3
+# FROM pytorch/pytorch:2.4.0-cuda12.4-cudnn9-runtime # this does not work
+
 
 ARG DEBIAN_FRONTEND=noninteractive
 
@@ -22,6 +24,7 @@ RUN curl https://dl.openfoam.com/add-debian-repo.sh | bash
 RUN apt-get update && apt-get install -y openfoam2312
 
 ### fenicsx
+RUN apt-get install -y gpg-agent
 RUN add-apt-repository ppa:fenics-packages/fenics
 RUN apt-get update && apt-get install -y fenicsx
 
