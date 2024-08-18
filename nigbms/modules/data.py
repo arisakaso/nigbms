@@ -1,5 +1,4 @@
 # %%
-from dataclasses import astuple
 from pathlib import Path
 from typing import Callable, Dict, List, Type
 
@@ -84,9 +83,8 @@ class OnlineIterableDataset(IterableDataset):
 
 
 def pytorch_task_collate_fn(batch: List[PyTorchLinearSystemTask]) -> PyTorchLinearSystemTask:
-    batch = [astuple(tau) for tau in batch]
-    batch = [torch.stack(x) for x in zip(*batch, strict=False)]
-    tau = PyTorchLinearSystemTask(*batch)
+    tau = torch.stack(batch)
+    tau.is_batched = True
     return tau
 
 

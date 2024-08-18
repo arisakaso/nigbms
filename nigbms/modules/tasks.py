@@ -1,7 +1,7 @@
 # %%
 import pickle
 from pathlib import Path
-from typing import Any, Callable, Dict, Type
+from typing import Any, Callable, Dict, List, Type
 
 import torch
 from petsc4py import PETSc
@@ -49,18 +49,20 @@ class PyTorchLinearSystemTask(LinearSystemTask):
     x: Tensor = None  # Ground Truth if applicable, otherwise the solution provided by the solver
     rtol: Tensor = None
     maxiter: Tensor = None
+    is_batched: bool = False
 
 
 @tensorclass
 class PETScLinearSystemTask(LinearSystemTask):
     """PETSc Linear System Task"""
 
-    A: PETSc.Mat = None  # currently only support sparse matrix (AIJ)
-    b: PETSc.Vec = None
-    x: PETSc.Vec = None  # Ground Truth if applicable, otherwise the solution provided by the solver
-    rtol: float = None
-    maxiter: int = None
+    A: PETSc.Mat | List[PETSc.Mat] = None  # currently only support sparse matrix (AIJ)
+    b: PETSc.Vec | List[PETSc.Vec] = None
+    x: PETSc.Vec | List[PETSc.Vec] = None  # Ground Truth if applicable, otherwise the solution provided by the solver
+    rtol: Tensor = None
+    maxiter: Tensor = None
     problem: Any = None  # TODO: Remove this. This is a placeholder for the problem object to keep it alive.
+    is_batched: bool = False
 
 
 @tensorclass

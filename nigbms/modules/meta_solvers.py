@@ -3,7 +3,7 @@ from omegaconf import DictConfig
 from torch import Tensor
 from torch.nn import Module
 
-from nigbms.modules.tasks import PETScLinearSystemTask, Task
+from nigbms.modules.tasks import PETScLinearSystemTask, PyTorchLinearSystemTask, Task
 
 
 class MetaSolver(Module):
@@ -19,7 +19,7 @@ class MetaSolver(Module):
         self.features = features
         self.model = model
 
-    def make_features(self, tau: Task) -> Tensor:
+    def arrange_input(self, tau: Task) -> Tensor:
         """Arrange input feature for the model from Task
 
         Args:
@@ -42,7 +42,7 @@ class MetaSolver(Module):
         Returns:
             Tensor: theta (solver parameters)
         """
-        x = self.make_features(tau)
+        x = self.arrange_input(tau)
         theta = self.model(x)
         return theta
 
@@ -57,7 +57,7 @@ class Poisson1DMetaSolver(MetaSolver):
         """
         super().__init__(params_learn, features, model)
 
-    def make_features(self, tau: PETScLinearSystemTask) -> Tensor:
+    def arrange_input(self, tau: PyTorchLinearSystemTask | PETScLinearSystemTask) -> Tensor:
         """Arrange input feature for the model from Task
 
         Args:
@@ -77,6 +77,28 @@ class Poisson1DMetaSolver(MetaSolver):
 
         features = torch.cat(features, dim=1).squeeze()  # (bs, dim)
         return features
+
+
+class ConstantMetaSolver(MetaSolver):
+    def __init__(self, params_learn: DictConfig, features: DictConfig, model: Module):
+        """
+        Args:
+            params_learn (DictConfig): parameters to learn. key: name of the parameter, value: dimension
+            features (DictConfig): input features. key: name of the feature, value: dimension
+            model (DictConfig): configuration of base model
+        """
+        super().__init__(params_learn, features, model)
+
+    def arrange_input(self, tau: PETScLinearSystemTask) -> Tensor:
+        """Arrange input feature for the model from Task
+
+        Args:
+            tau (Task): Task dataclass
+
+        Returns:
+            Tensor: input features
+        """
+        return None
 
 
 # class MetaSolver(Module):
