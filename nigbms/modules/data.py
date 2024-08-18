@@ -15,6 +15,8 @@ from nigbms.modules.tasks import (
     Task,
     load_petsc_task,
     load_pytorch_task,
+    petsc_task_collate_fn,
+    pytorch_task_collate_fn,
 )
 from nigbms.utils.distributions import Distribution
 
@@ -80,16 +82,6 @@ class OnlineIterableDataset(IterableDataset):
         task_params = self.task_params_type(**params)
         tau = self.task_constructor(task_params)
         return tau
-
-
-def pytorch_task_collate_fn(batch: List[PyTorchLinearSystemTask]) -> PyTorchLinearSystemTask:
-    tau = torch.stack(batch)
-    tau.is_batched = True
-    return tau
-
-
-def petsc_task_collate_fn(batch: List[PETScLinearSystemTask]) -> List[PETScLinearSystemTask]:
-    return batch
 
 
 class OfflineDataModule(LightningDataModule):

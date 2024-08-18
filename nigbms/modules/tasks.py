@@ -35,7 +35,6 @@ class LinearSystemTask(Task):
     A: Any = None
     b: Any = None
     x: Any = None  # Ground Truth if applicable, otherwise the solution provided by the solver
-    rtol: Any = None
     maxiter: Any = None
 
 
@@ -87,6 +86,7 @@ class TaskDistribution:
 
 
 def petsc2torch(task: PETScLinearSystemTask) -> PyTorchLinearSystemTask:
+    assert not task.is_batched, "Batched tasks are not supported yet. Please convert them one by one."
     size = task.A.getSize()
     row_idx, col_idx, values = task.A.getValuesCSR()
     A = sparse_csr_tensor(row_idx, col_idx, values, size).to_dense()
@@ -102,6 +102,7 @@ def petsc2torch(task: PETScLinearSystemTask) -> PyTorchLinearSystemTask:
 
 
 def torch2petsc(task: PyTorchLinearSystemTask) -> PETScLinearSystemTask:
+    assert not task.is_batched, "Batched tasks are not supported yet. Please convert them one by one."
     A_sp = task.A.cpu().to_sparse_csr()
     A = PETSc.Mat().createAIJ(size=A_sp.shape, nnz=A_sp._nnz())
     A.setValuesCSR(
@@ -125,6 +126,21 @@ def generate_sample_pytorch_task(seed=0) -> PyTorchLinearSystemTask:
     rtol = torch.tensor(1.0e-6)
     maxiter = torch.tensor(100)
     return PyTorchLinearSystemTask(params=params, A=A, b=b, x=x, rtol=rtol, maxiter=maxiter)
+
+
+def generate_sample_petsc_task(seed=0) -> PETScLinearSystemTask:
+    pytorch_task = generate_sample_pytorch_task(seed)
+    return torch2petsc(pytorch_task)
+
+
+def generate_sample_batched_pytorch_task(seed=0) -> PyTorchLinearSystemTask:
+    pytorch_tasks = [generate_sample_pytorch_task(seed + i) for i in range(3)]
+    return pytorch_task_collate_fn(pytorch_tasks)
+
+
+def generate_sample_batched_petsc_task(seed=0) -> PETScLinearSystemTask:
+    petsc_tasks = [generate_sample_petsc_task(seed + i) for i in range(3)]
+    return petsc_task_collate_fn(petsc_tasks)
 
 
 def save_petsc_task(task: PETScLinearSystemTask, path: Path) -> None:
@@ -199,4 +215,17 @@ def load_pytorch_task(path: Path) -> PyTorchLinearSystemTask:
     return pickle.load((path / "task.pkl").open("rb"))
 
 
-# %%
+def pytorch_task_collate_fn(batch: List[PyTorchLinearSystemTask]) -> PyTorchLinearSystemTask:
+    task = torch.stack(batch)
+    task.is_batched = True
+    return task
+
+
+def petsc_task_collate_fn(batch: List[PETScLinearSystemTask]) -> PETScLinearSystemTask:
+    tau = torch.stack(batch)
+    tau.A = [task.A for task in batch]
+    tau.b = [task.b for task in batch]
+    tau.x = [task.x for task in batch]
+    tau.is_batched = True
+
+    return batch

@@ -19,7 +19,7 @@ problem:
   tensor_type: torch.cuda.DoubleTensor
 
 meta_solver:
-  _target_: nigbms.modules.meta_solvers.MetaSolver
+  _target_: nigbms.modules.meta_solvers.ConstantMetaSolver
   params_learn: null
   features: null
   model:
