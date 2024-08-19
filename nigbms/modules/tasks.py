@@ -235,6 +235,7 @@ def save_pytorch_task(task: PyTorchLinearSystemTask, path: Path) -> None:
     # task.memmap(path)
     path.mkdir(parents=True, exist_ok=True)
     pickle.dump(task, (path / "task.pkl").open("wb"))
+    del task
 
 
 def load_pytorch_task(path: Path) -> PyTorchLinearSystemTask:

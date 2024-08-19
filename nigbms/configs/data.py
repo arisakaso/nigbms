@@ -40,7 +40,7 @@ class OfflineDataModuleConfig:
 @dataclass
 class Poisson1DOfflineDataModuleConfig(OfflineDataModuleConfig):
     data_dir: str = "/workspaces/nigbms/data/raw/poisson1d/sample"
-    dataset_sizes: DictConfig = DictConfig({"train": 1000, "val": 1000, "test": 1000})
+    dataset_sizes: DictConfig = DictConfig({"train": 100, "val": 100, "test": 100})
     rtol_dists: DictConfig = DictConfig(
         {
             "train": {"_target_": "nigbms.utils.distributions.NumpyConstant", "shape": None, "value": 1.0e-6},
@@ -68,7 +68,7 @@ cs.store(name="poisson1d_offline_datamodule", group="data", node=Poisson1DOfflin
 @dataclass
 class Poisson2DOfflineDataModuleConfig(OfflineDataModuleConfig):
     data_dir: str = "/workspaces/nigbms/data/raw/poisson2d/sample"
-    dataset_sizes: DictConfig = DictConfig({"train": 1000, "val": 1000, "test": 1000})
+    dataset_sizes: DictConfig = DictConfig({"train": 100, "val": 100, "test": 100})
     rtol_dists: DictConfig = DictConfig(
         {
             "train": {"_target_": "nigbms.utils.distributions.NumpyConstant", "shape": None, "value": 1.0e-6},

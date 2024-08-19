@@ -7,7 +7,7 @@ from tqdm import tqdm
 from nigbms.modules.tasks import save_petsc_task, save_pytorch_task
 
 
-@hydra.main(version_base="1.3", config_path="../configs/data", config_name="generate_poisson1d")
+@hydra.main(version_base="1.3", config_path="../configs/data", config_name="generate_poisson2d")
 def main(cfg) -> None:
     dataset = instantiate(cfg.dataset)
     for i in tqdm(range(cfg.N_data)):

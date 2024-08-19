@@ -4,7 +4,7 @@ hydra:
   job:
     chdir: True
 
-N_data: 100
+N_data: 1000
 
 dataset:
   _target_: nigbms.modules.data.OnlineDataset
