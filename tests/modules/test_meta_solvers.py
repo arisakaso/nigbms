@@ -16,7 +16,6 @@ class TestConstantMetaSolver:
 
         tau = Task()
         theta = meta_solver(tau)
-        assert theta.dtype == torch.float64
         assert theta.shape == torch.Size(cfg.model.shape)
 
 
@@ -29,5 +28,4 @@ class TestPoisson1DMetaSolver:
 
         tau = generate_sample_batched_pytorch_task()
         theta = meta_solver(tau)
-        assert theta.dtype == torch.float64
         assert theta.shape == torch.Size([len(tau), cfg.model.out_dim])

@@ -52,7 +52,7 @@ def main(cfg):
     # set up
     wandb.config = OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True)
     wandb.init(project=cfg.wandb.project, config=wandb.config, mode=cfg.wandb.mode)
-    torch.set_default_dtype(eval(cfg.dtype))
+    # torch.set_default_dtype(eval(cfg.dtype))
     torch.set_default_device(cfg.device)
     pl.seed_everything(seed=cfg.seed, workers=True)
 
@@ -91,6 +91,8 @@ def main(cfg):
 
         # update
         opt.step()
+
+    return y.mean()
 
 
 if __name__ == "__main__":
