@@ -22,9 +22,6 @@ class Square(Module):
         return torch.square(x)
 
 
-### Constant
-
-
 class Constant(Module):
     def __init__(self, shape, range):
         super().__init__()
@@ -33,9 +30,6 @@ class Constant(Module):
 
     def forward(self, x):
         return self.weight
-
-
-### MLPs
 
 
 class MLP(Module):
@@ -129,7 +123,6 @@ class MLPSkip(Module):
         return x
 
 
-### CNNs
 class CNN1D(nn.Module):
     def __init__(
         self,
@@ -176,9 +169,6 @@ class CNN1D(nn.Module):
         x = self.fcn_last(x)
 
         return self.output_activation(x)
-
-
-### UNet2D
 
 
 class UNet(nn.Module):

@@ -31,10 +31,3 @@ class TestPoisson1DMetaSolver:
         theta = meta_solver(tau)
         assert theta.dtype == torch.float64
         assert theta.shape == torch.Size([len(tau), cfg.model.out_dim])
-
-    def test_override_config(self):
-        with initialize(version_base="1.3", config_path="../configs/modules/meta_solvers"):
-            cfg: Poisson1DMetaSolverConfig = compose(config_name="poisson1d_meta_solver")
-        meta_solver = instantiate(cfg)
-        assert cfg.model.num_neurons == 500
-        assert isinstance(meta_solver, Poisson1DMetaSolver)

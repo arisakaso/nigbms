@@ -32,8 +32,8 @@ class Poisson1DMetaSolverConfig:
     model: DictConfig = DictConfig(
         {
             "_target_": "nigbms.modules.models.MLP",
-            "in_dim": 5,
-            "out_dim": 5,
+            "in_dim": "${..features.b}",
+            "out_dim": "${..features.b}",
             "num_layers": 3,
             "num_neurons": 10,
             "hidden_activation": {"_target_": "torch.nn.SiLU"},
