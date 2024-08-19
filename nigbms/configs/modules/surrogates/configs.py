@@ -46,11 +46,11 @@ class TestFunctionSurrogateConfig:
             "in_dim": "${calc_in_dim:${..features}}",
             "out_dim": 1,
             "num_layers": 1,
-            "num_neurons": 100,
-            "hidden_activation": {"_target_": "torch.nn.SiLU"},
+            "num_neurons": 1024,
+            "hidden_activation": {"_target_": "torch.nn.GELU"},
             "output_activation": {"_target_": "torch.nn.Identity"},
             "batch_normalization": False,
-            "init_weight": {"dist": "uniform", "scale": 1.0e-3},
+            "init_weight": {"dist": "normal", "scale": 1.0e-1},
         }
     )
 
