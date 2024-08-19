@@ -37,7 +37,7 @@ class ThetaConstructor(Module):
             theta_dict[k] = param.reshape(-1, *v.shape)
             idx += enc_dim
         theta_dict["enc"] = theta.unsqueeze(-1)
-        return theta_dict
+        return theta_dict.double()
 
 
 class _Decoder(Module):

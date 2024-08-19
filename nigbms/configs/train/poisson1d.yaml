@@ -1,9 +1,9 @@
 defaults:
   - common
-  - ../modules/data/offline_datamodule@data
   - meta_solver: poisson1d_meta_solver_default
   - solver: pytorch_jacobi_default
   - surrogate: poisson1d_surrogate_default
+  - data: poisson1d_offline_datamodule
 
 
 meta_solver:

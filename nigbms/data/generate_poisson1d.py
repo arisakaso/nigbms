@@ -80,6 +80,7 @@ def construct_sym_u(N_terms: int, coefs: np.ndarray) -> Expr:
 def construct_pytorch_poisson1d_task(params: Poisson1DParams) -> PyTorchLinearSystemTask:
     u_sym = construct_sym_u(params.N_terms, params.coefs)
     x = discretize(u_sym, params.N_grid + 2)[1:-1]  # exclude boundary because it is fixed to 0
+    x = x.reshape(-1, 1)  # (N_grid, 1), column vector
     A = laplacian_matrix(params.N_grid)
     b = A @ x
     task = PyTorchLinearSystemTask(
