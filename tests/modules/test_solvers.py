@@ -4,13 +4,15 @@ import numpy as np
 import pytest
 import torch
 from hydra import compose, initialize
-
-# from hydra.core.config_store import ConfigStore
 from hydra.utils import instantiate
 from omegaconf import OmegaConf
 from tensordict import TensorDict
 
-from nigbms.modules.solvers import PETScKSP, PyTorchCG, PyTorchSOR
+from nigbms.configs.modules.solvers.configs import (
+    PETScKSPConfig,
+    PyTorchJacobiConfig,
+)
+from nigbms.modules.solvers import PETScKSP, PyTorchCG, PyTorchJacobi, PyTorchSOR
 from nigbms.modules.tasks import (
     PETScLinearSystemTask,
     PyTorchLinearSystemTask,
@@ -30,12 +32,12 @@ def batched_petsc_tasks() -> List[PETScLinearSystemTask]:
 
 
 def test_pytorch_jacobi(batched_pytorch_tasks):
-    from nigbms.configs.modules.solvers.configs import PyTorchJacobiConfig  # noqa
-
     with initialize(version_base="1.3", config_path="."):
-        cfg = compose(config_name="pytorch_jacobi_default")
+        cfg: PyTorchJacobiConfig = compose(config_name="pytorch_jacobi_default")
     solver = instantiate(cfg)
     theta = TensorDict({"x0": torch.zeros_like(batched_pytorch_tasks.x)})
+    assert isinstance(solver, PyTorchJacobi)
+
     solver.forward(batched_pytorch_tasks, theta)
     assert torch.allclose(solver.x, batched_pytorch_tasks.x)
 
@@ -62,10 +64,8 @@ def test_petsc_default(batched_petsc_tasks):
 
 
 def test_petsc_ksp_default(batched_petsc_tasks):
-    from nigbms.configs.modules.solvers.configs import PETScKSPConfig  # noqa
-
     with initialize(version_base="1.3", config_path="."):
-        cfg = compose(config_name="petsc_ksp_default")
+        cfg: PETScKSPConfig = compose(config_name="petsc_ksp_default")
     solver = instantiate(cfg)
     theta = TensorDict({}, batch_size=3)
     solver.forward(batched_petsc_tasks, theta)
@@ -73,10 +73,8 @@ def test_petsc_ksp_default(batched_petsc_tasks):
 
 
 def test_petsc_cg(batched_petsc_tasks):
-    from nigbms.configs.modules.solvers.configs import PETScKSPConfig  # noqa
-
     with initialize(version_base="1.3", config_path="../configs/modules/solvers"):
-        cfg = compose(config_name="petsc_cg")
+        cfg: PETScKSPConfig = compose(config_name="petsc_cg")
     solver = instantiate(cfg)
     theta = TensorDict({}, batch_size=3)
     solver.forward(batched_petsc_tasks, theta)
