@@ -59,7 +59,7 @@ class MLP(Module):
         self.layers.append(nn.Linear(in_dim, num_neurons))
         if batch_normalization:
             self.layers.append(nn.BatchNorm1d(num_neurons, track_running_stats=False))
-        self.layers.append(eval(hidden_activation)())
+        self.layers.append(hidden_activation)
         self.layers.append(nn.Dropout(p=dropout))
 
         # hidden layers
@@ -67,12 +67,12 @@ class MLP(Module):
             self.layers.append(nn.Linear(num_neurons, num_neurons))
             if batch_normalization:
                 self.layers.append(nn.BatchNorm1d(num_neurons, track_running_stats=False))
-            self.layers.append(eval(hidden_activation)())
+            self.layers.append(hidden_activation)
             self.layers.append(nn.Dropout(p=dropout))
 
         # output layer
         self.layers.append(nn.Linear(num_neurons, out_dim))
-        self.layers.append(eval(output_activation)())
+        self.layers.append(output_activation)
 
         # initialize weights
         if init_weight is not None:

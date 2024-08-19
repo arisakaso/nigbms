@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+import torch  # noqa
 from hydra.core.config_store import ConfigStore
 from omegaconf import DictConfig
 
@@ -35,8 +36,8 @@ class Poisson1DMetaSolverConfig:
             "out_dim": 5,
             "num_layers": 3,
             "num_neurons": 10,
-            "hidden_activation": "nn.SiLU",
-            "output_activation": "nn.Identity",
+            "hidden_activation": {"_target_": "torch.nn.SiLU"},
+            "output_activation": {"_target_": "torch.nn.Identity"},
             "batch_normalization": False,
             "init_weight": {"dist": "uniform", "scale": 1.0e-3},
         }

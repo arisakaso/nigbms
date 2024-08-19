@@ -48,8 +48,10 @@ surrogate:
     out_dim: 1
     num_layers: 1
     num_neurons: 1024
-    hidden_activation: nn.GELU
-    output_activation: nn.Identity
+    hidden_activation: 
+      _target_: torch.nn.GELU
+    output_activation: 
+      _target_: torch.nn.Identity
     batch_normalization: False
     init_weight: 
       dist: normal
