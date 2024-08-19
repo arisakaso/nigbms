@@ -11,9 +11,11 @@ from tensordict import TensorDict
 from nigbms.configs.modules.solvers.configs import (
     PETScKSPConfig,
     PyTorchJacobiConfig,
+    TestFunctionConfig,
 )
 from nigbms.modules.solvers import PETScKSP, PyTorchCG, PyTorchJacobi, PyTorchSOR
 from nigbms.modules.tasks import (
+    MinimizeTestFunctionTask,
     PETScLinearSystemTask,
     PyTorchLinearSystemTask,
     generate_sample_batched_petsc_task,
@@ -31,9 +33,18 @@ def batched_petsc_tasks() -> List[PETScLinearSystemTask]:
     return generate_sample_batched_petsc_task()
 
 
+def test_test_function_solver():
+    with initialize(version_base="1.3"):
+        cfg: TestFunctionConfig = compose(overrides=["+solver@_global_=test_function_solver_default"])
+    solver = instantiate(cfg)
+    tau = MinimizeTestFunctionTask(f=lambda x: torch.sum(x**2))
+    theta = TensorDict({"x": torch.zeros(10)})
+    assert torch.allclose(solver(tau, theta), theta["x"])
+
+
 def test_pytorch_jacobi(batched_pytorch_tasks):
-    with initialize(version_base="1.3", config_path="."):
-        cfg: PyTorchJacobiConfig = compose(config_name="pytorch_jacobi_default")
+    with initialize(version_base="1.3"):
+        cfg: PyTorchJacobiConfig = compose(overrides=["+solver@_global_=pytorch_jacobi_default"])
     solver = instantiate(cfg)
     theta = TensorDict({"x0": torch.zeros_like(batched_pytorch_tasks.x)})
     assert isinstance(solver, PyTorchJacobi)
@@ -64,8 +75,8 @@ def test_petsc_default(batched_petsc_tasks):
 
 
 def test_petsc_ksp_default(batched_petsc_tasks):
-    with initialize(version_base="1.3", config_path="."):
-        cfg: PETScKSPConfig = compose(config_name="petsc_ksp_default")
+    with initialize(version_base="1.3"):
+        cfg: PETScKSPConfig = compose(overrides=["+solver@_global_=petsc_ksp_default"])
     solver = instantiate(cfg)
     theta = TensorDict({}, batch_size=3)
     solver.forward(batched_petsc_tasks, theta)

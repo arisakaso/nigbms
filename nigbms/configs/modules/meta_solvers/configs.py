@@ -21,7 +21,7 @@ class ConstantMetaSolverConfig:
     )
 
 
-cs.store(name="constant_meta_solver_default", node=ConstantMetaSolverConfig)
+cs.store(name="constant_meta_solver_default", group="meta_solver", node=ConstantMetaSolverConfig)
 
 
 @dataclass
@@ -44,4 +44,4 @@ class Poisson1DMetaSolverConfig:
     )
 
 
-cs.store(name="poisson1d_meta_solver_default", node=Poisson1DMetaSolverConfig)
+cs.store(name="poisson1d_meta_solver_default", group="meta_solver", node=Poisson1DMetaSolverConfig)

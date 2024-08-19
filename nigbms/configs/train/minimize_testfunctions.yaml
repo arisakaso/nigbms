@@ -1,3 +1,6 @@
+defaults:
+  - meta_solver: constant_meta_solver_default
+
 hydra:
   run:
     dir: outputs/minimize_testfunctions/${now:%Y-%m-%d_%H-%M-%S}
@@ -19,11 +22,7 @@ problem:
   tensor_type: torch.cuda.DoubleTensor
 
 meta_solver:
-  _target_: nigbms.modules.meta_solvers.ConstantMetaSolver
-  params_learn: null
-  features: null
   model:
-    _target_: nigbms.modules.models.Constant
     shape:
       - ${problem.num_samples}
       - ${problem.dim}

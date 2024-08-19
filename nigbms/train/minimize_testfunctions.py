@@ -5,6 +5,7 @@ import wandb
 from hydra.utils import instantiate
 from omegaconf import OmegaConf
 
+from nigbms.configs.modules.meta_solvers.configs import ConstantMetaSolverConfig  # noqa
 from nigbms.modules.tasks import MinimizeTestFunctionTask
 from nigbms.modules.wrapper import WrappedSolver
 from nigbms.utils.resolver import calc_in_channels, calc_in_dim

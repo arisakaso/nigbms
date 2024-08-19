@@ -1,5 +1,5 @@
 defaults:
-  - petsc_ksp_default
+  - solver@_global_: petsc_ksp_default
 # _target_: nigbms.modules.solvers.PETScKSP
 params_fix:
   # ksp

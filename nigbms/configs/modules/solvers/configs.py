@@ -8,14 +8,13 @@ cs = ConfigStore.instance()
 
 
 @dataclass
-class PETScKSPConfig:
-    _target_: str = "nigbms.modules.solvers.PETScKSP"
-    params_fix: DictConfig = DictConfig({"history_length": 100})
+class TestFunctionConfig:
+    _target_: str = "nigbms.modules.solvers.TestFunctionSolver"
+    params_fix: DictConfig = DictConfig({})
     params_learn: DictConfig = DictConfig({})
-    debug: bool = True
 
 
-cs.store(name="petsc_ksp_default", node=PETScKSPConfig)
+cs.store(name="test_function_solver_default", group="solver", node=TestFunctionConfig)
 
 
 @dataclass
@@ -25,4 +24,15 @@ class PyTorchJacobiConfig:
     params_learn: DictConfig = DictConfig({})
 
 
-cs.store(name="pytorch_jacobi_default", node=PyTorchJacobiConfig)
+cs.store(name="pytorch_jacobi_default", group="solver", node=PyTorchJacobiConfig)
+
+
+@dataclass
+class PETScKSPConfig:
+    _target_: str = "nigbms.modules.solvers.PETScKSP"
+    params_fix: DictConfig = DictConfig({"history_length": 100})
+    params_learn: DictConfig = DictConfig({})
+    debug: bool = True
+
+
+cs.store(name="petsc_ksp_default", group="solver", node=PETScKSPConfig)

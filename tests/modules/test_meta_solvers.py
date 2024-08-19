@@ -9,8 +9,8 @@ from nigbms.modules.tasks import Task, generate_sample_batched_pytorch_task
 
 class TestConstantMetaSolver:
     def test_forward(self):
-        with initialize(version_base="1.3", config_path="."):
-            cfg: ConstantMetaSolverConfig = compose(config_name="constant_meta_solver_default")
+        with initialize(version_base="1.3"):
+            cfg: ConstantMetaSolverConfig = compose(overrides=["+meta_solver@_global_=constant_meta_solver_default"])
         meta_solver = instantiate(cfg)
         assert isinstance(meta_solver, ConstantMetaSolver)
 
@@ -22,8 +22,8 @@ class TestConstantMetaSolver:
 
 class TestPoisson1DMetaSolver:
     def test_forward(self):
-        with initialize(version_base="1.3", config_path="."):
-            cfg: Poisson1DMetaSolverConfig = compose(config_name="poisson1d_meta_solver_default")
+        with initialize(version_base="1.3"):
+            cfg: Poisson1DMetaSolverConfig = compose(overrides=["+meta_solver@_global_=poisson1d_meta_solver_default"])
         meta_solver = instantiate(cfg)
         assert isinstance(meta_solver, Poisson1DMetaSolver)
 
