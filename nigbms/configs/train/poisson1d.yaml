@@ -3,6 +3,7 @@ defaults:
   - ../modules/data/offline_datamodule@data
   - meta_solver: poisson1d_meta_solver_default
   - solver: pytorch_jacobi_default
+  - surrogate: poisson1d_surrogate_default
 
 
 meta_solver:
@@ -20,14 +21,13 @@ solver:
   _target_: nigbms.modules.solvers.PyTorchJacobi
   params_fix: 
     omega: 1.0
-    history_length: ${int:${eval:${data.rtol_dists.test.value} + 1}}
+    history_length: 100
   params_learn: 
     x0: 
       - ${dim}
       - 1
 
 surrogate:
-  _target_: nigbms.modules.surrogates.SurrogateSolver
   params_fix: ${solver.params_fix}
   params_learn: ${solver.params_learn}
   features: 
@@ -35,23 +35,18 @@ surrogate:
       - ${dim}
     x0: 
       - ${dim}
-    xn: 
-      - ${dim}
-    xn_sin-x0_sin:
-      - ${dim}
+    # xn: 
+    #   - ${dim}
+    # xn_sin-x0_sin:
+    #   - ${dim}
     # xn-x0:
     #   - ${dim}
     # x: 
     #   - ${dim}
   model:
-    _target_: nigbms.modules.models.MLP
-    in_dim: ${calc_in_dim:${surrogate.features}}
     out_dim: ${solver.params_fix.history_length}
     num_layers: 0
     num_neurons: 1024
-    hidden_activation: nn.GELU
-    output_activation: nn.GELU
-    batch_normalization: False
     init_weight: 
       dist: uniform
       scale: 1.0e-3

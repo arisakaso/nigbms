@@ -11,27 +11,21 @@ from nigbms.configs.modules.surrogates.configs import TestFunctionSurrogateConfi
 from nigbms.modules.tasks import MinimizeTestFunctionTask
 from nigbms.modules.wrapper import WrappedSolver
 
-# from nigbms.utils.resolver import calc_in_channels, calc_in_dim
-
-# OmegaConf.register_new_resolver("calc_in_dim", calc_in_dim)
-# OmegaConf.register_new_resolver("calc_in_channels", calc_in_channels)
-# OmegaConf.register_new_resolver("eval", eval)
-
 
 #### TEST FUNCTIONS ####
-def sphere(x):
+def sphere(x) -> torch.Tensor:
     """Sphere function."""
     return torch.sum(x**2, dim=-1, keepdim=True)
 
 
-def rosenbrock(x):
+def rosenbrock(x) -> torch.Tensor:
     """Rosenbrock function."""
     x1 = x[..., :-1]
     x2 = x[..., 1:]
     return torch.sum(100 * (x2 - x1**2) ** 2 + (1 - x1) ** 2, dim=-1, keepdim=True)
 
 
-def rosenbrock_separate(x):
+def rosenbrock_separate(x) -> torch.Tensor:
     """Rosenbrock function (easy)."""
     assert x.shape[-1] % 2 == 0, "Dimension must be even."
     x1 = x[..., ::2]
@@ -39,7 +33,7 @@ def rosenbrock_separate(x):
     return torch.sum((1 - x1) ** 2 + 100 * (x2 - x1**2) ** 2, dim=-1, keepdim=True)
 
 
-def rastrigin(x):
+def rastrigin(x) -> torch.Tensor:
     """Rastrigin function."""
     A = 10
     n = x.shape[-1]

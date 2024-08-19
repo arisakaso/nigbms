@@ -9,13 +9,8 @@ from pytorch_lightning.loggers.wandb import WandbLogger
 
 from nigbms.configs.modules.meta_solvers.configs import Poisson1DMetaSolverConfig  # noqa
 from nigbms.configs.modules.solvers.configs import PyTorchJacobiConfig  # noqa
+from nigbms.configs.modules.surrogates.configs import Poisson1DSurrogateConfig  # noqa
 from nigbms.modules.wrapper import WrappedSolver
-from nigbms.utils.resolver import calc_in_channels, calc_in_dim
-
-OmegaConf.register_new_resolver("calc_in_dim", calc_in_dim)
-OmegaConf.register_new_resolver("calc_in_channels", calc_in_channels)
-OmegaConf.register_new_resolver("eval", eval)
-OmegaConf.register_new_resolver("int", int)
 
 
 # %%
