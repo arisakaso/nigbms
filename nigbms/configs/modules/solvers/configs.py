@@ -14,7 +14,7 @@ class TestFunctionConfig:
     params_learn: DictConfig = DictConfig({})
 
 
-cs.store(name="test_function_solver_default", group="solver", node=TestFunctionConfig)
+cs.store(name="testfunction_solver_default", group="solver", node=TestFunctionConfig)
 
 
 @dataclass

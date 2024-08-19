@@ -1,5 +1,7 @@
 defaults:
   - meta_solver: constant_meta_solver_default
+  - solver: testfunction_solver_default
+  - surrogate: testfunction_surrogate_default
 
 hydra:
   run:
@@ -29,15 +31,11 @@ meta_solver:
     range: ${problem.initial_range}
 
 solver:
-  _target_: nigbms.modules.solvers.TestFunctionSolver
-  params_fix: 
-    test_function: ${problem.test_function}
   params_learn: 
     x:
       - ${problem.dim}
 
 surrogate:
-  _target_: nigbms.modules.surrogates.SurrogateSolver
   params_fix: ${solver.params_fix}
   params_learn: ${solver.params_learn}
   features: ${surrogate.params_learn}

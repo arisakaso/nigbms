@@ -6,13 +6,16 @@ from hydra.utils import instantiate
 from omegaconf import OmegaConf
 
 from nigbms.configs.modules.meta_solvers.configs import ConstantMetaSolverConfig  # noqa
+from nigbms.configs.modules.solvers.configs import TestFunctionConfig  # noqa
+from nigbms.configs.modules.surrogates.configs import TestFunctionSurrogateConfig  # noqa
 from nigbms.modules.tasks import MinimizeTestFunctionTask
 from nigbms.modules.wrapper import WrappedSolver
-from nigbms.utils.resolver import calc_in_channels, calc_in_dim
 
-OmegaConf.register_new_resolver("calc_in_dim", calc_in_dim)
-OmegaConf.register_new_resolver("calc_in_channels", calc_in_channels)
-OmegaConf.register_new_resolver("eval", eval)
+# from nigbms.utils.resolver import calc_in_channels, calc_in_dim
+
+# OmegaConf.register_new_resolver("calc_in_dim", calc_in_dim)
+# OmegaConf.register_new_resolver("calc_in_channels", calc_in_channels)
+# OmegaConf.register_new_resolver("eval", eval)
 
 
 #### TEST FUNCTIONS ####

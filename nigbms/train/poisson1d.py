@@ -7,6 +7,8 @@ from lightning import LightningModule, Trainer, seed_everything
 from omegaconf import DictConfig, OmegaConf
 from pytorch_lightning.loggers.wandb import WandbLogger
 
+from nigbms.configs.modules.meta_solvers.configs import Poisson1DMetaSolverConfig  # noqa
+from nigbms.configs.modules.solvers.configs import PyTorchJacobiConfig  # noqa
 from nigbms.modules.wrapper import WrappedSolver
 from nigbms.utils.resolver import calc_in_channels, calc_in_dim
 

@@ -35,7 +35,7 @@ def batched_petsc_tasks() -> List[PETScLinearSystemTask]:
 
 def test_test_function_solver():
     with initialize(version_base="1.3"):
-        cfg: TestFunctionConfig = compose(overrides=["+solver@_global_=test_function_solver_default"])
+        cfg: TestFunctionConfig = compose(overrides=["+solver@_global_=testfunction_solver_default"])
     solver = instantiate(cfg)
     tau = MinimizeTestFunctionTask(f=lambda x: torch.sum(x**2))
     theta = TensorDict({"x": torch.zeros(10)})

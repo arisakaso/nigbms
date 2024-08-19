@@ -1,10 +1,11 @@
 defaults:
   - common
   - ../modules/data/offline_datamodule@data
+  - meta_solver: poisson1d_meta_solver_default
+  - solver: pytorch_jacobi_default
 
 
 meta_solver:
-  _target_: nigbms.modules.meta_solvers.MetaSolver
   params_learn: 
     x0: 
       - ${dim}
@@ -12,18 +13,9 @@ meta_solver:
     b: 
       - ${dim}
   model:
-    _target_: nigbms.modules.models.MLP
-    in_dim: ${dim}
-    out_dim: ${dim}
-    num_layers: 0
+    num_layers: 2
     num_neurons: 512
-    hidden_activation: nn.SiLU
-    output_activation: nn.Identity
-    batch_normalization: False
-    init_weight: 
-      dist: uniform
-      scale: 1.0e-3
-
+  
 solver:
   _target_: nigbms.modules.solvers.PyTorchJacobi
   params_fix: 

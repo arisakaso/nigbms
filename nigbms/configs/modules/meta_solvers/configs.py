@@ -27,13 +27,13 @@ cs.store(name="constant_meta_solver_default", group="meta_solver", node=Constant
 @dataclass
 class Poisson1DMetaSolverConfig:
     _target_: str = "nigbms.modules.meta_solvers.Poisson1DMetaSolver"
-    params_learn: DictConfig = DictConfig({})
-    features: DictConfig = DictConfig({"b": 5})
+    params_learn: DictConfig = DictConfig({"x0": [5]})
+    features: DictConfig = DictConfig({"b": [5]})
     model: DictConfig = DictConfig(
         {
             "_target_": "nigbms.modules.models.MLP",
-            "in_dim": "${..features.b}",
-            "out_dim": "${..features.b}",
+            "in_dim": "${..features.b[0]}",
+            "out_dim": "${..features.b[0]}",
             "num_layers": 3,
             "num_neurons": 10,
             "hidden_activation": {"_target_": "torch.nn.SiLU"},

@@ -53,7 +53,7 @@ class TestFunctionSolver(_Solver):
     def __init__(self, params_fix: DictConfig, params_learn: DictConfig) -> None:
         super().__init__(params_fix, params_learn)
 
-    def forward(self, tau: MinimizeTestFunctionTask, theta: Tensor) -> Tensor:
+    def forward(self, tau: MinimizeTestFunctionTask, theta: TensorDict) -> Tensor:
         return tau.f(theta["x"])
 
 
