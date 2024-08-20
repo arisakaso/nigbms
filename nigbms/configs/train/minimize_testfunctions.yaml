@@ -76,9 +76,13 @@ constructor:
   _target_: nigbms.modules.constructors.ThetaConstructor
   params:
     x:
-      decoder: null
-      shape: ${solver.params_learn.x}
-
+      codec: 
+        _target_: nigbms.modules.constructors.IdentityCodec
+        enc_dim: ${problem.dim}
+        dec_dim: ${problem.dim}
+      shape: 
+        - ${problem.dim}
+    
 opt:
   _target_: torch.optim.SGD
   lr: 0.01
