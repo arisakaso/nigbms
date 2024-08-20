@@ -9,6 +9,8 @@ cs = ConfigStore.instance()
 
 @dataclass
 class OnlineDatasetConfig:
+    """OnlineDatasetConfig class."""
+
     _target_: str = "nigbms.modules.data.OnlineDataset"
     task_params_type: DictConfig = MISSING
     task_constructor: DictConfig = MISSING

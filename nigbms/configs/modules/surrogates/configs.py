@@ -12,6 +12,8 @@ cs = ConfigStore.instance()
 
 @dataclass
 class Poisson1DSurrogateConfig:
+    """Poisson1DSurrogateConfig class."""
+
     _target_: str = "nigbms.modules.surrogates.Poisson1DSurrogate"
     params_fix: DictConfig = DictConfig({})
     params_learn: DictConfig = DictConfig({"x0": [5]})

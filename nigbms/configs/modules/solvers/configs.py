@@ -9,6 +9,8 @@ cs = ConfigStore.instance()
 
 @dataclass
 class TestFunctionConfig:
+    """TestFunctionConfig class."""
+
     _target_: str = "nigbms.modules.solvers.TestFunctionSolver"
     params_fix: DictConfig = DictConfig({})
     params_learn: DictConfig = DictConfig({})

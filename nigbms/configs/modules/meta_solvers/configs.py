@@ -9,6 +9,8 @@ cs = ConfigStore.instance()
 
 @dataclass
 class ConstantMetaSolverConfig:
+    """ConstantMetaSolverConfig class."""
+
     _target_: str = "nigbms.modules.meta_solvers.ConstantMetaSolver"
     params_learn: DictConfig = DictConfig({})
     features: DictConfig = DictConfig({})
