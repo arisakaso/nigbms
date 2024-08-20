@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List
 
 from hydra.core.config_store import ConfigStore
@@ -12,19 +12,43 @@ class OnlineDatasetConfig:
     """OnlineDatasetConfig class."""
 
     _target_: str = "nigbms.modules.data.OnlineDataset"
-    task_params_type: DictConfig = MISSING
-    task_constructor: DictConfig = MISSING
-    distributions: DictConfig = MISSING
+    task_params_type: DictConfig = DictConfig(
+        {"_target_": "hydra.utils.get_class", "path": "nigbms.data.generate_poisson2d.Poisson2DParams"}
+    )
+    task_constructor: DictConfig = DictConfig(
+        {"_target_": "hydra.utils.get_method", "path": "nigbms.data.generate_poisson2d.construct_petsc_poisson2d_task"}
+    )
+    distributions: DictConfig = DictConfig(
+        {
+            "coef": {"_target_": "nigbms.utils.distributions.NumpyNormal", "shape": [2], "mean": 0, "std": 1},
+            "N": {"_target_": "nigbms.utils.distributions.NumpyConstant", "shape": None, "value": 10},
+            "degree": {"_target_": "nigbms.utils.distributions.NumpyConstant", "shape": None, "value": 1},
+            "rtol": {"_target_": "nigbms.utils.distributions.NumpyConstant", "shape": None, "value": 1.0e-6},
+            "maxiter": {"_target_": "nigbms.utils.distributions.NumpyConstant", "shape": None, "value": 1000},
+        }
+    )
+
+
+cs.store(name="online_dataset_default", group="data", node=OnlineDatasetConfig)
 
 
 @dataclass
 class OfflineDatasetConfig:
     _target_: str = "nigbms.modules.data.OfflineDataset"
-    data_dir: str = MISSING
-    idcs: List[int] = MISSING
-    rtol_dist: DictConfig = MISSING
-    maxiter_dist: DictConfig = MISSING
-    task_type: DictConfig = MISSING
+    data_dir: str = "/workspaces/nigbms/data/raw/poisson2d/sample"
+    idcs: List[int] = field(default_factory=lambda: [0, 1, 2, 3, 4, 5])
+    rtol_dist: DictConfig = DictConfig(
+        {"_target_": "nigbms.utils.distributions.NumpyConstant", "shape": None, "value": 1.0e-6}
+    )
+    maxiter_dist: DictConfig = DictConfig(
+        {"_target_": "nigbms.utils.distributions.NumpyConstant", "shape": None, "value": 1000}
+    )
+    task_type: DictConfig = DictConfig(
+        {"_target_": "hydra.utils.get_class", "path": "nigbms.modules.tasks.PETScLinearSystemTask"}
+    )
+
+
+cs.store(name="offline_dataset_default", group="data", node=OfflineDatasetConfig)
 
 
 @dataclass
