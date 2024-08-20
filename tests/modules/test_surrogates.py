@@ -12,6 +12,7 @@ class TestPoisson1DSurrogate:
     def test_forward(self):
         with initialize(version_base="1.3"):
             cfg: Poisson1DSurrogateConfig = compose(overrides=["+surrogate@_global_=poisson1d_surrogate_default"])
+        torch.set_default_dtype(torch.float64)
         surrogate = instantiate(cfg)
         assert isinstance(surrogate, Poisson1DSurrogate)
 

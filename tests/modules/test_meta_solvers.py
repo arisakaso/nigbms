@@ -23,6 +23,7 @@ class TestPoisson1DMetaSolver:
     def test_forward(self):
         with initialize(version_base="1.3"):
             cfg: Poisson1DMetaSolverConfig = compose(overrides=["+meta_solver@_global_=poisson1d_meta_solver_default"])
+        torch.set_default_dtype(torch.float64)
         meta_solver = instantiate(cfg)
         assert isinstance(meta_solver, Poisson1DMetaSolver)
 

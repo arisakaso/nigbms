@@ -21,7 +21,7 @@ solver:
   _target_: nigbms.modules.solvers.PyTorchJacobi
   params_fix: 
     omega: 1.0
-    history_length: 100
+    history_length: 1001
   params_learn: 
     x0: 
       - ${dim}
@@ -53,11 +53,10 @@ surrogate:
 
 constructor:
   _target_: nigbms.modules.constructors.ThetaConstructor
-  _recursive_: False
   params: 
     x0:
-      encdec: 
-        _target_: nigbms.modules.constructors.SinEncDec
+      codec: 
+        _target_: nigbms.modules.constructors.IdentityCodec
         enc_dim: ${dim}
         dec_dim: ${dim}
       shape: ${solver.params_learn.x0}

@@ -64,7 +64,7 @@ class Poisson1DSurrogate(SurrogateSolver):
                 raise ValueError(f"Feature {k} not found in task")
 
         features = torch.cat(features, dim=1).squeeze()  # (bs, dim)
-        features = features.float()  # neural network expects floats
+        # features = features.float()  # neural network expects floats
         return features
 
 

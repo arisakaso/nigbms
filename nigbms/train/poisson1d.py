@@ -106,8 +106,9 @@ class NIGBMS(LightningModule):
 
 @hydra.main(version_base="1.3", config_path="../configs/train", config_name="poisson1d")
 def main(cfg: DictConfig):
+    print(OmegaConf.to_yaml(cfg))
     seed_everything(seed=cfg.seed, workers=True)
-    # torch.set_default_dtype(eval(cfg.dtype))
+    torch.set_default_dtype(eval(cfg.dtype))
     wandb.config = OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True)
     wandb.init(project=cfg.wandb.project, config=wandb.config, mode=cfg.wandb.mode)
     logger = WandbLogger(settings=wandb.Settings(start_method="thread"))
@@ -128,5 +129,3 @@ def main(cfg: DictConfig):
 # %%
 if __name__ == "__main__":
     main()
-
-# %%
