@@ -8,11 +8,7 @@ from hydra.utils import instantiate
 from omegaconf import OmegaConf
 from tensordict import TensorDict
 
-from nigbms.configs.modules.solvers.configs import (
-    PETScKSPConfig,
-    PyTorchJacobiConfig,
-    TestFunctionConfig,
-)
+from nigbms.configs.solvers import PETScCGConfig, PETScKSPConfig, PyTorchJacobiConfig, TestFunctionConfig
 from nigbms.modules.solvers import PETScKSP, PyTorchCG, PyTorchJacobi, PyTorchSOR
 from nigbms.modules.tasks import (
     MinimizeTestFunctionTask,
@@ -84,8 +80,10 @@ def test_petsc_ksp_default(batched_petsc_tasks):
 
 
 def test_petsc_cg(batched_petsc_tasks):
-    with initialize(version_base="1.3", config_path="../configs/modules/solvers"):
-        cfg: PETScKSPConfig = compose(config_name="petsc_cg")
+    with initialize(version_base="1.3"):
+        cfg: PETScCGConfig = compose(overrides=["+solver@_global_=petsc_cg_default"])
+
+    assert cfg.params_fix.ksp_type == "cg"
     solver = instantiate(cfg)
     theta = TensorDict({}, batch_size=3)
     solver.forward(batched_petsc_tasks, theta)

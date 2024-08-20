@@ -1,5 +1,0 @@
-defaults:
-  - poisson1d_meta_solver_default
-
-model:
-  num_neurons: 500

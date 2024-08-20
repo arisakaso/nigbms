@@ -5,9 +5,9 @@ import wandb
 from hydra.utils import instantiate
 from omegaconf import OmegaConf
 
-from nigbms.configs.modules.meta_solvers.configs import ConstantMetaSolverConfig  # noqa
-from nigbms.configs.modules.solvers.configs import TestFunctionConfig  # noqa
-from nigbms.configs.modules.surrogates.configs import TestFunctionSurrogateConfig  # noqa
+from nigbms.configs.meta_solvers import ConstantMetaSolverConfig  # noqa
+from nigbms.configs.solvers import TestFunctionConfig  # noqa
+from nigbms.configs.surrogates import TestFunctionSurrogateConfig  # noqa
 from nigbms.modules.tasks import MinimizeTestFunctionTask
 from nigbms.modules.wrapper import WrappedSolver
 

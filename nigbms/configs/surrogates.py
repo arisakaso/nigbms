@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 
-import torch  # noqa
 from hydra.core.config_store import ConfigStore
 from omegaconf import DictConfig, OmegaConf
 

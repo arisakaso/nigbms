@@ -1,4 +1,3 @@
-# %%
 from dataclasses import dataclass
 
 from hydra.core.config_store import ConfigStore
@@ -38,3 +37,20 @@ class PETScKSPConfig:
 
 
 cs.store(name="petsc_ksp_default", group="solver", node=PETScKSPConfig)
+
+
+@dataclass
+class PETScCGConfig(PETScKSPConfig):
+    params_fix: DictConfig = DictConfig(
+        {
+            "history_length": 100,
+            "ksp_type": "cg",
+            "ksp_divtol": 1.0e10,
+            "ksp_norm_type": "unpreconditioned",
+            "pc_type": "none",
+        }
+    )
+    debug: bool = False
+
+
+cs.store(name="petsc_cg_default", group="solver", node=PETScCGConfig)

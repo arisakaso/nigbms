@@ -2,7 +2,7 @@ import torch
 from hydra import compose, initialize
 from hydra.utils import instantiate
 
-from nigbms.configs.modules.meta_solvers.configs import ConstantMetaSolverConfig, Poisson1DMetaSolverConfig
+from nigbms.configs.meta_solvers import ConstantMetaSolverConfig, Poisson1DMetaSolverConfig
 from nigbms.modules.meta_solvers import ConstantMetaSolver, Poisson1DMetaSolver
 from nigbms.modules.tasks import Task, generate_sample_batched_pytorch_task
 
