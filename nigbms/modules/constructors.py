@@ -1,4 +1,3 @@
-# %%
 import numpy as np
 import torch
 from tensordict import TensorDict
@@ -25,20 +24,26 @@ class ThetaConstructor(Module):
         theta_dict = TensorDict({})
         idx = 0
         for k, v in self.params.items():
-            assert v.codec.enc_dim == np.prod(v.shape)
-            param = v.codec.decode(theta[:, idx : idx + v.codec.dec_dim])
+            assert v.codec.param_dim == np.prod(v.shape)
+            param = v.codec.decode(theta[:, idx : idx + v.codec.latent_dim])
             theta_dict[k] = param.reshape(-1, *v.shape)
-            idx += v.codec.dec_dim
+            idx += v.codec.latent_dim
         # theta_dict["enc"] = theta.unsqueeze(-1)
         return theta_dict
 
 
 class Codec(Module):
-    def __init__(self, enc_dim: int, dec_dim: int) -> None:
+    def __init__(self, param_dim: int, latent_dim: int) -> None:
+        """Initialize the codec.
+
+        Args:
+            param_dim (int): solver parameter dimension
+            latent_dim (int): latent dimension
+        """
         super().__init__()
-        assert enc_dim >= dec_dim
-        self.enc_dim = enc_dim
-        self.dec_dim = dec_dim
+        assert param_dim >= latent_dim
+        self.param_dim = param_dim
+        self.latent_dim = latent_dim
 
     def forward(self, x: Tensor) -> Tensor:
         raise NotImplementedError
@@ -46,42 +51,43 @@ class Codec(Module):
     def encode(self, x: Tensor) -> Tensor:
         raise NotImplementedError
 
-    def decode(self, x: Tensor) -> Tensor:
+    def decode(self, z: Tensor) -> Tensor:
         raise NotImplementedError
 
 
 class IdentityCodec(Codec):
-    def __init__(self, enc_dim: int = 128, dec_dim: int = 128):
-        assert enc_dim == dec_dim
-        super().__init__(enc_dim, dec_dim)
+    def __init__(self, param_dim: int = 128, latent_dim: int = 128):
+        assert param_dim == latent_dim
+        super().__init__(param_dim, latent_dim)
 
     def encode(self, x: Tensor) -> Tensor:
-        return x
+        z = x
+        return z
 
-    def decode(self, x: Tensor) -> Tensor:
+    def decode(self, z: Tensor) -> Tensor:
+        x = z
         return x
 
 
 class SinCodec(Codec):
-    def __init__(self, enc_in_dim: int = 128, enc_out_dim: int = 128):
-        super().__init__(enc_in_dim, enc_out_dim)
-        self.basis = torch.sin(
-            torch.arange(1, enc_in_dim + 1).unsqueeze(-1)
-            * torch.tensor([i / (enc_out_dim + 1) for i in range(1, enc_out_dim + 1)])
-            * torch.pi
-        )
-        self.basis = self.basis.unsqueeze(0)  # (1, dec_dim, enc_dim) to broadcast for batch
-        # self.basis = self.basis.cuda()
+    def __init__(self, param_dim: int = 128, latent_dim: int = 128):
+        super().__init__(param_dim, latent_dim)
+        frequencies = torch.arange(1, latent_dim + 1).unsqueeze(-1)  # (latent_dim, 1)
+        phases = (torch.tensor([i / (param_dim + 1) for i in range(1, param_dim + 1)]) * torch.pi).unsqueeze(
+            0
+        )  # (1, param_dim)
+        self.basis = torch.sin(frequencies * phases)  # (latent_dim, param_dim)
+        self.basis = self.basis.unsqueeze(0)  # (1, latent_dim, param_dim) to broadcast for batch
 
-    def encode(self, decoded_theta: Tensor) -> Tensor:
-        decoded_theta = decoded_theta.reshape(-1, self.enc_dim, 1)
-        encoded_theta = torch.matmul(self.basis, decoded_theta)
-        return encoded_theta
+    def encode(self, x: Tensor) -> Tensor:
+        x = x.reshape(-1, self.param_dim, 1)
+        z = torch.matmul(self.basis, x).squeeze(-1)
+        return z
 
-    def decode(self, encoded_theta: Tensor) -> Tensor:
-        encoded_theta = encoded_theta.reshape(-1, self.dec_dim, 1)
-        decoded_theta = torch.matmul(self.basis.transpose(1, 2), encoded_theta)  # (bs, out_dim, 1)
-        return decoded_theta
+    def decode(self, z: Tensor) -> Tensor:
+        z = z.reshape(-1, self.latent_dim, 1)
+        x = torch.matmul(self.basis.transpose(1, 2), z).squeeze(-1)
+        return x
 
 
 # class SinDecoder(Codec):

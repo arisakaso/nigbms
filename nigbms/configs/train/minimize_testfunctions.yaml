@@ -1,17 +1,8 @@
 defaults:
+  - common
   - meta_solver: constant_meta_solver_default
   - solver: testfunction_solver_default
   - surrogate: testfunction_surrogate_default
-
-hydra:
-  run:
-    dir: outputs/minimize_testfunctions/${now:%Y-%m-%d_%H-%M-%S}
-  job:
-    chdir: True
-
-wandb: 
-  project: minimize_testfunctions
-  mode: disabled
 
 problem:
   test_function: sphere
