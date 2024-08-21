@@ -3,6 +3,7 @@ defaults:
   - meta_solver: constant_meta_solver_default
   - solver: testfunction_solver_default
   - surrogate: testfunction_surrogate_default
+  - constructor: constructor_default
 
 problem:
   test_function: sphere
@@ -64,13 +65,12 @@ wrapper:
     v_dist: rademacher
 
 constructor:
-  _target_: nigbms.modules.constructors.ThetaConstructor
   params:
     x:
       codec: 
         _target_: nigbms.modules.constructors.IdentityCodec
-        enc_dim: ${problem.dim}
-        dec_dim: ${problem.dim}
+        param_dim: ${problem.dim}
+        latent_dim: ${problem.dim}
       shape: 
         - ${problem.dim}
     
