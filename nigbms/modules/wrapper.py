@@ -28,6 +28,7 @@ class register_custom_grad(Function):
         wrapper = ctx.wrapper
         hparams = ctx.wrapper.hparams
 
+        # placeholders
         f_fwd = torch.zeros(hparams.Nv, *theta.shape, device=theta.device)
         f_hat_true = torch.zeros(hparams.Nv, *theta.shape, device=theta.device)
         cv_fwd = torch.zeros(hparams.Nv, *theta.shape, device=theta.device)
@@ -42,11 +43,14 @@ class register_custom_grad(Function):
                 else:
                     raise ValueError("v_dist must be 'rademacher' or 'normal'")
 
-                # compute forward gradients
+                # compute forward gradient of the black-box solver (f)
                 if hparams.jvp_type == "forwardAD":
                     _, dvf = torch.func.jvp(wrapper.f, (theta,), (v,))
                 elif hparams.jvp_type == "forwardFD":
                     dvf = (wrapper.f(theta + v * hparams.eps) - wrapper.y) / hparams.eps
+                else:
+                    raise ValueError("jvp_type must be 'forwardAD' or 'forwardFD")
+
                 dvL = torch.sum(grad_y * dvf, dim=1, keepdim=True)
                 f_fwd[i] = dvL * v
 
@@ -68,7 +72,7 @@ class register_custom_grad(Function):
                 wrapper.opt.step()
 
         with torch.no_grad():
-            grad_theta = torch.mean(eval(hparams.grad_type), dim=0)
+            grad_theta = torch.mean(eval(hparams.grad_type), dim=0)  # average over Nv
 
         return None, grad_theta
 

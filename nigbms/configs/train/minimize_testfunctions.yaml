@@ -4,6 +4,7 @@ defaults:
   - solver: testfunction_solver_default
   - surrogate: testfunction_surrogate_default
   - constructor: constructor_default
+  - wrapper: wrapped_solver_default
 
 problem:
   test_function: sphere
@@ -46,21 +47,10 @@ surrogate:
   #   num_fcn_layers: 2
     
 wrapper:
-  _target_: nigbms.modules.wrapper.WrappedSolver
-  _recursive_: False
   hparams:
-    opt:
-      _target_: torch.optim.SGD
-      lr: 0.001
-      momentum: 0.9
-    loss:
-      _target_: nigbms.modules.losses.SurrogateSolverLoss
-      weights:
-        dvf_loss: 1
-      reduce: True
     clip: 100.0
     grad_type: cv_fwd
-    jvp_type: forwardAD
+    jvp_type: forwardFD
     eps: 1.0e-10
     Nv: 1
     v_scale: 1.0

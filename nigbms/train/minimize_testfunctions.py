@@ -9,6 +9,7 @@ from nigbms.configs.constructors import ConstructorConfig  # noqa
 from nigbms.configs.meta_solvers import ConstantMetaSolverConfig  # noqa
 from nigbms.configs.solvers import TestFunctionConfig  # noqa
 from nigbms.configs.surrogates import TestFunctionSurrogateConfig  # noqa
+from nigbms.configs.wrapper import WrappedSolverConfig  # noqa
 from nigbms.modules.tasks import MinimizeTestFunctionTask
 
 
@@ -43,6 +44,7 @@ def rastrigin(x) -> torch.Tensor:
 ### MAIN ###
 @hydra.main(version_base="1.3", config_path="../configs/train", config_name="minimize_testfunctions")
 def main(cfg):
+    print(OmegaConf.to_yaml(cfg))
     # set up
     wandb.config = OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True)
     wandb.init(project=cfg.wandb.project, config=wandb.config, mode=cfg.wandb.mode)
