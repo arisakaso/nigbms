@@ -4,6 +4,7 @@ defaults:
   - solver: pytorch_jacobi_default
   - surrogate: poisson1d_surrogate_default
   - data: poisson1d_offline_datamodule
+  - wrapper: wrapped_solver_default
 
 
 meta_solver:
@@ -57,32 +58,29 @@ constructor:
     x0:
       codec: 
         _target_: nigbms.modules.constructors.IdentityCodec
-        enc_dim: ${dim}
-        dec_dim: ${dim}
+        param_dim: ${dim}
+        latent_dim: ${dim}
       shape: ${solver.params_learn.x0}
     
 
 wrapper:
-  opt:
-    _target_: torch.optim.Adam
-    lr: 1.0e-3
-    # momentum: 0.9
-  loss:
-    _target_: nigbms.modules.losses.SurrogateSolverLoss
-    weights:
-      y_loss: 0
-      # dvf_loss: 1
-      dvL_loss: 1
-    reduce: True
-  clip: 10.0
-  cfg:
+  hparams:
+    opt:
+      _target_: torch.optim.Adam
+      lr: 1.0e-3
+    loss:
+      weights:
+        y_loss: 0
+        # dvf_loss: 1
+        dvL_loss: 1
+    clip: 10.0
     grad_type: cv_fwd
     jvp_type: forwardAD
     eps: 1.0e-10
     Nv: 1
     v_scale: 1.0
     v_dist: rademacher
-  
+    
 loss:
   _target_: nigbms.modules.losses.MetaSolverLoss
   weights:
@@ -93,6 +91,7 @@ loss:
 opt:
   _target_: torch.optim.Adam
   lr: 0 # 1.0e-4
+
 sch:
   _target_: torch.optim.lr_scheduler.MultiStepLR
   milestones: [100]
@@ -110,20 +109,18 @@ callbacks:
     monitor: ${monitor}
     mode: min
     save_top_k: 0
-    save_last: False
+    save_last: ${test}
 
 trainer:
-  max_epochs: 20
+  max_epochs: 1
   accelerator: gpu
   devices: 1
   check_val_every_n_epoch: 20
   log_every_n_steps: 1
   fast_dev_run: False
 
-seed: 0
 monitor: val/iter_r
-dtype: torch.float64
-test: False
+test: True
 dim: 31
 compile: False
 logging: True

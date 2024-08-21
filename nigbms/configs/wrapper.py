@@ -18,7 +18,6 @@ class WrappedSolverConfig:
             "opt": {
                 "_target_": "torch.optim.SGD",
                 "lr": 0.001,
-                "momentum": 0.9,
             },
             "loss": {
                 "_target_": "nigbms.modules.losses.SurrogateSolverLoss",

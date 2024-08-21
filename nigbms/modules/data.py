@@ -3,7 +3,6 @@ from pathlib import Path
 from typing import Callable, Dict, List, Type
 
 import numpy as np
-import torch
 from lightning import LightningDataModule
 from omegaconf import DictConfig
 from torch.utils.data.dataloader import DataLoader
@@ -163,7 +162,8 @@ class OfflineDataModule(LightningDataModule):
             batch_size=self.batch_size,
             shuffle=False,
             collate_fn=self.collate_fn,
-            generator=torch.Generator(device="cuda"),
+            num_workers=self.num_workers,
+            # generator=torch.Generator(device="cuda"), # What was this...?
         )
 
 

@@ -8,10 +8,10 @@ from omegaconf import DictConfig, OmegaConf
 from pytorch_lightning.loggers.wandb import WandbLogger
 
 from nigbms.configs.data import Poisson1DOfflineDataModuleConfig  # noqa
-from nigbms.configs.modules.meta_solvers.configs import Poisson1DMetaSolverConfig  # noqa
-from nigbms.configs.modules.solvers.configs import PyTorchJacobiConfig  # noqa
-from nigbms.configs.modules.surrogates.configs import Poisson1DSurrogateConfig  # noqa
-from nigbms.modules.wrapper import WrappedSolver
+from nigbms.configs.meta_solvers import Poisson1DMetaSolverConfig  # noqa
+from nigbms.configs.solvers import PyTorchJacobiConfig  # noqa
+from nigbms.configs.surrogates import Poisson1DSurrogateConfig  # noqa
+from nigbms.configs.wrapper import WrappedSolverConfig  # noqa
 
 
 # %%
@@ -25,8 +25,8 @@ class NIGBMS(LightningModule):
         self.solver = instantiate(cfg.solver)
         self.surrogate = instantiate(cfg.surrogate)
         self.constructor = instantiate(cfg.constructor)
-        self.wrapped_solver = WrappedSolver(
-            solver=self.solver, surrogate=self.surrogate, constructor=self.constructor, **cfg.wrapper
+        self.wrapped_solver = instantiate(
+            cfg.wrapper, solver=self.solver, surrogate=self.surrogate, constructor=self.constructor
         )
         self.loss = instantiate(cfg.loss, constructor=self.constructor)
         if cfg.compile:
@@ -55,7 +55,7 @@ class NIGBMS(LightningModule):
         self.manual_backward(loss_dict["loss"], create_graph=True, inputs=list(self.meta_solver.parameters()))
 
         # logging
-        if self.cfg.logging and self.cfg.wrapper.cfg.grad_type != "f_true":
+        if self.cfg.logging and self.cfg.wrapper.hparams.grad_type != "f_true":
             theta_ref = theta.clone()  # copy to get the true gradient
             y_ref = self.wrapped_solver(tau, theta_ref, mode="test")
             loss_ref = self.loss(tau, theta_ref, y_ref)["loss"]
@@ -123,7 +123,7 @@ def main(cfg: DictConfig):
 
     # TEST
     if cfg.test:
-        trainer.test(ckpt_path="best", datamodule=data_module)
+        trainer.test(ckpt_path="last", datamodule=data_module)
 
 
 # %%

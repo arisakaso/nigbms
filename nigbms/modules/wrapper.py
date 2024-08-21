@@ -62,7 +62,7 @@ class register_custom_grad(Function):
                 f_hat_true[i] = grad(y_hat, theta, grad_outputs=grad_y, retain_graph=True)[0]
                 dvL_hat = torch.sum(grad_y * dvf_hat, dim=1, keepdim=True)
                 f_hat_fwd = dvL_hat * v
-                cv_fwd[i] = f_fwd[i] - f_hat_fwd + f_hat_true[i]
+                cv_fwd[i] = hparams.v_scale * (f_fwd[i] - f_hat_fwd) + f_hat_true[i]
 
                 # training surrogate
                 wrapper.loss_dict = wrapper.loss(wrapper.y, y_hat, dvf, dvf_hat, dvL, dvL_hat)

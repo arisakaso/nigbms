@@ -14,7 +14,6 @@ problem:
   initial_range:
     - -1
     - 1
-  tensor_type: torch.cuda.DoubleTensor
 
 meta_solver:
   model:
@@ -34,27 +33,6 @@ surrogate:
   model:
     num_neurons: 1024
     
-  # model:
-  #   _target_: nigbms.modules.models.CNN1D
-  #   in_channels: ${calc_in_channels:${surrogate.features}}
-  #   out_unit: 1
-  #   base_channels: 64
-  #   kernel_size: 1
-  #   batch_normalization: False
-  #   hidden_activation: nn.GELU
-  #   output_activation: nn.Identity
-  #   num_conv_layers: 2
-  #   num_fcn_layers: 2
-    
-wrapper:
-  hparams:
-    clip: 100.0
-    grad_type: cv_fwd
-    jvp_type: forwardFD
-    eps: 1.0e-10
-    Nv: 1
-    v_scale: 1.0
-    v_dist: rademacher
 
 constructor:
   params:
@@ -65,13 +43,24 @@ constructor:
         latent_dim: ${problem.dim}
       shape: 
         - ${problem.dim}
-    
+
+wrapper:
+  hparams:
+    opt:
+      momentum: 0.9
+    clip: 100.0
+    grad_type: cv_fwd
+    jvp_type: forwardFD
+    eps: 1.0e-10
+    Nv: 1
+    v_scale: 1.0
+    v_dist: rademacher
+
+
 opt:
   _target_: torch.optim.SGD
   lr: 0.01
 
 clip: null
-seed: 0
 device: cuda
-dtype: torch.float64
 
