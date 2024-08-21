@@ -116,21 +116,6 @@ def generate_sample_petsc_task(seed=0) -> PETScLinearSystemTask:
     return torch2petsc(pytorch_task)
 
 
-def pytorch_task_collate_fn(batch: List[PyTorchLinearSystemTask]) -> PyTorchLinearSystemTask:
-    task = torch.stack(batch)
-    task.is_batched = True
-    return task
-
-
-def petsc_task_collate_fn(batch: List[PETScLinearSystemTask]) -> PETScLinearSystemTask:
-    tau = torch.stack(batch)
-    tau.A = [task.A for task in batch]
-    tau.b = [task.b for task in batch]
-    tau.x = [task.x for task in batch]
-    tau.is_batched = True
-    return tau
-
-
 def generate_sample_batched_pytorch_task(seed=0) -> PyTorchLinearSystemTask:
     pytorch_tasks = [generate_sample_pytorch_task(seed + i) for i in range(3)]
     return pytorch_task_collate_fn(pytorch_tasks)
@@ -244,4 +229,28 @@ def load_pytorch_task(path: Path) -> PyTorchLinearSystemTask:
     return pickle.load((path / "task.pkl").open("rb"))
 
 
-# %%
+def pytorch_task_collate_fn(batch: List[PyTorchLinearSystemTask]) -> PyTorchLinearSystemTask:
+    task = torch.stack(batch)
+    task.is_batched = True
+    return task
+
+
+def petsc_task_collate_fn(batch: List[PETScLinearSystemTask]) -> PETScLinearSystemTask:
+    tau = torch.stack(batch)
+    tau.A = [task.A for task in batch]
+    tau.b = [task.b for task in batch]
+    tau.x = [task.x for task in batch]
+    tau.is_batched = True
+    return tau
+
+
+# TODO: test this
+def torch2petsc_collate_fn(batch: List[PyTorchLinearSystemTask]) -> PETScLinearSystemTask:
+    batch = [torch2petsc(task) for task in batch]
+    return petsc_task_collate_fn(batch)
+
+
+# TODO: test this
+def petsc2torch_collate_fn(batch: List[PETScLinearSystemTask]) -> PyTorchLinearSystemTask:
+    batch = [petsc2torch(task) for task in batch]
+    return pytorch_task_collate_fn(batch)
