@@ -54,3 +54,20 @@ class PETScCGConfig(PETScKSPConfig):
 
 
 cs.store(name="petsc_cg_default", group="solver", node=PETScCGConfig)
+
+
+@dataclass
+class PETScJacobiConfig(PETScKSPConfig):
+    params_fix: DictConfig = DictConfig(
+        {
+            "history_length": 100,
+            "ksp_type": "richardson",
+            "ksp_divtol": 1.0e10,
+            "ksp_norm_type": "unpreconditioned",
+            "pc_type": "jacobi",
+        }
+    )
+    debug: bool = False
+
+
+cs.store(name="petsc_jacobi_default", group="solver", node=PETScJacobiConfig)
