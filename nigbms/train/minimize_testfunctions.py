@@ -1,3 +1,5 @@
+import logging
+
 import hydra
 import lightning as pl
 import torch
@@ -11,6 +13,8 @@ from nigbms.configs.solvers import TestFunctionConfig  # noqa
 from nigbms.configs.surrogates import TestFunctionSurrogateConfig  # noqa
 from nigbms.configs.wrapper import WrappedSolverConfig  # noqa
 from nigbms.modules.tasks import MinimizeTestFunctionTask
+
+log = logging.getLogger(__name__)
 
 
 #### TEST FUNCTIONS ####
@@ -44,7 +48,7 @@ def rastrigin(x) -> torch.Tensor:
 ### MAIN ###
 @hydra.main(version_base="1.3", config_path="../configs/train", config_name="minimize_testfunctions")
 def main(cfg):
-    print(OmegaConf.to_yaml(cfg))
+    log.info(OmegaConf.to_yaml(cfg))
     # set up
     wandb.config = OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True)
     wandb.init(project=cfg.wandb.project, config=wandb.config, mode=cfg.wandb.mode)
@@ -79,7 +83,7 @@ def main(cfg):
         sim = torch.cosine_similarity(f_true, theta.grad, dim=1, eps=1e-20).detach()
         wandb.log({"ymean": y.mean(), "ymax": y.max(), "ymin": y.min(), "cos_sim": sim.mean()})
         if i % 100 == 0:
-            print(f"{i}, ymean: {y.mean():.3g}, ymax: {y.max():.3g}, ymin: {y.min():.3g}, cos_sim: {sim.mean():.3g}")
+            log.info(f"{i=}, {y.mean()=:.3g}, {y.max()=:.3g}, {y.min()=:.3g}, {sim.mean()=:.3g}")
 
         # clip gradients
         if cfg.clip:

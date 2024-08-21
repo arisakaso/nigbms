@@ -1,4 +1,5 @@
-# %%
+import logging
+
 import hydra
 import torch
 import wandb
@@ -13,8 +14,9 @@ from nigbms.configs.solvers import PyTorchJacobiConfig  # noqa
 from nigbms.configs.surrogates import Poisson1DSurrogateConfig  # noqa
 from nigbms.configs.wrapper import WrappedSolverConfig  # noqa
 
+log = logging.getLogger(__name__)
 
-# %%
+
 class NIGBMS(LightningModule):
     def __init__(self, cfg):
         super().__init__()
@@ -106,7 +108,7 @@ class NIGBMS(LightningModule):
 
 @hydra.main(version_base="1.3", config_path="../configs/train", config_name="poisson1d")
 def main(cfg: DictConfig):
-    print(OmegaConf.to_yaml(cfg))
+    log.info(OmegaConf.to_yaml(cfg))
     seed_everything(seed=cfg.seed, workers=True)
     torch.set_default_dtype(eval(cfg.dtype))
     wandb.config = OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True)
