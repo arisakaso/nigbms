@@ -28,7 +28,6 @@ class ThetaConstructor(Module):
             param = v.codec.decode(theta[:, idx : idx + v.codec.latent_dim])
             theta_dict[k] = param.reshape(-1, *v.shape)
             idx += v.codec.latent_dim
-        # theta_dict["enc"] = theta.unsqueeze(-1)
         return theta_dict
 
 

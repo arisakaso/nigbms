@@ -10,7 +10,6 @@ from nigbms.configs.meta_solvers import ConstantMetaSolverConfig  # noqa
 from nigbms.configs.solvers import TestFunctionConfig  # noqa
 from nigbms.configs.surrogates import TestFunctionSurrogateConfig  # noqa
 from nigbms.modules.tasks import MinimizeTestFunctionTask
-from nigbms.modules.wrapper import WrappedSolver
 
 
 #### TEST FUNCTIONS ####
@@ -59,7 +58,7 @@ def main(cfg):
     constructor = instantiate(cfg.constructor)
     loss = torch.sum
     opt = instantiate(cfg.opt, params=list(meta_solver.parameters()))
-    wrapped_solver = WrappedSolver(solver=solver, surrogate=surrogate, constructor=constructor, **cfg.wrapper)
+    wrapped_solver = instantiate(cfg.wrapper, solver=solver, surrogate=surrogate, constructor=constructor)
 
     for i in range(1, cfg.problem.num_iter + 1):
         # clear gradients
