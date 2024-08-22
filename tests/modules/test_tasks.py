@@ -14,9 +14,11 @@ from nigbms.modules.tasks import (
     load_petsc_task,
     load_pytorch_task,
     petsc2torch,
+    petsc2torch_collate_fn,
     save_petsc_task,
     save_pytorch_task,
     torch2petsc,
+    torch2petsc_collate_fn,
 )
 
 
@@ -74,3 +76,17 @@ def test_save_pytorch_task():
     assert torch.equal(pytorch_task.A, task.A)
     assert torch.equal(pytorch_task.b, task.b)
     shutil.rmtree(path)
+
+
+def test_torch2petsc_collate_fn():
+    pytorch_tasks = [generate_sample_pytorch_task(i) for i in range(3)]
+    batched_petsc_task = torch2petsc_collate_fn(pytorch_tasks)
+    assert isinstance(batched_petsc_task, PETScLinearSystemTask)
+    assert batched_petsc_task.is_batched
+
+
+def test_petsc2torch_collate_fn():
+    petsc_tasks = [generate_sample_petsc_task(i) for i in range(3)]
+    batched_pytorch_task = petsc2torch_collate_fn(petsc_tasks)
+    assert isinstance(batched_pytorch_task, PyTorchLinearSystemTask)
+    assert batched_pytorch_task.is_batched

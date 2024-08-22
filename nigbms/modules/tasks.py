@@ -244,13 +244,11 @@ def petsc_task_collate_fn(batch: List[PETScLinearSystemTask]) -> PETScLinearSyst
     return tau
 
 
-# TODO: test this
 def torch2petsc_collate_fn(batch: List[PyTorchLinearSystemTask]) -> PETScLinearSystemTask:
     batch = [torch2petsc(task) for task in batch]
     return petsc_task_collate_fn(batch)
 
 
-# TODO: test this
 def petsc2torch_collate_fn(batch: List[PETScLinearSystemTask]) -> PyTorchLinearSystemTask:
     batch = [petsc2torch(task) for task in batch]
     return pytorch_task_collate_fn(batch)
