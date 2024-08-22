@@ -31,10 +31,9 @@ class NIGBMS(LightningModule):
             cfg.wrapper, solver=self.solver, surrogate=self.surrogate, constructor=self.constructor
         )
         self.loss = instantiate(cfg.loss, constructor=self.constructor)
-        if cfg.compile:
-            self.solver.compile()
-            self.wrapped_solver.compile()
-            self.surrogate.compile()
+        if cfg.compile:  # This doesn't speed up the training, even slower. TODO: Investigate why?
+            self.solver.compile(mode="reduce-overhead")
+            self.surrogate.compile(mode="reduce-overhead")
 
     def on_fit_start(self):
         seed_everything(seed=self.cfg.seed, workers=True)

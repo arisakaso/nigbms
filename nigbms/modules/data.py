@@ -14,8 +14,10 @@ from nigbms.modules.tasks import (
     Task,
     load_petsc_task,
     load_pytorch_task,
+    petsc2torch_collate_fn,
     petsc_task_collate_fn,
     pytorch_task_collate_fn,
+    torch2petsc_collate_fn,
 )
 from nigbms.utils.distributions import Distribution
 
@@ -90,20 +92,30 @@ class OfflineDataModule(LightningDataModule):
         dataset_sizes: Dict[str, int],
         rtol_dists: Dict[str, Distribution],
         maxiter_dists: Dict[str, Distribution],
-        task_type: Type,
+        in_task_type: Type,
+        out_task_type: Type,
         batch_size: int,
         num_workers: int,
     ) -> None:
+        """
+
+        Args:
+            data_dir (Path): root directory of the dataset
+            dataset_sizes (Dict[str, int]): number of samples in each dataset. keys: "train", "val", "test"
+            rtol_dists (Dict[str, Distribution]): rtol distributions for each dataset. keys: "train", "val", "test"
+            maxiter_dists (Dict[str, Distribution]): maxiter distributions for each dataset. keys: "train", "val", "test"
+            in_task_type (Type): task type used for loading the dataset
+            out_task_type (Type): task type used for the output of the dataloader
+            batch_size (int): batch size
+            num_workers (int): number of workers for the dataloader
+        """
         super().__init__()
         self.data_dir = Path(data_dir)
         self.dataset_sizes = dataset_sizes
         self.rtol_dists = rtol_dists
         self.maxiter_dits = maxiter_dists
-        self.task_type = task_type
-        if task_type == PyTorchLinearSystemTask:
-            self.collate_fn = pytorch_task_collate_fn
-        elif task_type == PETScLinearSystemTask:
-            self.collate_fn = petsc_task_collate_fn
+        self.in_task_type = in_task_type
+        self.out_task_type = out_task_type
         self.batch_size = batch_size
         self.num_workers = num_workers
 
@@ -113,20 +125,34 @@ class OfflineDataModule(LightningDataModule):
         self.indcs = dict(zip(dataset_names, indices_ranges, strict=False))
 
     def setup(self, stage: str = None):
+        # set up collate_fn
+        task_combination = (self.in_task_type, self.out_task_type)
+        if task_combination == (PyTorchLinearSystemTask, PyTorchLinearSystemTask):
+            self.collate_fn = pytorch_task_collate_fn
+        elif task_combination == (PyTorchLinearSystemTask, PETScLinearSystemTask):
+            self.collate_fn = torch2petsc_collate_fn
+        elif task_combination == (PETScLinearSystemTask, PETScLinearSystemTask):
+            self.collate_fn = petsc_task_collate_fn
+        elif task_combination == (PETScLinearSystemTask, PyTorchLinearSystemTask):
+            self.collate_fn = petsc2torch_collate_fn
+        else:
+            raise ValueError(f"Unsupported task combination: {task_combination}")
+
+        # setup datasets
         if stage == "fit" or stage is None:
             self.train_ds = OfflineDataset(
                 self.data_dir,
                 self.indcs["train"],
                 self.rtol_dists["train"],
                 self.maxiter_dits["train"],
-                self.task_type,
+                self.in_task_type,
             )
             self.val_ds = OfflineDataset(
                 self.data_dir,
                 self.indcs["val"],
                 self.rtol_dists["val"],
                 self.maxiter_dits["val"],
-                self.task_type,
+                self.in_task_type,
             )
 
         if stage == "test":
@@ -135,7 +161,7 @@ class OfflineDataModule(LightningDataModule):
                 self.indcs["test"],
                 self.rtol_dists["test"],
                 self.maxiter_dits["test"],
-                self.task_type,
+                self.in_task_type,
             )
 
     def train_dataloader(self):

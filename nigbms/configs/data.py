@@ -58,7 +58,8 @@ class OfflineDataModuleConfig:
     dataset_sizes: DictConfig = MISSING
     rtol_dists: DictConfig = MISSING
     maxiter_dists: DictConfig = MISSING
-    task_type: DictConfig = MISSING
+    in_task_type: DictConfig = MISSING
+    out_task_type: DictConfig = MISSING
     batch_size: int = MISSING
     num_workers: int = MISSING
 
@@ -81,7 +82,10 @@ class Poisson1DOfflineDataModuleConfig(OfflineDataModuleConfig):
             "test": "${.train}",
         }
     )
-    task_type: DictConfig = DictConfig(
+    in_task_type: DictConfig = DictConfig(
+        {"_target_": "hydra.utils.get_class", "path": "nigbms.modules.tasks.PyTorchLinearSystemTask"}
+    )
+    out_task_type: DictConfig = DictConfig(
         {"_target_": "hydra.utils.get_class", "path": "nigbms.modules.tasks.PyTorchLinearSystemTask"}
     )
     batch_size: int = 32
@@ -109,7 +113,10 @@ class Poisson2DOfflineDataModuleConfig(OfflineDataModuleConfig):
             "test": "${.train}",
         }
     )
-    task_type: DictConfig = DictConfig(
+    in_task_type: DictConfig = DictConfig(
+        {"_target_": "hydra.utils.get_class", "path": "nigbms.modules.tasks.PETScLinearSystemTask"}
+    )
+    out_task_type: DictConfig = DictConfig(
         {"_target_": "hydra.utils.get_class", "path": "nigbms.modules.tasks.PETScLinearSystemTask"}
     )
     batch_size: int = 32

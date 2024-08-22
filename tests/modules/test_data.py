@@ -35,28 +35,30 @@ class TestOnlineDataset:
         assert isinstance(tau, PETScLinearSystemTask)
 
 
+@pytest.mark.parametrize("out_task_type", [PyTorchLinearSystemTask, PETScLinearSystemTask])
 class TestPoisson1DDataModule:
-    @pytest.fixture
-    def init_datamodule(self):
+    @pytest.fixture()
+    def init_datamodule(self, out_task_type):
         with initialize(version_base="1.3"):
             cfg: Poisson1DOfflineDataModuleConfig = compose(overrides=["+data@_global_=poisson1d_offline_datamodule"])
             self.dm = instantiate(cfg)
+            self.dm.out_task_type = out_task_type
 
-    def test_prepare_data(self, init_datamodule):
+    def test_prepare_data(self, init_datamodule, out_task_type):
         self.dm.prepare_data()
         assert len(self.dm.indcs["test"]) == self.dm.dataset_sizes["test"]
 
-    def test_setup(self, init_datamodule):
+    def test_setup(self, init_datamodule, out_task_type):
         self.dm.prepare_data()
         self.dm.setup()
         assert isinstance(self.dm.train_ds, torch.utils.data.Dataset)
 
-    def test_train_dataloader(self, init_datamodule):
+    def test_train_dataloader(self, init_datamodule, out_task_type):
         self.dm.prepare_data()
         self.dm.setup()
         dl = self.dm.train_dataloader()
         batch = next(iter(dl))
-        assert isinstance(batch[0], PyTorchLinearSystemTask)
+        assert isinstance(batch, out_task_type)
 
 
 class TestPoisson2DDataModule:
