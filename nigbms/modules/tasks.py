@@ -38,7 +38,6 @@ class LinearSystemTask(Task):
     maxiter: Any = None
 
 
-# TODO: add `is_batched` flag?
 @tensorclass(autocast=True)
 class PyTorchLinearSystemTask(LinearSystemTask):
     """PyTorch Linear System Task"""

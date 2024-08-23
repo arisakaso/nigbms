@@ -25,7 +25,7 @@ class ClampedBeam3DParams(TaskParams):
     maxiter: Tensor = 100
 
 
-def construct_petsc_clamped_beam3d(params: ClampedBeam3DParams) -> PETScLinearSystemTask:
+def construct_petsc_beam3d(params: ClampedBeam3DParams) -> PETScLinearSystemTask:
     # Reference: https://jsdokken.com/dolfinx-tutorial/chapter2/linearelasticity_code.html
 
     g = 0.4 * (params.W / params.L) ** 2

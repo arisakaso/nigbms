@@ -70,7 +70,7 @@ class Poisson1DOfflineDataModuleConfig(OfflineDataModuleConfig):
     dataset_sizes: DictConfig = DictConfig({"train": 100, "val": 100, "test": 100})
     rtol_dists: DictConfig = DictConfig(
         {
-            "train": {"_target_": "nigbms.utils.distributions.NumpyConstant", "shape": None, "value": 1.0e-12},
+            "train": {"_target_": "nigbms.utils.distributions.NumpyConstant", "shape": None, "value": 1.0e-3},
             "val": "${.train}",
             "test": "${.train}",
         }

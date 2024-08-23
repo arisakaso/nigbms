@@ -59,6 +59,3 @@ def construct_petsc_poisson2d_task(params: Poisson2DParams) -> PETScLinearSystem
     # A and b should be created without the problem object in the future.
     task = PETScLinearSystemTask(params, problem.A, problem.b, None, params.rtol, params.maxiter, problem)
     return task
-
-
-# %%

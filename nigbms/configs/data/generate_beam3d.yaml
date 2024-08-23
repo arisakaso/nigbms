@@ -1,10 +1,10 @@
 hydra:
   run:
-    dir: data/raw/poisson1d/${now:%Y-%m-%d_%H-%M-%S}
+    dir: data/raw/beam3d/${now:%Y-%m-%d_%H-%M-%S}
   job:
     chdir: True
 
-N_data: 15000
+N_data: 1000
 
 dataset:
   _target_: nigbms.modules.data.OnlineDataset

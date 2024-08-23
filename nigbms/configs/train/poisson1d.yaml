@@ -8,6 +8,13 @@ defaults:
   - wrapper: wrapped_solver_default
 
 data:
+  data_dir: /workspaces/nigbms/data/raw/poisson1d/2024-08-23_15-14-11
+  dataset_sizes:
+    train: 5000
+    val: 5000
+    test: 5000
+  batch_size: 256
+  num_workers: 0
   out_task_type: 
     _target_: hydra.utils.get_class
     path: nigbms.modules.tasks.PETScLinearSystemTask
@@ -20,7 +27,7 @@ meta_solver:
     b: 
       - ${dim}
   model:
-    num_layers: 2
+    num_layers: 1
     num_neurons: 512
   
 solver:
@@ -45,8 +52,6 @@ surrogate:
     #   - ${dim}
     # xn-x0:
     #   - ${dim}
-    # x: 
-    #   - ${dim}
   model:
     out_dim: ${solver.params_fix.history_length}
     num_layers: 0
@@ -70,14 +75,14 @@ wrapper:
   hparams:
     opt:
       _target_: torch.optim.Adam
-      lr: 1.0e-3
+      lr: 5.0e-4
     loss:
       weights:
         y_loss: 0
-        # dvf_loss: 1
-        dvL_loss: 1
+        dvf_loss: 1
+        # dvL_loss: 1
     clip: 10.0
-    grad_type: cv_fwd
+    grad_type: f_true
     jvp_type: forwardFD
     eps: 1.0e-10
     Nv: 1
@@ -87,18 +92,20 @@ wrapper:
 loss:
   _target_: nigbms.modules.losses.MetaSolverLoss
   weights:
-    iter_r_proxy: 1
+    # iter_r_proxy: 1
+    e0: 1
     # r0: 1
   reduce: True
   
 opt:
   _target_: torch.optim.Adam
-  lr: 0 # 1.0e-4
+  lr: 1.0e-5
 
 sch:
   _target_: torch.optim.lr_scheduler.MultiStepLR
-  milestones: [100]
+  milestones: [1000000]
   gamma: 0.1
+  verbose: True
   
 callbacks:
   - _target_: lightning.pytorch.callbacks.EarlyStopping
@@ -115,7 +122,7 @@ callbacks:
     save_last: ${test}
 
 trainer:
-  max_epochs: 1
+  max_epochs: 100
   accelerator: gpu
   devices: 1
   check_val_every_n_epoch: 20
