@@ -3,7 +3,7 @@ defaults:
   - meta_solver: constant_meta_solver_default
   - solver: testfunction_solver_default
   - surrogate: testfunction_surrogate_default
-  - constructor: constructor_default
+  - constructor: constructor_testfunction_default
   - wrapper: wrapped_solver_default
 
 problem:

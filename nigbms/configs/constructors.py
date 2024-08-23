@@ -68,15 +68,9 @@ class ConstructorTestFunctionConfig:
                     "codec": IdentityCodecConfig(param_dim=10, latent_dim=10),
                     "shape": [5, 2],
                 }
-            ),
-            "y": DictConfig(
-                {
-                    "codec": SinCodecConfig(param_dim=32, latent_dim=16),
-                    "shape": [32],
-                }
-            ),
+            )
         }
     )
 
 
-cs.store(name="constructor_default", group="constructor", node=ConstructorConfig)
+cs.store(name="constructor_testfunction_default", group="constructor", node=ConstructorTestFunctionConfig)
