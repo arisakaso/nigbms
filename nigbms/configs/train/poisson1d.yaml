@@ -2,10 +2,15 @@ defaults:
   - common
   - data: poisson1d_offline_datamodule
   - meta_solver: poisson1d_meta_solver_default
-  - solver: pytorch_jacobi_default
+  # - solver: pytorch_jacobi_default
+  - solver: petsc_jacobi_default
   - surrogate: poisson1d_surrogate_default
   - wrapper: wrapped_solver_default
 
+data:
+  out_task_type: 
+    _target_: hydra.utils.get_class
+    path: nigbms.modules.tasks.PETScLinearSystemTask
 
 meta_solver:
   params_learn: 
@@ -19,9 +24,7 @@ meta_solver:
     num_neurons: 512
   
 solver:
-  _target_: nigbms.modules.solvers.PyTorchJacobi
   params_fix: 
-    omega: 1.0
     history_length: 1001
   params_learn: 
     x0: 
@@ -75,7 +78,7 @@ wrapper:
         dvL_loss: 1
     clip: 10.0
     grad_type: cv_fwd
-    jvp_type: forwardAD
+    jvp_type: forwardFD
     eps: 1.0e-10
     Nv: 1
     v_scale: 1.0
@@ -123,5 +126,5 @@ monitor: val/iter_r
 test: True
 dim: 31
 compile: False
-logging: True
+logging: False
 warmup: 0

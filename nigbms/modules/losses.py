@@ -4,6 +4,8 @@ from torch.nn import Module
 from torch.nn.functional import mse_loss
 
 from nigbms.modules.data import PyTorchLinearSystemTask
+from nigbms.modules.tasks import PETScLinearSystemTask
+from nigbms.utils.convert import petscvec2tensor
 
 
 class SurrogateSolverLoss(Module):
@@ -68,7 +70,7 @@ class MetaSolverLoss(Module):
         self.reduce = reduce
         self.constructor = constructor
 
-    def forward(self, tau: PyTorchLinearSystemTask, theta: Tensor, history: Tensor) -> dict:
+    def forward(self, tau: PyTorchLinearSystemTask | PETScLinearSystemTask, theta: Tensor, history: Tensor) -> dict:
         """Compute the loss
 
         Args:
@@ -81,12 +83,25 @@ class MetaSolverLoss(Module):
         """
         theta = self.constructor(theta)
 
-        bnorm = norm(tau.b, dim=(1, 2))  # (bs,)
-        xnorm = norm(tau.x, dim=(1, 2))  # (bs,)
+        if isinstance(tau, PyTorchLinearSystemTask):
+            bnorm = norm(tau.b, dim=(1, 2))  # (bs,)
+            xnorm = norm(tau.x, dim=(1, 2))  # (bs,)
+            x = tau.x  # (bs, n, 1)
+        elif isinstance(tau, PETScLinearSystemTask):
+            bnorm = torch.tensor([b.norm() for b in tau.b], device=theta.device)
+            xnorm = torch.tensor([x.norm() for x in tau.x], device=theta.device)
+            x = list(map(lambda x: petscvec2tensor(x, device=theta.device), tau.x))
+            x = torch.stack(x, dim=0)  # (bs, n, 1)
+        else:  # pragma: no cover
+            raise ValueError(f"Task type {type(tau)} not supported")
+
         rtol_bnorm = (tau.rtol * bnorm).unsqueeze(-1)  # (bs, 1)
-        x0 = theta["x0"]  # (bs, n, 1)
-        r0 = norm(tau.b - tau.A @ x0, dim=(1, 2))  # (bs,)
-        e0 = norm(tau.x - x0, dim=(1, 2))  # (bs,)
+        x0 = theta["x0"]
+        r0 = history[:, 0]
+        # TODO: This r0 is dependent on the solver, and the backward pass can be modified.
+        # It can be computed as a function of x0 without involving the solver.
+        e0 = norm(x - x0, dim=(1, 2))
+
         unconvergece_flag = history > rtol_bnorm
 
         loss_dict = {

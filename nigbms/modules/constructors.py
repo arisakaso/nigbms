@@ -21,13 +21,14 @@ class ThetaConstructor(Module):
         self.params = params
 
     def forward(self, theta: Tensor) -> TensorDict:
-        theta_dict = TensorDict({})
+        theta_dict = TensorDict({}, batch_size=theta.shape[0], device=theta.device)
         idx = 0
         for k, v in self.params.items():
             assert v.codec.param_dim == np.prod(v.shape)
             param = v.codec.decode(theta[:, idx : idx + v.codec.latent_dim])
             theta_dict[k] = param.reshape(-1, *v.shape)
             idx += v.codec.latent_dim
+
         return theta_dict
 
 

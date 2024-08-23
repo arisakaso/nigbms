@@ -3,8 +3,9 @@ from omegaconf import DictConfig
 from tensordict import TensorDict
 from torch import Tensor
 
-from nigbms.modules.data import Task
 from nigbms.modules.solvers import _Solver
+from nigbms.modules.tasks import PETScLinearSystemTask, Task
+from nigbms.utils.convert import petscvec2tensor
 
 
 class SurrogateSolver(_Solver):
@@ -53,13 +54,22 @@ class Poisson1DSurrogate(SurrogateSolver):
 
     def arrange_input(self, tau: Task, theta: TensorDict) -> Tensor:
         features = []
+
         for k in self.features.keys():
             if hasattr(tau, k):
-                features.append(getattr(tau, k))
+                feature = getattr(tau, k)
+                if isinstance(tau, PETScLinearSystemTask):
+                    feature = list(map(lambda x: petscvec2tensor(x, device=tau.params.device), feature))
+                    feature = torch.stack(feature, dim=0)
+
+                features.append(feature)
+
             elif hasattr(tau.params, k):
                 features.append(getattr(tau.params, k))
+
             elif k in theta:
                 features.append(theta[k])
+
             else:
                 raise ValueError(f"Feature {k} not found in task")
 

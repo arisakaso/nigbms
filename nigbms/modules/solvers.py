@@ -83,7 +83,10 @@ class _PytorchIterativeSolver(_Solver):
 
         self.A = tau.A
         self.b = tau.b
-        self.x = theta["x0"]
+        if "x0" in self.params_learn:
+            self.x = theta["x0"]
+        else:
+            self.x = torch.zeros_like(self.b)
         self.rtol = tau.rtol
         self.maxiter = tau.maxiter
         self.r = self.b - self.A @ self.x
@@ -91,6 +94,7 @@ class _PytorchIterativeSolver(_Solver):
         self.history = torch.zeros(tau.b.shape[0], self.history_length, device=tau.b.device, dtype=tau.b.dtype)
         self.history[:, 0] = self.rnorm
         self.bnorm = torch.norm(self.b, dim=(1, 2))
+        self.is_converged = self.rnorm < self.rtol * self.bnorm
 
     def forward(self, tau: PyTorchLinearSystemTask, theta: TensorDict) -> Tensor:
         """
@@ -104,12 +108,15 @@ class _PytorchIterativeSolver(_Solver):
             Tensor: The stacked history of absolute residual norm. Shape: (bs, niter, 1)
         """
         self._setup(tau, theta)
-        for i in range(self.maxiter.max()):
-            self._step()
-            self.history[:, i] = self.rnorm
 
-            if all(self.rnorm < self.rtol * self.bnorm):
+        for i in range(self.maxiter.max()):
+            if all(self.is_converged):
                 break
+
+            self._step()
+            # To be consistent with PETSc, if converged, the reidiaul is set to 0
+            self.history[:, i + 1] = self.rnorm * ~self.is_converged
+            self.is_converged = self.rnorm < self.rtol * self.bnorm  # update convergence flag
 
         if tau.x is None:
             tau.x = self.x  # save the solution if not provided
@@ -239,7 +246,7 @@ class PETScKSP(_Solver):
 
         # set initial guess
         if "x0" in self.params_learn:
-            assert self.opts["ksp_initial_guess_nonzero"] == "true"
+            assert self.opts.getBool("ksp_initial_guess_nonzero", False), "ksp_initial_guess_nonzero must be set true."
             x = tensor2petscvec(theta["x0"])
         else:
             x = tau.b.copy()
@@ -253,9 +260,7 @@ class PETScKSP(_Solver):
 
         # return history
         history = torch.zeros(self.history_length, dtype=theta.dtype, device=theta.device)
-        history[: self.ksp.getIterationNumber() + 1] = torch.from_numpy(
-            self.ksp.getConvergenceHistory() / tau.b.norm()
-        )
+        history[: self.ksp.getIterationNumber() + 1] = torch.from_numpy(self.ksp.getConvergenceHistory())
 
         # clean up
         self.ksp.destroy()
@@ -267,11 +272,12 @@ class PETScKSP(_Solver):
         assert batched_tau.batch_size == theta.batch_size, "batch_size of tau and theta must match."
 
         self.x = []
+        device = theta.device
         theta = theta.detach().cpu()
         histories = []
         for i in range(len(batched_tau)):
             histories.append(self.solve(batched_tau.get_task(i), theta[i]))
-        histories = torch.stack(histories).to(device=theta.device, dtype=theta.dtype)
+        histories = torch.stack(histories).to(device=device, dtype=theta.dtype)
 
         return histories
 

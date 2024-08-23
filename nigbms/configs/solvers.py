@@ -47,6 +47,7 @@ class PETScCGConfig(PETScKSPConfig):
             "ksp_type": "cg",
             "ksp_divtol": 1.0e10,
             "ksp_norm_type": "unpreconditioned",
+            "ksp_initial_guess_nonzero": "true",
             "pc_type": "none",
         }
     )
@@ -64,6 +65,7 @@ class PETScJacobiConfig(PETScKSPConfig):
             "ksp_type": "richardson",
             "ksp_divtol": 1.0e10,
             "ksp_norm_type": "unpreconditioned",
+            "ksp_initial_guess_nonzero": "true",
             "pc_type": "jacobi",
         }
     )

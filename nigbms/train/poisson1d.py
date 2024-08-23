@@ -13,6 +13,7 @@ from nigbms.configs.meta_solvers import Poisson1DMetaSolverConfig  # noqa
 from nigbms.configs.solvers import PyTorchJacobiConfig  # noqa
 from nigbms.configs.surrogates import Poisson1DSurrogateConfig  # noqa
 from nigbms.configs.wrapper import WrappedSolverConfig  # noqa
+from nigbms.modules.solvers import _PytorchIterativeSolver  # noqa
 
 log = logging.getLogger(__name__)
 
@@ -55,8 +56,9 @@ class NIGBMS(LightningModule):
         loss_dict = self.loss(tau, theta, y)
         self.manual_backward(loss_dict["loss"], create_graph=True, inputs=list(self.meta_solver.parameters()))
 
-        # logging
+        # log the cosine similarity between the true gradient and the surrogate gradient
         if self.cfg.logging and self.cfg.wrapper.hparams.grad_type != "f_true":
+            assert isinstance(self.solver, _PytorchIterativeSolver), "Only PytorchIterativeSolver is supported"
             theta_ref = theta.clone()  # copy to get the true gradient
             y_ref = self.wrapped_solver(tau, theta_ref, mode="test")
             loss_ref = self.loss(tau, theta_ref, y_ref)["loss"]

@@ -137,3 +137,17 @@ def tensordict2list(t: TensorDict):
 
 def list2tensordict(ks, vs):
     return TensorDict({k: v for k, v in zip(ks, vs, strict=False)})
+
+
+def petscvec2tensor(petsc_vec: PETSc.Vec, device="cpu") -> torch.Tensor:
+    """Converts a petsc vector to a torch tensor
+
+    Args:
+        petsc_vec (PETSc.Vec): petsc vector
+
+    Returns:
+        torch.Tensor: torch tensor
+    """
+    np_array = petsc_vec.getArray()
+    torch_tensor = torch.from_numpy(np_array).reshape(-1, 1)  # (n, 1) make it a column vector explicitly
+    return torch_tensor.to(device)

@@ -4,6 +4,7 @@ from torch import Tensor
 from torch.nn import Module
 
 from nigbms.modules.tasks import PETScLinearSystemTask, PyTorchLinearSystemTask, Task
+from nigbms.utils.convert import petscvec2tensor
 
 
 class MetaSolver(Module):
@@ -69,14 +70,20 @@ class Poisson1DMetaSolver(MetaSolver):
         features = []
         for k in self.features.keys():
             if hasattr(tau, k):
-                features.append(getattr(tau, k))
+                feature = getattr(tau, k)
+                if isinstance(tau, PETScLinearSystemTask):
+                    feature = list(map(lambda x: petscvec2tensor(x, device=tau.params.device), feature))
+                    feature = torch.stack(feature, dim=0)
+
+                features.append(feature)
+
             elif hasattr(tau.params, k):
                 features.append(getattr(tau.params, k))
+
             else:
                 raise ValueError(f"Feature {k} not found in task")
 
         features = torch.cat(features, dim=1).squeeze()  # (bs, dim)
-        # features = features.float()  # neural network expects floats
         return features
 
 

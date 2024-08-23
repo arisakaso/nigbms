@@ -109,16 +109,18 @@ def test_petsc_jacobi(batched_petsc_tasks):
 
 
 def test_equivalence_of_pytorch_and_petsc(batched_pytorch_tasks, batched_petsc_tasks):
+    torch.set_default_dtype(torch.float64)
     with initialize(version_base="1.3"):
         cfg: PyTorchJacobiConfig = compose(overrides=["+solver@_global_=pytorch_jacobi_default"])
     pytorch_solver = instantiate(cfg)
-    theta = TensorDict({"x0": torch.zeros_like(batched_pytorch_tasks.x)})
-    pytorch_solver.forward(batched_pytorch_tasks, theta)
+    theta = TensorDict({}, batch_size=3)
+    pytorch_hist = pytorch_solver.forward(batched_pytorch_tasks, theta)
 
     with initialize(version_base="1.3"):
         cfg: PETScJacobiConfig = compose(overrides=["+solver@_global_=petsc_jacobi_default"])
     petsc_solver = instantiate(cfg)
     theta = TensorDict({}, batch_size=3)
-    petsc_solver.forward(batched_petsc_tasks, theta)
+    petsc_hist = petsc_solver.forward(batched_petsc_tasks, theta)
 
     assert all([np.allclose(pytorch_solver.x, petsc_solver.x[i].getArray()) for i in range(3)])
+    assert torch.allclose(pytorch_hist, petsc_hist)
