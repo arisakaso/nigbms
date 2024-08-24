@@ -2,10 +2,13 @@ defaults:
   - common
   - data: poisson1d_offline_datamodule
   - meta_solver: poisson1d_meta_solver_default
-  # - solver: pytorch_jacobi_default
-  - solver: petsc_jacobi_default
+  - solver: pytorch_jacobi_default
+  # - solver: petsc_jacobi_default
   - surrogate: poisson1d_surrogate_default
   - wrapper: wrapped_solver_default
+
+wandb: 
+  mode: online
 
 data:
   data_dir: /workspaces/nigbms/data/raw/poisson1d/2024-08-23_15-14-11
@@ -14,10 +17,9 @@ data:
     val: 5000
     test: 5000
   batch_size: 256
-  num_workers: 0
-  out_task_type: 
-    _target_: hydra.utils.get_class
-    path: nigbms.modules.tasks.PETScLinearSystemTask
+  # out_task_type: 
+  #   _target_: hydra.utils.get_class
+  #   path: nigbms.modules.tasks.PETScLinearSystemTask
 
 meta_solver:
   params_learn: 
@@ -29,9 +31,9 @@ meta_solver:
   model:
     num_layers: 1
     num_neurons: 512
-    init_weight: 
+    init_weight:
       dist: uniform
-      scale: 1.0e-3
+      scale: 1.0e-2
   
 solver:
   params_fix: 
@@ -51,24 +53,24 @@ surrogate:
       - ${dim}
     x: 
       - ${dim}
+    x-x0:
+      - ${dim}
     # xn_sin-x0_sin:
-    #   - ${dim}
-    # xn-x0:
     #   - ${dim}
   model:
     out_dim: ${solver.params_fix.history_length}
     num_layers: 0
     num_neurons: 1024
-    init_weight: 
-      dist: uniform
-      scale: 1.0e-3
+    init_weight: null
+      # dist: uniform
+      # scale: 1.0e-3
 
 constructor:
   _target_: nigbms.modules.constructors.ThetaConstructor
   params: 
     x0:
       codec: 
-        _target_: nigbms.modules.constructors.SinCodec
+        _target_: nigbms.modules.constructors.IdentityCodec
         param_dim: ${dim}
         latent_dim: ${dim}
       shape: ${solver.params_learn.x0}
@@ -86,9 +88,9 @@ wrapper:
         # dvL_loss: 1
     clip: 10.0
     grad_type: cv_fwd
-    jvp_type: forwardFD
+    jvp_type: forwardAD
     eps: 1.0e-10
-    Nv: 4
+    Nv: 1
     v_scale: 1.0
     v_dist: rademacher
     
@@ -102,7 +104,7 @@ loss:
   
 opt:
   _target_: torch.optim.Adam
-  lr: 1.0e-5
+  lr: 5.0e-5
 
 sch:
   _target_: torch.optim.lr_scheduler.MultiStepLR
@@ -127,7 +129,8 @@ callbacks:
 trainer:
   max_epochs: 100
   accelerator: gpu
-  devices: 1
+  devices: 
+    - 0
   check_val_every_n_epoch: 20
   log_every_n_steps: 1
   fast_dev_run: False
@@ -136,5 +139,5 @@ monitor: val/iter_r
 test: True
 dim: 31
 compile: False
-logging: False
+logging: True
 warmup: 0

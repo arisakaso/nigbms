@@ -83,9 +83,8 @@ class NIGBMS(LightningModule):
             self.log_dict(self._add_prefix(self.wrapped_solver.loss_dict, "surrogate/"), prog_bar=True)
 
     def on_train_epoch_end(self):
-        sch = self.lr_schedulers()
         if self.current_epoch >= self.cfg.warmup:
-            sch.step()
+            self.lr_schedulers().step()
 
     def validation_step(self, batch, batch_idx):
         tau = batch

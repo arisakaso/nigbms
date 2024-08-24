@@ -70,6 +70,15 @@ class Poisson1DSurrogate(SurrogateSolver):
             elif k in theta:
                 features.append(theta[k])
 
+            elif k == "x-x0":
+                if isinstance(tau, PETScLinearSystemTask):
+                    x = list(map(lambda x: petscvec2tensor(x, device=tau.params.device), tau.x))
+                    x = torch.stack(x, dim=0)
+                else:
+                    x = tau.x
+
+                x0 = theta["x0"]
+                features.append(x - x0)
             else:
                 raise ValueError(f"Feature {k} not found in task")
 
