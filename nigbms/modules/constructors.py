@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from tensordict import TensorDict
 from torch import Tensor
-from torch.nn import Module
+from torch.nn import Module, ModuleList, Parameter
 
 
 class ThetaConstructor(Module):
@@ -19,6 +19,7 @@ class ThetaConstructor(Module):
     def __init__(self, params) -> None:
         super().__init__()
         self.params = params
+        self.codecs = ModuleList([v.codec for v in params.values()])  # register codecs as submodules to move to cuda
 
     def forward(self, theta: Tensor) -> TensorDict:
         theta_dict = TensorDict({}, batch_size=theta.shape[0], device=theta.device)
@@ -78,6 +79,7 @@ class SinCodec(Codec):
         )  # (1, param_dim)
         self.basis = torch.sin(frequencies * phases)  # (latent_dim, param_dim)
         self.basis = self.basis.unsqueeze(0)  # (1, latent_dim, param_dim) to broadcast for batch
+        self.basis = Parameter(self.basis, requires_grad=False)  # set as fixed parameter to move to cuda
 
     def encode(self, x: Tensor) -> Tensor:
         x = x.reshape(-1, self.param_dim, 1)

@@ -48,7 +48,6 @@ class NIGBMS(LightningModule):
 
     def training_step(self, batch, batch_idx):
         opt = self.optimizers()
-        sch = self.lr_schedulers()
         opt.zero_grad()
 
         tau = batch
@@ -72,7 +71,6 @@ class NIGBMS(LightningModule):
 
         if self.current_epoch >= self.cfg.warmup:
             opt.step()
-            sch.step()
 
         self.log_dict(
             self._add_prefix(loss_dict, "train/"),
@@ -83,6 +81,11 @@ class NIGBMS(LightningModule):
         )
         if self.wrapped_solver.loss_dict:
             self.log_dict(self._add_prefix(self.wrapped_solver.loss_dict, "surrogate/"), prog_bar=True)
+
+    def on_train_epoch_end(self):
+        sch = self.lr_schedulers()
+        if self.current_epoch >= self.cfg.warmup:
+            sch.step()
 
     def validation_step(self, batch, batch_idx):
         tau = batch

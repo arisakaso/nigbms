@@ -6,7 +6,7 @@ hydra:
 
 wandb: 
   project: ${hydra:job.config_name}
-  mode: online
+  mode: disabled
 
 dtype: torch.float64
 seed: 0

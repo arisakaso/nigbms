@@ -29,7 +29,9 @@ meta_solver:
   model:
     num_layers: 1
     num_neurons: 512
-    init_weight: null
+    init_weight: 
+      dist: uniform
+      scale: 1.0e-3
   
 solver:
   params_fix: 
@@ -66,7 +68,7 @@ constructor:
   params: 
     x0:
       codec: 
-        _target_: nigbms.modules.constructors.IdentityCodec
+        _target_: nigbms.modules.constructors.SinCodec
         param_dim: ${dim}
         latent_dim: ${dim}
       shape: ${solver.params_learn.x0}
@@ -100,7 +102,7 @@ loss:
   
 opt:
   _target_: torch.optim.Adam
-  lr: 5.0e-4
+  lr: 1.0e-5
 
 sch:
   _target_: torch.optim.lr_scheduler.MultiStepLR
