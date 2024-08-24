@@ -36,6 +36,10 @@ class NIGBMS(LightningModule):
             self.solver.compile(mode="reduce-overhead")
             self.surrogate.compile(mode="reduce-overhead")
 
+        ref_solver_cfg = cfg.solver.copy()
+        ref_solver_cfg.params_learn = {}
+        self.ref_solver = instantiate(ref_solver_cfg)
+
     def on_fit_start(self):
         seed_everything(seed=self.cfg.seed, workers=True)
 
@@ -90,11 +94,16 @@ class NIGBMS(LightningModule):
 
     def test_step(self, batch, batch_idx):
         tau = batch
+
         theta = self.meta_solver(tau)
         y = self.wrapped_solver(tau, theta, mode="test")  # no surrogate
         loss_dict = self.loss(tau, theta, y)
-
         self.log_dict(self._add_prefix(loss_dict, "test/"))
+
+        theta_dict = self.constructor(theta)
+        y_ref = self.ref_solver(tau, theta_dict)
+        loss_dict_ref = self.loss(tau, theta, y_ref)
+        self.log_dict(self._add_prefix(loss_dict_ref, "test_ref/"))
 
     def configure_optimizers(self):
         opt = instantiate(self.cfg.opt, params=self.meta_solver.parameters())
