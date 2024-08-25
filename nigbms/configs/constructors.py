@@ -31,6 +31,18 @@ cs.store(name="sin_codec_default", group="codec", node=SinCodecConfig)
 
 
 @dataclass
+class LinearCodecConfig:
+    """SinCodecConfig class."""
+
+    _target_: str = "nigbms.modules.constructors.LinearCodec"
+    param_dim: int = 128
+    latent_dim: int = 128
+
+
+cs.store(name="linear_codec_default", group="codec", node=LinearCodecConfig)
+
+
+@dataclass
 class ConstructorConfig:
     """ConstructorConfig class."""
 

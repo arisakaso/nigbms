@@ -1,0 +1,139 @@
+defaults:
+  - common
+  - data: poisson1d_offline_datamodule
+  - meta_solver: poisson1d_meta_solver_default
+  - solver: pytorch_jacobi_default
+  # - solver: petsc_jacobi_default  
+  - surrogate: poisson1d_surrogate_default
+  - wrapper: wrapped_solver_default
+
+wandb: 
+  mode: online
+
+data:
+  data_dir: /workspaces/nigbms/data/raw/poisson1d/small
+  dataset_sizes:
+    train: 5000
+    val: 5000
+    test: 5000
+  batch_size: 256
+  # rtol_dists:
+  #   train:
+  #     value: 1.0e-6
+  # out_task_type: 
+  #   _target_: hydra.utils.get_class
+  #   path: nigbms.modules.tasks.PETScLinearSystemTask
+
+meta_solver:
+  params_learn: 
+    x0: 
+      - ${latent_dim}
+  features:
+    b: 
+      - ${dim}
+  model:
+    num_layers: 2
+    num_neurons: 512
+    init_weight: null
+      # dist: uniform
+      # scale: 1.0e-2
+  
+solver:
+  params_fix: 
+    history_length: 1001
+  params_learn: 
+    x0: 
+      - ${dim}
+      - 1
+
+surrogate:
+  params_fix: ${solver.params_fix}
+  params_learn: ${solver.params_learn}
+  features: 
+    e0_enc:
+      - ${latent_dim}
+  model:
+    out_dim: ${solver.params_fix.history_length}
+    num_layers: 2
+    num_neurons: 1024
+    init_weight: null
+      # dist: uniform
+      # scale: 1.0e-3
+
+constructor:
+  _target_: nigbms.modules.constructors.ThetaConstructor
+  params: 
+    x0:
+      codec: 
+        _target_: nigbms.modules.constructors.SinCodec
+        param_dim: ${dim}
+        latent_dim: ${latent_dim}
+      shape: ${solver.params_learn.x0}
+    
+
+wrapper:
+  hparams:
+    opt:
+      _target_: torch.optim.Adam
+      lr: 1.0e-4
+    loss:
+      weights:
+        # y_loss: 1
+        # dvf_loss: 1
+        dvL_loss: 1
+    clip: 10.0
+    grad_type: f_true
+    jvp_type: forwardFD
+    eps: 1.0e-10
+    Nv: 1
+    v_scale: 1.0
+    v_dist: rademacher
+    
+loss:
+  _target_: nigbms.modules.losses.MetaSolverLoss
+  weights:
+    iter_r_proxy: 1
+    # e0: 1
+    # r0: 1
+  reduce: True
+  gain: 1.0e+0
+  
+opt:
+  _target_: torch.optim.Adam
+  lr: 1.0e-5
+
+sch:
+  _target_: torch.optim.lr_scheduler.MultiStepLR
+  milestones: [1000000]
+  gamma: 0.1
+  
+callbacks:
+  - _target_: lightning.pytorch.callbacks.EarlyStopping
+    monitor: ${monitor}
+    patience: 10
+    mode: min
+    verbose: True
+  - _target_: lightning.pytorch.callbacks.LearningRateMonitor
+    logging_interval: epoch
+  - _target_: lightning.pytorch.callbacks.ModelCheckpoint
+    monitor: ${monitor}
+    mode: min
+    save_top_k: 0
+    save_last: ${test}
+
+trainer:
+  max_epochs: 100
+  accelerator: gpu
+  devices: 
+    - 1
+  check_val_every_n_epoch: 20
+  log_every_n_steps: 1
+  fast_dev_run: False
+
+monitor: val/iter_r
+test: True
+dim: 31
+latent_dim: 16
+compile: False
+logging: False
+warmup: 0

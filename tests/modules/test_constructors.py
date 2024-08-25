@@ -4,7 +4,7 @@ from hydra import compose, initialize
 from hydra.utils import instantiate
 
 from nigbms.configs.constructors import IdentityCodecConfig, SinCodecConfig
-from nigbms.modules.constructors import IdentityCodec, SinCodec, ThetaConstructor
+from nigbms.modules.constructors import IdentityCodec, LinearCodec, SinCodec, ThetaConstructor
 
 
 class TestIdentityCodec:
@@ -53,6 +53,31 @@ class TestSinCodec:
         z = torch.ones(batch_size, self.codec.latent_dim)
         x = self.codec.decode(z)
         assert x.shape == (batch_size, self.codec.param_dim)
+
+
+class TestLinearCodec:
+    @pytest.fixture
+    def init_codec(self):
+        with initialize(version_base="1.3"):
+            cfg = compose(overrides=["+codec@_global_=linear_codec_default"])
+            self.codec = instantiate(cfg)
+
+    def test_init(self, init_codec):
+        assert isinstance(self.codec, LinearCodec)
+
+    def test_encode(self, init_codec):
+        batch_size = 10
+        x = torch.ones(batch_size, self.codec.param_dim)
+        z = self.codec.encode(x)
+        assert z.shape == (batch_size, self.codec.latent_dim)
+        assert torch.equal(z, x)
+
+    def test_decode(self, init_codec):
+        batch_size = 10
+        z = torch.ones(batch_size, self.codec.latent_dim)
+        x = self.codec.decode(z)
+        assert x.shape == (batch_size, self.codec.param_dim)
+        assert torch.equal(x, z)
 
 
 class TestConstructor:

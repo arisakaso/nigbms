@@ -2,8 +2,8 @@ defaults:
   - common
   - data: poisson1d_offline_datamodule
   - meta_solver: poisson1d_meta_solver_default
-  - solver: pytorch_jacobi_default
-  # - solver: petsc_jacobi_default  
+  # - solver: pytorch_jacobi_default
+  - solver: petsc_jacobi_default  
   - surrogate: poisson1d_surrogate_default
   - wrapper: wrapped_solver_default
 
@@ -11,20 +11,20 @@ wandb:
   mode: online
 
 data:
-  data_dir: /workspaces/nigbms/data/raw/poisson1d/2024-08-23_15-14-11
+  data_dir: /workspaces/nigbms/data/raw/poisson1d/large
   dataset_sizes:
     train: 5000
     val: 5000
     test: 5000
   batch_size: 256
-  # out_task_type: 
-  #   _target_: hydra.utils.get_class
-  #   path: nigbms.modules.tasks.PETScLinearSystemTask
+  out_task_type: 
+    _target_: hydra.utils.get_class
+    path: nigbms.modules.tasks.PETScLinearSystemTask
 
 meta_solver:
   params_learn: 
     x0: 
-      - ${dim}
+      - 31
   features:
     b: 
       - ${dim}
@@ -37,7 +37,7 @@ meta_solver:
   
 solver:
   params_fix: 
-    history_length: 501
+    history_length: 1001
   params_learn: 
     x0: 
       - ${dim}
@@ -47,27 +47,13 @@ surrogate:
   params_fix: ${solver.params_fix}
   params_learn: ${solver.params_learn}
   features: 
-    # b: 
-    #   - ${dim}
-    # x0: 
-    #   - ${dim}
-    # x: 
-    #   - ${dim}
-    # e0:
-    #   - ${dim}
-    # x0_enc:
-    #   - ${dim}
     e0_enc:
-      - ${dim}
-    # xn_sin-x0_sin:
-    #   - ${dim}
+      - 31
   model:
     out_dim: ${solver.params_fix.history_length}
     num_layers: 2
     num_neurons: 1024
     init_weight: null
-      # dist: uniform
-      # scale: 1.0e-3
 
 constructor:
   _target_: nigbms.modules.constructors.ThetaConstructor
@@ -76,7 +62,7 @@ constructor:
       codec: 
         _target_: nigbms.modules.constructors.SinCodec
         param_dim: ${dim}
-        latent_dim: ${dim}
+        latent_dim: 31
       shape: ${solver.params_learn.x0}
     
 
@@ -91,7 +77,7 @@ wrapper:
         # dvf_loss: 1
         dvL_loss: 1
     clip: 10.0
-    grad_type: f_fwd
+    grad_type: cv_fwd
     jvp_type: forwardFD
     eps: 1.0e-10
     Nv: 1
@@ -140,7 +126,7 @@ trainer:
 
 monitor: val/iter_r
 test: True
-dim: 31
+dim: 127
 compile: False
 logging: False
 warmup: 0

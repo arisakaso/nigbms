@@ -18,7 +18,7 @@ dataset:
     N_terms:
       _target_: nigbms.utils.distributions.NumpyConstant
       shape: null
-      value: 31
+      value: 127
     N_grid:
       _target_: nigbms.utils.distributions.NumpyConstant
       shape: null

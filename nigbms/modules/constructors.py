@@ -3,6 +3,7 @@ import torch
 from tensordict import TensorDict
 from torch import Tensor
 from torch.nn import Module, ModuleList, Parameter
+from torch.nn.functional import interpolate
 
 
 class ThetaConstructor(Module):
@@ -93,67 +94,17 @@ class SinCodec(Codec):
         return x
 
 
-# class SinDecoder(Codec):
-#     def __init__(self, enc_dim: int = 128, dec_dim: int = 128):
-#         super().__init__(enc_dim, dec_dim)
-#         self.basis = torch.sin(
-#             torch.arange(1, dec_dim + 1).unsqueeze(-1)
-#             * torch.tensor([i / (dec_dim + 1) for i in range(1, dec_dim + 1)])
-#             * torch.pi
-#         )
-#         self.basis = self.basis.unsqueeze(0)  # (1, out_dim, n_basis)
-#         self.basis = self.basis.cuda()
+class LinearCodec(Codec):
+    def __init__(self, param_dim: int = 128, latent_dim: int = 128):
+        super().__init__(param_dim, latent_dim)
 
-#     def forward(self, theta: Tensor) -> Tensor:
-#         decoded_theta = torch.matmul(self.basis, theta.unsqueeze(-1))  # (bs, out_dim, 1)
-#         return decoded_theta.squeeze()
+    def encode(self, x: Tensor) -> Tensor:
+        z = interpolate(x.reshape(-1, 1, self.param_dim), size=self.latent_dim)
+        return z.squeeze(1)
 
-
-# class SinEncoder(Codec):
-#     def __init__(self, enc_dim: int = 128, dec_dim: int = 128):
-#         super().__init__(enc_dim, dec_dim)
-#         self.basis = torch.sin(
-#             torch.arange(1, dec_dim + 1).unsqueeze(-1)
-#             * torch.tensor([i / (dec_dim + 1) for i in range(1, dec_dim + 1)])
-#             * torch.pi
-#         )
-#         self.basis = self.basis.unsqueeze(0)  # (1, out_dim, n_basis)
-#         self.basis = self.basis.cuda()
-
-#     def forward(self, signal: Tensor) -> Tensor:
-#         freq_signal = torch.matmul(self.basis.transpose(1, 2), signal.reshape(-1, self.dec_dim, 1))
-
-#         return freq_signal.squeeze()
-
-
-# class InterpolateDecoder(Module):
-#     def __init__(self, out_dim: int = 32, mode="linear"):
-#         super().__init__()
-#         self.out_dim = out_dim
-#         self.mode = mode
-
-#     def forward(self, x: Tensor) -> Tensor:
-#         x = x.unsqueeze(1)
-#         scale_factor = self.out_dim // x.shape[-1]
-#         interpolated_signal = F.interpolate(x, scale_factor=scale_factor, mode=self.mode, align_corners=True)
-
-#         return interpolated_signal.squeeze(1)
-
-
-# class InterpolateDecoder2D(Module):
-#     def __init__(self, out_dim: int = 32, mode="bilinear"):
-#         super().__init__()
-#         self.out_dim = out_dim
-#         self.mode = mode
-
-#     def forward(self, signal: Tensor) -> Tensor:
-#         bs, n2 = signal.shape
-#         n = int(n2**0.5)
-#         signal = signal.reshape(bs, 1, n, n)
-#         scale_factor = self.out_dim // n
-#         interpolated_signal = F.interpolate(signal, scale_factor=scale_factor, mode=self.mode, align_corners=True)
-
-#         return interpolated_signal.reshape(bs, -1)
+    def decode(self, z: Tensor) -> Tensor:
+        x = interpolate(z.reshape(-1, 1, self.latent_dim), size=self.param_dim)
+        return x.squeeze(1)
 
 
 # class FFTEncoder(Module):

@@ -57,7 +57,7 @@ class SurrogateSolverLoss(Module):
 class MetaSolverLoss(Module):
     """Loss function for training meta solvers (f)"""
 
-    def __init__(self, weights: dict, reduce: bool, constructor) -> None:
+    def __init__(self, weights: dict, reduce: bool, constructor, gain: float = 1.0) -> None:
         """
 
         Args:
@@ -69,6 +69,7 @@ class MetaSolverLoss(Module):
         self.weights = weights
         self.reduce = reduce
         self.constructor = constructor
+        self.gain = gain
 
     def forward(self, tau: PyTorchLinearSystemTask | PETScLinearSystemTask, theta: Tensor, history: Tensor) -> dict:
         """Compute the loss
@@ -118,7 +119,7 @@ class MetaSolverLoss(Module):
             "relative_e0^2": (e0 / xnorm) ** 2,
             # solver dependent
             "iter_r": unconvergece_flag.sum(dim=1).float(),
-            "iter_r_proxy": torch.where(unconvergece_flag, sigmoid(history - rtol_bnorm), 0).sum(dim=1),
+            "iter_r_proxy": torch.where(unconvergece_flag, sigmoid(self.gain * (history - rtol_bnorm)), 0).sum(dim=1),
             "iter_r_proxy_log": torch.where(unconvergece_flag, sigmoid(log(history / rtol_bnorm)), 0).sum(dim=1),
             "rn": history[:, -1],
             "rn^2": history[:, -1] ** 2,
