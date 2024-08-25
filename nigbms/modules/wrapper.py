@@ -34,7 +34,7 @@ class register_custom_grad(Function):
         cv_fwd = torch.zeros(hparams.Nv, *theta.shape, device=theta.device)
 
         for i in range(hparams.Nv):
-            with torch.no_grad():
+            with torch.no_grad():  # f is black-box
                 # sample random vector
                 if hparams.v_dist == "rademacher":
                     v = rademacher_like(theta)
@@ -55,21 +55,22 @@ class register_custom_grad(Function):
                 f_fwd[i] = dvL * v
 
             if hparams.grad_type in ["f_hat_true", "cv_fwd"]:
-                wrapper.opt.zero_grad()
+                with torch.enable_grad():  # f_hat is differentiable
+                    wrapper.opt.zero_grad()
 
-                # compute control forward gradient
-                y_hat, dvf_hat = torch.func.jvp(wrapper.f_hat, (theta,), (v,))  # forward AD
-                f_hat_true[i] = grad(y_hat, theta, grad_outputs=grad_y, retain_graph=True)[0]
-                dvL_hat = torch.sum(grad_y * dvf_hat, dim=1, keepdim=True)
-                f_hat_fwd = dvL_hat * v
-                cv_fwd[i] = hparams.v_scale * (f_fwd[i] - f_hat_fwd) + f_hat_true[i]
+                    # compute control forward gradient
+                    y_hat, dvf_hat = torch.func.jvp(wrapper.f_hat, (theta,), (v,))  # forward AD
+                    f_hat_true[i] = grad(y_hat, theta, grad_outputs=grad_y, retain_graph=True)[0]
+                    dvL_hat = torch.sum(grad_y * dvf_hat, dim=1, keepdim=True)
+                    f_hat_fwd = dvL_hat * v
+                    cv_fwd[i] = hparams.v_scale * (f_fwd[i] - f_hat_fwd) + f_hat_true[i]
 
-                # training surrogate
-                wrapper.loss_dict = wrapper.loss(wrapper.y, y_hat, dvf, dvf_hat, dvL, dvL_hat)
-                wrapper.loss_dict["loss"].backward(inputs=list(wrapper.surrogate.parameters()))
-                if hparams.clip:
-                    torch.nn.utils.clip_grad_norm_(wrapper.surrogate.parameters(), hparams.clip)
-                wrapper.opt.step()
+                    # training surrogate
+                    wrapper.loss_dict = wrapper.loss(wrapper.y, y_hat, dvf, dvf_hat, dvL, dvL_hat)
+                    wrapper.loss_dict["loss"].backward(inputs=list(wrapper.surrogate.model.parameters()))
+                    if hparams.clip:
+                        torch.nn.utils.clip_grad_norm_(wrapper.surrogate.parameters(), hparams.clip)
+                    wrapper.opt.step()
 
         with torch.no_grad():
             grad_theta = torch.mean(eval(hparams.grad_type), dim=0)  # average over Nv

@@ -255,8 +255,6 @@ class PETScKSP(_Solver):
         # solve
         self.ksp.solve(tau.b, x)
         self.x.append(x)
-        if tau.x is None:
-            tau.x = x  # save the solution if not provided
 
         # return history
         history = torch.zeros(self.history_length, dtype=theta.dtype, device=theta.device)
@@ -278,6 +276,8 @@ class PETScKSP(_Solver):
         for i in range(len(batched_tau)):
             histories.append(self.solve(batched_tau.get_task(i), theta[i]))
         histories = torch.stack(histories).to(device=device, dtype=theta.dtype)
+        if batched_tau.x is None:
+            batched_tau.x = self.x  # save the solution if not provided
 
         return histories
 

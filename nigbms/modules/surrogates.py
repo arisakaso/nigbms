@@ -2,6 +2,7 @@ import torch
 from omegaconf import DictConfig
 from tensordict import TensorDict
 from torch import Tensor
+from torch.nn import Module
 
 from nigbms.modules.solvers import _Solver
 from nigbms.modules.tasks import PETScLinearSystemTask, Task
@@ -16,7 +17,8 @@ class SurrogateSolver(_Solver):
         params_fix: DictConfig,
         params_learn: DictConfig,
         features: DictConfig,
-        model: DictConfig,
+        model: Module,
+        constructor: Module = None,
     ) -> None:
         # TODO: Maybe it is better to pass the corresponding solver instead of params_fix and params_learn
         """
@@ -30,6 +32,7 @@ class SurrogateSolver(_Solver):
         super().__init__(params_fix, params_learn)
         self.features = features
         self.model = model
+        self.constructor = constructor
 
     def arrange_input(self, tau: Task, theta: TensorDict) -> Tensor:
         raise NotImplementedError
@@ -48,9 +51,10 @@ class Poisson1DSurrogate(SurrogateSolver):
         params_fix: DictConfig,
         params_learn: DictConfig,
         features: DictConfig,
-        model: DictConfig,
+        model: Module,
+        constructor: Module = None,
     ) -> None:
-        super().__init__(params_fix, params_learn, features, model)
+        super().__init__(params_fix, params_learn, features, model, constructor)
 
     def arrange_input(self, tau: Task, theta: TensorDict) -> Tensor:
         features = []
@@ -70,7 +74,7 @@ class Poisson1DSurrogate(SurrogateSolver):
             elif k in theta:
                 features.append(theta[k])
 
-            elif k == "x-x0":
+            elif k == "e0":
                 if isinstance(tau, PETScLinearSystemTask):
                     x = list(map(lambda x: petscvec2tensor(x, device=tau.params.device), tau.x))
                     x = torch.stack(x, dim=0)
@@ -79,11 +83,25 @@ class Poisson1DSurrogate(SurrogateSolver):
 
                 x0 = theta["x0"]
                 features.append(x - x0)
+
+            elif k == "x0_enc":
+                x0_enc = self.constructor.params.x0.codec.encode(theta["x0"]).unsqueeze(-1)
+                features.append(x0_enc)
+
+            elif k == "e0_enc":
+                if isinstance(tau, PETScLinearSystemTask):
+                    x = list(map(lambda x: petscvec2tensor(x, device=tau.params.device), tau.x))
+                    x = torch.stack(x, dim=0)
+                else:
+                    x = tau.x
+                x_enc = self.constructor.params.x0.codec.encode(x).unsqueeze(-1)
+                x0_enc = self.constructor.params.x0.codec.encode(theta["x0"]).unsqueeze(-1)
+                features.append((x0_enc - x_enc).abs())
+
             else:
                 raise ValueError(f"Feature {k} not found in task")
 
         features = torch.cat(features, dim=1).squeeze()  # (bs, dim)
-        # features = features.float()  # neural network expects floats
         return features
 
 

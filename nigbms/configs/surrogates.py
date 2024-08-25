@@ -16,7 +16,7 @@ class Poisson1DSurrogateConfig:
     _target_: str = "nigbms.modules.surrogates.Poisson1DSurrogate"
     params_fix: DictConfig = DictConfig({})
     params_learn: DictConfig = DictConfig({"x0": [5]})
-    features: DictConfig = DictConfig({"b": [5], "x0": [5]})
+    features: DictConfig = DictConfig({})
     model: DictConfig = DictConfig(
         {
             "_target_": "nigbms.modules.models.MLP",

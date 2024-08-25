@@ -26,8 +26,8 @@ class NIGBMS(LightningModule):
         self.cfg = cfg
         self.meta_solver = instantiate(cfg.meta_solver)
         self.solver = instantiate(cfg.solver)
-        self.surrogate = instantiate(cfg.surrogate)
         self.constructor = instantiate(cfg.constructor)
+        self.surrogate = instantiate(cfg.surrogate, constructor=self.constructor)
         self.wrapped_solver = instantiate(
             cfg.wrapper, solver=self.solver, surrogate=self.surrogate, constructor=self.constructor
         )
@@ -57,7 +57,7 @@ class NIGBMS(LightningModule):
         y = self.wrapped_solver(tau, theta)
 
         loss_dict = self.loss(tau, theta, y)
-        self.manual_backward(loss_dict["loss"], create_graph=True, inputs=list(self.meta_solver.parameters()))
+        self.manual_backward(loss_dict["loss"], inputs=list(self.meta_solver.model.parameters()))
 
         # log the cosine similarity between the true gradient and the surrogate gradient
         if self.cfg.logging and self.cfg.wrapper.hparams.grad_type != "f_true":
@@ -76,7 +76,7 @@ class NIGBMS(LightningModule):
             self._add_prefix(loss_dict, "train/"),
             logger=True,
             on_epoch=True,
-            on_step=False,
+            on_step=True,
             prog_bar=True,
         )
         if self.wrapped_solver.loss_dict:

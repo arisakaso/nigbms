@@ -3,7 +3,7 @@ defaults:
   - data: poisson1d_offline_datamodule
   - meta_solver: poisson1d_meta_solver_default
   - solver: pytorch_jacobi_default
-  # - solver: petsc_jacobi_default
+  # - solver: petsc_jacobi_default  
   - surrogate: poisson1d_surrogate_default
   - wrapper: wrapped_solver_default
 
@@ -37,7 +37,7 @@ meta_solver:
   
 solver:
   params_fix: 
-    history_length: 1001
+    history_length: 501
   params_learn: 
     x0: 
       - ${dim}
@@ -47,19 +47,23 @@ surrogate:
   params_fix: ${solver.params_fix}
   params_learn: ${solver.params_learn}
   features: 
-    b: 
-      - ${dim}
-    x0: 
-      - ${dim}
-    x: 
-      - ${dim}
-    x-x0:
+    # b: 
+    #   - ${dim}
+    # x0: 
+    #   - ${dim}
+    # x: 
+    #   - ${dim}
+    # e0:
+    #   - ${dim}
+    # x0_enc:
+    #   - ${dim}
+    e0_enc:
       - ${dim}
     # xn_sin-x0_sin:
     #   - ${dim}
   model:
     out_dim: ${solver.params_fix.history_length}
-    num_layers: 0
+    num_layers: 2
     num_neurons: 1024
     init_weight: null
       # dist: uniform
@@ -70,7 +74,7 @@ constructor:
   params: 
     x0:
       codec: 
-        _target_: nigbms.modules.constructors.IdentityCodec
+        _target_: nigbms.modules.constructors.SinCodec
         param_dim: ${dim}
         latent_dim: ${dim}
       shape: ${solver.params_learn.x0}
@@ -83,12 +87,12 @@ wrapper:
       lr: 5.0e-4
     loss:
       weights:
-        y_loss: 0
-        dvf_loss: 1
-        # dvL_loss: 1
+        # y_loss: 1
+        # dvf_loss: 1
+        dvL_loss: 1
     clip: 10.0
-    grad_type: cv_fwd
-    jvp_type: forwardAD
+    grad_type: f_fwd
+    jvp_type: forwardFD
     eps: 1.0e-10
     Nv: 1
     v_scale: 1.0
@@ -104,13 +108,12 @@ loss:
   
 opt:
   _target_: torch.optim.Adam
-  lr: 5.0e-5
+  lr: 1.0e-5
 
 sch:
   _target_: torch.optim.lr_scheduler.MultiStepLR
   milestones: [1000000]
   gamma: 0.1
-  verbose: True
   
 callbacks:
   - _target_: lightning.pytorch.callbacks.EarlyStopping
@@ -139,5 +142,5 @@ monitor: val/iter_r
 test: True
 dim: 31
 compile: False
-logging: True
+logging: False
 warmup: 0

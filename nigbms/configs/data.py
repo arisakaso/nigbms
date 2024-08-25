@@ -77,7 +77,7 @@ class Poisson1DOfflineDataModuleConfig(OfflineDataModuleConfig):
     )
     maxiter_dists: DictConfig = DictConfig(
         {
-            "train": {"_target_": "nigbms.utils.distributions.NumpyConstant", "shape": None, "value": 1000},
+            "train": {"_target_": "nigbms.utils.distributions.NumpyConstant", "shape": None, "value": 500},
             "val": "${.train}",
             "test": "${.train}",
         }

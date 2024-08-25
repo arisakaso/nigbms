@@ -1,6 +1,7 @@
 import torch
 from hydra import compose, initialize
 from hydra.utils import instantiate
+from omegaconf import DictConfig
 from tensordict import TensorDict
 
 from nigbms.configs.surrogates import Poisson1DSurrogateConfig, TestFunctionSurrogateConfig
@@ -12,6 +13,8 @@ class TestPoisson1DSurrogate:
     def test_forward(self):
         with initialize(version_base="1.3"):
             cfg: Poisson1DSurrogateConfig = compose(overrides=["+surrogate@_global_=poisson1d_surrogate_default"])
+            cfg.features = DictConfig({"b": [5], "x0": [5]})
+
         torch.set_default_dtype(torch.float64)
         surrogate = instantiate(cfg)
         assert isinstance(surrogate, Poisson1DSurrogate)
