@@ -76,7 +76,7 @@ class NIGBMS(LightningModule):
             self._add_prefix(loss_dict, "train/"),
             logger=True,
             on_epoch=True,
-            on_step=True,
+            on_step=False,
             prog_bar=True,
         )
         if self.wrapped_solver.loss_dict:
@@ -118,7 +118,7 @@ class NIGBMS(LightningModule):
         }
 
 
-@hydra.main(version_base="1.3", config_path="../configs/train", config_name="poisson1d")
+@hydra.main(version_base="1.3", config_path="../configs/train", config_name="poisson1d_small")
 def main(cfg: DictConfig):
     log.info(OmegaConf.to_yaml(cfg))
     seed_everything(seed=cfg.seed, workers=True)
