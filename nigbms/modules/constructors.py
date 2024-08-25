@@ -79,6 +79,7 @@ class SinCodec(Codec):
         )  # (1, param_dim)
         self.basis = torch.sin(frequencies * phases)  # (latent_dim, param_dim)
         self.basis = self.basis.unsqueeze(0)  # (1, latent_dim, param_dim) to broadcast for batch
+        self.basis = self.basis / self.basis.norm(dim=-1, keepdim=True)  # normalize basis
         self.basis = Parameter(self.basis, requires_grad=False)  # set as fixed parameter to move to cuda
 
     def encode(self, x: Tensor) -> Tensor:

@@ -102,6 +102,8 @@ class MetaSolverLoss(Module):
         # It can be computed as a function of x0 without involving the solver.
         e0 = norm(x - x0, dim=(1, 2))
 
+        unconvergece_flag = history > rtol_bnorm
+
         loss_dict = {
             # total loss
             "loss": torch.zeros_like(bnorm),
@@ -115,9 +117,9 @@ class MetaSolverLoss(Module):
             "relative_e0": e0 / xnorm,
             "relative_e0^2": (e0 / xnorm) ** 2,
             # solver dependent
-            "iter_r": (history > rtol_bnorm).sum(dim=1).float() - 1,  # history includes r0
-            "iter_r_proxy": sigmoid(history - rtol_bnorm).sum(dim=1),
-            "iter_r_proxy_log": sigmoid(log(history / rtol_bnorm)).sum(dim=1),
+            "iter_r": unconvergece_flag.sum(dim=1).float(),
+            "iter_r_proxy": torch.where(unconvergece_flag, sigmoid(history - rtol_bnorm), 0).sum(dim=1),
+            "iter_r_proxy_log": torch.where(unconvergece_flag, sigmoid(log(history / rtol_bnorm)), 0).sum(dim=1),
             "rn": history[:, -1],
             "rn^2": history[:, -1] ** 2,
             "relative_rn": history[:, -1] / bnorm,
