@@ -1,0 +1,13 @@
+project: ${hydra:job.config_name}
+program: nigbms/train/poisson1d.py
+name: ${now:%Y-%m-%d_%H-%M-%S}
+method: grid
+parameters:
+  loss.gain:
+    values:
+      - 1.0e+0
+      - 1.0e+1
+      - 1.0e+2
+  trainer.devices: # use this to specify the device
+    values:
+      - [0]

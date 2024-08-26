@@ -102,7 +102,7 @@ loss:
   
 opt:
   _target_: torch.optim.Adam
-  lr: 1.0e-3
+  lr: 5.0e-4
 
 sch:
   _target_: torch.optim.lr_scheduler.MultiStepLR
@@ -127,7 +127,7 @@ trainer:
   max_epochs: 100
   accelerator: gpu
   devices: 
-    - 1
+    - 0
   check_val_every_n_epoch: 20
   log_every_n_steps: 1
   fast_dev_run: False

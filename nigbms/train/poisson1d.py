@@ -2,7 +2,6 @@ import logging
 
 import hydra
 import torch
-import wandb
 from hydra.utils import instantiate
 from lightning import LightningModule, Trainer, seed_everything
 from omegaconf import DictConfig, OmegaConf
@@ -13,6 +12,7 @@ import nigbms.configs.meta_solvers  # noqa
 import nigbms.configs.solvers  # noqa
 import nigbms.configs.surrogates  # noqa
 import nigbms.configs.wrapper  # noqa
+import wandb
 from nigbms.modules.solvers import _PytorchIterativeSolver
 
 log = logging.getLogger(__name__)
