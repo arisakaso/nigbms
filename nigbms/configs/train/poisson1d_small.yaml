@@ -8,7 +8,7 @@ defaults:
   - wrapper: wrapped_solver_default
 
 wandb: 
-  mode: disabled
+  mode: online
 
 data:
   data_dir: /workspaces/nigbms/data/raw/poisson1d/small
@@ -102,7 +102,7 @@ loss:
   
 opt:
   _target_: torch.optim.Adam
-  lr: 1.0e-5
+  lr: 1.0e-3
 
 sch:
   _target_: torch.optim.lr_scheduler.MultiStepLR
@@ -137,5 +137,5 @@ test: True
 dim: 31
 latent_dim: 30
 compile: False
-logging: True
+logging: False
 warmup: 0
