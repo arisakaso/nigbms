@@ -84,7 +84,7 @@ wrapper:
         # dvf_loss: 1
         dvL_loss: 1
     clip: 10.0
-    grad_type: cv_fwd
+    grad_type: f_true
     jvp_type: forwardFD
     eps: 1.0e-10
     Nv: 1
@@ -98,7 +98,7 @@ loss:
     # e0: 1
     # r0: 1
   reduce: True
-  gain: 1.0e+0
+  gain: 1.0e+2
   
 opt:
   _target_: torch.optim.Adam
@@ -127,7 +127,7 @@ trainer:
   max_epochs: 100
   accelerator: gpu
   devices: 
-    - 0
+    - 1
   check_val_every_n_epoch: 20
   log_every_n_steps: 1
   fast_dev_run: False
@@ -135,7 +135,7 @@ trainer:
 monitor: val/iter_r
 test: True
 dim: 31
-latent_dim: 10
+latent_dim: 30
 compile: False
 logging: True
 warmup: 0

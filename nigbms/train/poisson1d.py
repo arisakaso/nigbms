@@ -8,13 +8,12 @@ from lightning import LightningModule, Trainer, seed_everything
 from omegaconf import DictConfig, OmegaConf
 from pytorch_lightning.loggers.wandb import WandbLogger
 
-
-import nigbms.configs.data
-import nigbms.configs.meta_solvers
-import nigbms.configs.solvers
-import nigbms.configs.surrogates
-import nigbms.configs.wrapper
-from nigbms.modules.solvers import _PytorchIterativeSolver 
+import nigbms.configs.data  # noqa
+import nigbms.configs.meta_solvers  # noqa
+import nigbms.configs.solvers  # noqa
+import nigbms.configs.surrogates  # noqa
+import nigbms.configs.wrapper  # noqa
+from nigbms.modules.solvers import _PytorchIterativeSolver
 
 log = logging.getLogger(__name__)
 
@@ -34,8 +33,10 @@ class NIGBMS(LightningModule):
         )
         self.loss = instantiate(cfg.loss, constructor=self.constructor)
         if cfg.compile:  # This doesn't speed up the training, even slower. TODO: Investigate why?
-            self.solver.compile(mode="reduce-overhead")
-            self.surrogate.compile(mode="reduce-overhead")
+            # possible backend ['cudagraphs', 'inductor', 'onnxrt', 'openxla', 'tvm']
+            backend = "inductor"
+            self.meta_solver = torch.compile(self.meta_solver, backend=backend, mode="reduce-overhead", dynamic=True)
+            self.solver = torch.compile(self.solver, backend=backend, mode="reduce-overhead", dynamic=True)
 
         ref_solver_cfg = cfg.solver.copy()
         ref_solver_cfg.params_learn = {}

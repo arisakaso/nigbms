@@ -3,8 +3,8 @@ import torch
 from hydra import compose, initialize
 from hydra.utils import instantiate
 
-from nigbms.configs.constructors import IdentityCodecConfig, SinCodecConfig, FFTCodecConfig
-from nigbms.modules.constructors import IdentityCodec, LinearCodec, SinCodec, ThetaConstructor, FFTCodec
+from nigbms.configs.constructors import FFTCodecConfig, IdentityCodecConfig, SinCodecConfig
+from nigbms.modules.constructors import FFTCodec, IdentityCodec, LinearCodec, SinCodec, ThetaConstructor
 
 
 class TestIdentityCodec:
@@ -79,6 +79,7 @@ class TestLinearCodec:
         assert x.shape == (batch_size, self.codec.param_dim)
         assert torch.equal(x, z)
 
+
 class TestFFTCodec:
     @pytest.fixture
     def init_codec(self):
@@ -100,7 +101,6 @@ class TestFFTCodec:
         z = torch.ones(batch_size, self.codec.latent_dim)
         x = self.codec.decode(z)
         assert x.shape == (batch_size, self.codec.param_dim)
-
 
 
 class TestConstructor:

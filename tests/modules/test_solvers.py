@@ -124,3 +124,17 @@ def test_equivalence_of_pytorch_and_petsc(batched_pytorch_tasks, batched_petsc_t
 
     assert all([np.allclose(pytorch_solver.x, petsc_solver.x[i].getArray()) for i in range(3)])
     assert torch.allclose(pytorch_hist, petsc_hist)
+
+
+# def test_pytorch_jitjacobi(batched_pytorch_tasks):
+#     with initialize(version_base="1.3"):
+#         cfg: PyTorchJacobiConfig = compose(overrides=["+solver@_global_=pytorch_jacobi_default"])
+#         cfg._target_ = "nigbms.modules.solvers.JITJacobi"
+#         cfg.params_learn = {}
+#         cfg.params_fix = OmegaConf.create({"history_length": 100})
+#     solver = torch.jit.script(instantiate(cfg))
+#     theta = TensorDict({"x0": torch.zeros_like(batched_pytorch_tasks.x)})
+#     assert isinstance(solver, JITJacobi)
+
+#     solver.forward(batched_pytorch_tasks, theta)
+#     assert torch.allclose(solver.x, batched_pytorch_tasks.x)

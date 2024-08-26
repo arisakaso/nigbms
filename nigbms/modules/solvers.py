@@ -127,20 +127,20 @@ class _PytorchIterativeSolver(_Solver):
 class PyTorchJacobi(_PytorchIterativeSolver):
     def __init__(self, params_fix: dict, params_learn: dict) -> None:
         super().__init__(params_fix, params_learn)
+        if "omega" in self.params_fix:
+            self.omega = self.params_fix.omega
+        else:
+            self.omega = 1.0
 
     def _setup(self, tau: PyTorchLinearSystemTask, theta: TensorDict):
         super()._setup(tau, theta)
-        if "omega" in self.params_fix:
-            omega = self.params_fix.omega
-        elif "omega" in theta.keys():
-            omega = theta.omega
-        else:
-            omega = 1.0
+        if "omega" in self.params_learn:
+            self.omega = theta["omega"]
 
         D_inv = torch.diag_embed(1 / self.A.diagonal(dim1=1, dim2=2), dim1=1, dim2=2)
         I = eyes_like(self.A)  # noqa: E741
-        self.G = I - omega * D_inv @ self.A
-        self.f = omega * D_inv @ self.b
+        self.G = I - self.omega * D_inv @ self.A
+        self.f = self.omega * D_inv @ self.b
 
     def _step(self):
         self.x = self.G @ self.x + self.f
@@ -300,3 +300,82 @@ class OpenFOAMSolver(_Solver):  # TODO: implement OpenFOAM solver
 
     def forward(self, tau: PyTorchLinearSystemTask, theta: TensorDict) -> Tensor:
         pass
+
+
+# class JITJacobi(torch.nn.Module):
+#     def __init__(self, params_fix: dict, params_learn: dict) -> None:
+#         super().__init__()
+#         self.params_fix = params_fix
+#         self.history_length = params_fix.history_length
+#         self.params_learn = params_learn
+
+#         if "omega" in params_fix:
+#             self.omega = params_fix.omega
+#         else:
+#             self.omega = 1.0
+
+#         self.maxiter = torch.tensor(0)
+#         self.rtol = torch.tensor(0)
+#         self.A = torch.tensor(0)
+#         self.b = torch.tensor(0)
+#         self.x = torch.tensor(0)
+#         self.r = torch.tensor(0)
+#         self.G = torch.tensor(0)
+#         self.L = torch.tensor(0)
+#         self.U = torch.tensor(0)
+#         self.f = torch.tensor(0)
+#         self.rnorm = torch.tensor(0)
+#         self.bnorm = torch.tensor(0)
+#         self.history = torch.tensor(0)
+
+#     def forward(self, tau: Tensor, theta: Tensor) -> Tensor:
+#         """return entire solution sequence.
+#         This is not efficient. Just for study purpose.
+
+#         Args:
+#             tau (Dict[str, Tensor]): _description_
+#             theta (Dict[str, Tensor]): _description_
+
+#         Returns:
+#             _type_: _description_
+#         """
+#         # SETUP
+#         if "omega" in self.params_learn:
+#             self.omega = theta["omega"]
+
+#         self.A = tau.A
+#         self.b = tau.b
+#         if "x0" in self.params_learn:
+#             self.x = theta["x0"]
+#         else:
+#             self.x = torch.zeros_like(self.b)
+#         self.rtol = tau.rtol
+#         self.maxiter = tau.maxiter
+#         self.r = self.b - self.A @ self.x
+#         self.rnorm = torch.norm(self.r, dim=(1, 2))
+#         self.history = torch.zeros(tau.b.shape[0], self.history_length, device=tau.b.device, dtype=tau.b.dtype)
+#         self.history[:, 0] = self.rnorm
+#         self.bnorm = torch.norm(self.b, dim=(1, 2))
+#         self.is_converged = self.rnorm < self.rtol * self.bnorm
+
+#         D_inv = torch.diag_embed(1 / self.A.diagonal(dim1=1, dim2=2), dim1=1, dim2=2)
+#         I = eyes_like(self.A)  # noqa: E741
+#         self.G = I - self.omega * D_inv @ self.A
+#         self.f = self.omega * D_inv @ self.b
+
+#         for i in range(self.maxiter.max()):
+#             if all(self.is_converged):
+#                 break
+
+#             self.x = self.G @ self.x + self.f
+#             self.r = self.b - self.A @ self.x
+#             self.rnorm = torch.norm(self.r, dim=(1, 2))
+
+#             # To be consistent with PETSc, if converged, the reidiaul is set to 0
+#             self.history[:, i + 1] = self.rnorm * ~self.is_converged
+#             self.is_converged = self.rnorm < self.rtol * self.bnorm  # update convergence flag
+
+#         if tau.x is None:
+#             tau.x = self.x  # save the solution if not provided
+
+#         return self.history
