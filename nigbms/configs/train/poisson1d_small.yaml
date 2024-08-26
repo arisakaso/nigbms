@@ -40,7 +40,7 @@ meta_solver:
   
 solver:
   params_fix: 
-    history_length: 1001
+    history_length: 501
   params_learn: 
     x0: 
       - ${dim}
@@ -67,7 +67,7 @@ constructor:
   params: 
     x0:
       codec: 
-        _target_: nigbms.modules.constructors.FFTCodec
+        _target_: nigbms.modules.constructors.LinearCodec
         param_dim: ${dim}
         latent_dim: ${latent_dim}
       shape: ${solver.params_learn.x0}
@@ -135,7 +135,7 @@ trainer:
 monitor: val/iter_r
 test: True
 dim: 31
-latent_dim: 30
+latent_dim: 31
 compile: False
 logging: False
 warmup: 0

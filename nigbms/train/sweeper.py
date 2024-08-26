@@ -16,7 +16,7 @@ def main(cfg: DictConfig):
     sweep_id = wandb.sweep(cfg)
     path = wandb.Api().sweep(sweep_id).path
     agents = []
-    RUN_PER_GPU = 1
+    RUN_PER_GPU = 2
 
     for i in range(torch.cuda.device_count()):
         for _ in range(RUN_PER_GPU):
