@@ -67,7 +67,7 @@ constructor:
   params: 
     x0:
       codec: 
-        _target_: nigbms.modules.constructors.LinearCodec
+        _target_: nigbms.modules.constructors.SinCodec
         param_dim: ${dim}
         latent_dim: ${latent_dim}
       shape: ${solver.params_learn.x0}
