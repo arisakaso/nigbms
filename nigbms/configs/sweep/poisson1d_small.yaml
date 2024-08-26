@@ -15,10 +15,14 @@ parameters:
       - 1.0e-3
   latent_dim:
     values:
-      - 31
+      - 32
       - 16
       - 8
       - 4
+  constructor._target_:
+    values:
+      - nigbms.modules.constructors.FFTCodec
+      - nigbms.modules.constructors.LinearCodec
   trainer.devices: # use this to specify the device
     values:
       - [0]

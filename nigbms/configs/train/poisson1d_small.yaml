@@ -8,7 +8,7 @@ defaults:
   - wrapper: wrapped_solver_default
 
 wandb: 
-  mode: online
+  mode: disabled
 
 data:
   data_dir: /workspaces/nigbms/data/raw/poisson1d/small
@@ -67,7 +67,7 @@ constructor:
   params: 
     x0:
       codec: 
-        _target_: nigbms.modules.constructors.SinCodec
+        _target_: nigbms.modules.constructors.LinearCodec
         param_dim: ${dim}
         latent_dim: ${latent_dim}
       shape: ${solver.params_learn.x0}
@@ -135,7 +135,7 @@ trainer:
 monitor: val/iter_r
 test: True
 dim: 31
-latent_dim: 31
+latent_dim: 32
 compile: False
 logging: False
 warmup: 0
