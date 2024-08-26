@@ -42,6 +42,19 @@ class LinearCodecConfig:
 cs.store(name="linear_codec_default", group="codec", node=LinearCodecConfig)
 
 
+
+@dataclass
+class FFTCodecConfig:
+    """FFTCodecConfig class."""
+    
+    _target_: str = "nigbms.modules.constructors.FFTCodec"
+    param_dim: int = 128
+    latent_dim: int = 128
+
+
+
+cs.store(name="fft_codec_default", group="codec", node=FFTCodecConfig)
+
 @dataclass
 class ConstructorConfig:
     """ConstructorConfig class."""

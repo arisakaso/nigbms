@@ -32,11 +32,11 @@ meta_solver:
     b: 
       - ${dim}
   model:
-    num_layers: 2
+    num_layers: 1
     num_neurons: 512
-    init_weight: null
-      # dist: uniform
-      # scale: 1.0e-2
+    init_weight: 
+      dist: uniform
+      scale: 1.0e-2
   
 solver:
   params_fix: 
@@ -49,9 +49,11 @@ solver:
 surrogate:
   params_fix: ${solver.params_fix}
   params_learn: ${solver.params_learn}
-  features: 
-    e0_enc:
-      - ${latent_dim}
+  features:
+    e0:
+      - ${dim} 
+    # e0_enc:
+    #   - ${latent_dim}
   model:
     out_dim: ${solver.params_fix.history_length}
     num_layers: 2
@@ -65,7 +67,7 @@ constructor:
   params: 
     x0:
       codec: 
-        _target_: nigbms.modules.constructors.SinCodec
+        _target_: nigbms.modules.constructors.LinearCodec
         param_dim: ${dim}
         latent_dim: ${latent_dim}
       shape: ${solver.params_learn.x0}
@@ -78,11 +80,11 @@ wrapper:
       lr: 1.0e-4
     loss:
       weights:
-        # y_loss: 1
+        y_loss: 1
         # dvf_loss: 1
         dvL_loss: 1
     clip: 10.0
-    grad_type: f_true
+    grad_type: cv_fwd
     jvp_type: forwardFD
     eps: 1.0e-10
     Nv: 1
@@ -125,7 +127,7 @@ trainer:
   max_epochs: 100
   accelerator: gpu
   devices: 
-    - 1
+    - 0
   check_val_every_n_epoch: 20
   log_every_n_steps: 1
   fast_dev_run: False
@@ -133,7 +135,7 @@ trainer:
 monitor: val/iter_r
 test: True
 dim: 31
-latent_dim: 16
+latent_dim: 10
 compile: False
-logging: False
+logging: True
 warmup: 0

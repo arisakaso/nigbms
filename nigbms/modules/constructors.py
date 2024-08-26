@@ -107,6 +107,22 @@ class LinearCodec(Codec):
         return x.squeeze(1)
 
 
+class FFTCodec(Codec):
+    def __init__(self, param_dim: int = 128, latent_dim: int = 128):
+        super().__init__(param_dim, latent_dim)
+        assert latent_dim % 2 == 0
+
+    def encode(self, x: Tensor) -> Tensor:
+        z = torch.fft.rfft(x, dim=-1)[..., : self.latent_dim // 2]
+        z = torch.view_as_real(z).reshape(-1, self.latent_dim)
+        return z
+
+    def decode(self, z: Tensor) -> Tensor:
+        z = torch.view_as_complex(z.reshape(-1, self.latent_dim // 2, 2))
+        x = torch.fft.irfft(z, n=self.param_dim)
+        return x
+
+
 # class FFTEncoder(Module):
 #     def __init__(self, out_dim: int = 32):
 #         super().__init__()
