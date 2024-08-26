@@ -8,12 +8,13 @@ from lightning import LightningModule, Trainer, seed_everything
 from omegaconf import DictConfig, OmegaConf
 from pytorch_lightning.loggers.wandb import WandbLogger
 
-from nigbms.configs.data import Poisson1DOfflineDataModuleConfig  # noqa
-from nigbms.configs.meta_solvers import Poisson1DMetaSolverConfig  # noqa
-from nigbms.configs.solvers import PyTorchJacobiConfig  # noqa
-from nigbms.configs.surrogates import Poisson1DSurrogateConfig  # noqa
-from nigbms.configs.wrapper import WrappedSolverConfig  # noqa
-from nigbms.modules.solvers import _PytorchIterativeSolver  # noqa
+
+import nigbms.configs.data
+import nigbms.configs.meta_solvers
+import nigbms.configs.solvers
+import nigbms.configs.surrogates
+import nigbms.configs.wrapper
+from nigbms.modules.solvers import _PytorchIterativeSolver 
 
 log = logging.getLogger(__name__)
 

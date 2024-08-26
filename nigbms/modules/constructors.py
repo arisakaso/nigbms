@@ -43,7 +43,6 @@ class Codec(Module):
             latent_dim (int): latent dimension
         """
         super().__init__()
-        assert param_dim >= latent_dim
         self.param_dim = param_dim
         self.latent_dim = latent_dim
 
@@ -110,7 +109,7 @@ class LinearCodec(Codec):
 class FFTCodec(Codec):
     def __init__(self, param_dim: int = 128, latent_dim: int = 128):
         super().__init__(param_dim, latent_dim)
-        assert latent_dim % 2 == 0
+        assert latent_dim % 2 == 0, "latent_dim must be even for FFT codec"
 
     def encode(self, x: Tensor) -> Tensor:
         z = torch.fft.rfft(x, dim=-1)[..., : self.latent_dim // 2]
@@ -118,6 +117,7 @@ class FFTCodec(Codec):
         return z
 
     def decode(self, z: Tensor) -> Tensor:
+        z = z.contiguous()
         z = torch.view_as_complex(z.reshape(-1, self.latent_dim // 2, 2))
         x = torch.fft.irfft(z, n=self.param_dim)
         return x
