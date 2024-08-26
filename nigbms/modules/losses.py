@@ -117,7 +117,7 @@ class MetaSolverLoss(Module):
             "e0": e0,
             "relative_e0": e0 / xnorm,
             # solver dependent
-            "iter_r": is_converged.sum(dim=1).float(),
+            "iter_r": (~is_converged).sum(dim=1).float(),
             "iter_r_proxy": torch.where(is_converged, 0, sigmoid(self.gain * (relative_history - rtol))).sum(dim=1),
             "iter_r_proxy_log": torch.where(is_converged, 0, sigmoid(log(relative_history / rtol))).sum(dim=1),
             "rn": history[:, -1],
