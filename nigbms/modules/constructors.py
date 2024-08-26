@@ -121,29 +121,3 @@ class FFTCodec(Codec):
         z = torch.view_as_complex(z.reshape(-1, self.latent_dim // 2, 2))
         x = torch.fft.irfft(z, n=self.param_dim)
         return x
-
-
-# class FFTEncoder(Module):
-#     def __init__(self, out_dim: int = 32):
-#         super().__init__()
-#         self.out_dim = out_dim
-
-#     def forward(self, signal: Tensor) -> Tensor:
-#         freq_signal = torch.fft.rfft(signal, dim=-1)[..., : self.out_dim // 2]
-#         freq_signal = torch.view_as_real(freq_signal).reshape(-1, self.out_dim)
-#         return freq_signal
-
-
-# class IFFTDecoder(Module):
-#     def __init__(self, out_dim: int = 128):
-#         super().__init__()
-#         self.out_dim = out_dim
-
-#     def forward(self, freq_signal: Tensor) -> Tensor:
-#         n_components = freq_signal.shape[-1] // 2
-#         freq_signal = torch.view_as_complex(freq_signal.reshape(-1, n_components, 2))
-#         signal = torch.fft.irfft(freq_signal, n=self.out_dim, dim=-1)
-#         return signal
-
-
-# # %%
