@@ -96,34 +96,32 @@ class MetaSolverLoss(Module):
         else:  # pragma: no cover
             raise ValueError(f"Task type {type(tau)} not supported")
 
-        rtol_bnorm = (tau.rtol * bnorm).unsqueeze(-1)  # (bs, 1)
+        rtol = tau.rtol.unsqueeze(-1)  # (bs, 1)
+        bnorm = bnorm.unsqueeze(-1)  # (bs, 1)
+        relative_history = history / bnorm  # (bs, niter)
         x0 = theta["x0"]
         r0 = history[:, 0]
+        relative_r0 = relative_history[:, 0]
         # TODO: This r0 is dependent on the solver, and the backward pass can be modified.
         # It can be computed as a function of x0 without involving the solver.
         e0 = norm(x - x0, dim=(1, 2))
 
-        unconvergece_flag = history > rtol_bnorm
+        is_converged = relative_history < rtol
 
         loss_dict = {
             # total loss
-            "loss": torch.zeros_like(bnorm),
+            "loss": 0,
             # solver independent
             "r0": r0,
-            "r0^2": r0**2,
-            "relative_r0": r0 / bnorm,
-            "relative_r0^2": (r0 / bnorm) ** 2,
+            "relative_r0": relative_r0,
             "e0": e0,
-            "e0^2": e0**2,
             "relative_e0": e0 / xnorm,
-            "relative_e0^2": (e0 / xnorm) ** 2,
             # solver dependent
-            "iter_r": unconvergece_flag.sum(dim=1).float(),
-            "iter_r_proxy": torch.where(unconvergece_flag, sigmoid(self.gain * (history - rtol_bnorm)), 0).sum(dim=1),
-            "iter_r_proxy_log": torch.where(unconvergece_flag, sigmoid(log(history / rtol_bnorm)), 0).sum(dim=1),
+            "iter_r": is_converged.sum(dim=1).float(),
+            "iter_r_proxy": torch.where(is_converged, 0, sigmoid(self.gain * (relative_history - rtol))).sum(dim=1),
+            "iter_r_proxy_log": torch.where(is_converged, 0, sigmoid(log(relative_history / rtol))).sum(dim=1),
             "rn": history[:, -1],
-            "rn^2": history[:, -1] ** 2,
-            "relative_rn": history[:, -1] / bnorm,
+            "relative_rn": relative_history[:, -1],
         }
         for k, w in self.weights.items():
             loss_dict["loss"] += w * loss_dict[k]
