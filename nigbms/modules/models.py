@@ -32,6 +32,18 @@ class Constant(Module):
         return self.weight
 
 
+class InverseBoxCox(Module):
+    def __init__(self, lmbda=0):
+        super().__init__()
+        self.lmbda = lmbda
+
+    def forward(self, x):
+        if self.lmbda == 0:
+            return torch.exp(x)
+        else:
+            return torch.exp(torch.log(self.lmbda * x + 1) / self.lmbda)
+
+
 class MLP(Module):
     def __init__(
         self,
