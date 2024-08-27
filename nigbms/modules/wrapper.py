@@ -68,7 +68,7 @@ class register_custom_grad(Function):
                     # training surrogate
                     wrapper.loss_dict = wrapper.loss(wrapper.y, y_hat, dvf, dvf_hat, dvL, dvL_hat)
                     wrapper.loss_dict["loss"].backward(inputs=list(wrapper.surrogate.model.parameters()))
-                    if hparams.clip:
+                    if isinstance(hparams.clip, float):
                         torch.nn.utils.clip_grad_norm_(wrapper.surrogate.parameters(), hparams.clip)
                     wrapper.opt.step()
 

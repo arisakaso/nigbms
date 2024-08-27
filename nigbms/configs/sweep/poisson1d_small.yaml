@@ -5,25 +5,34 @@ method: grid
 parameters:
   loss.gain:
     values:
-      - 1.0e+0
-      - 1.0e+1
-      - 1.0e+2
+      # - 1.0e+0
+      # - 1.0e+1
+      # - 1.0e+2
       - 1.0e+3
   opt.lr:
     values:
       - 1.0e-4
-      - 1.0e-3
   latent_dim:
     values:
       - 32
       - 16
       - 8
       - 4
+  wrapper.hparams.opt.lr:
+    values:
+      - 1.0e-3
+      - 1.0e-4
+      - 1.0e-5
+  wrapper.hparams.clip:
+    values:
+      - null
+      - 1.0
+      - 10.0
   constructor.params.x0.codec._target_:
     values:
-      - nigbms.modules.constructors.FFTCodec
+      # - nigbms.modules.constructors.FFTCodec
       - nigbms.modules.constructors.LinearCodec
-      - nigbms.modules.constructors.SinCodec
+      # - nigbms.modules.constructors.SinCodec
   trainer.devices: # use this to specify the device
     values:
       - [0]

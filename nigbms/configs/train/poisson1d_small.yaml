@@ -50,6 +50,12 @@ surrogate:
   params_fix: ${solver.params_fix}
   params_learn: ${solver.params_learn}
   features:
+    b:
+      - ${dim}
+    x0:
+      - ${dim}
+    x:
+      - ${dim}
     e0:
       - ${dim} 
     # e0_enc:
@@ -80,12 +86,12 @@ wrapper:
       lr: 1.0e-4
     loss:
       weights:
-        y_loss: 1
+        # y_loss: 1
         # dvf_loss: 1
         dvL_loss: 1
     clip: 10.0
-    grad_type: f_true
-    jvp_type: forwardFD
+    grad_type: cv_fwd
+    jvp_type: forwardAD
     eps: 1.0e-10
     Nv: 1
     v_scale: 1.0
@@ -98,7 +104,7 @@ loss:
     # e0: 1
     # r0: 1
   reduce: True
-  gain: 1.0e+2
+  gain: 1.0e+3 # equal to 1/rtol
   
 opt:
   _target_: torch.optim.Adam
@@ -137,5 +143,5 @@ test: True
 dim: 31
 latent_dim: 32
 compile: False
-logging: False
+logging: True
 warmup: 0
