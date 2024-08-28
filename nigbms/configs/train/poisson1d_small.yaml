@@ -141,7 +141,6 @@ trainer:
   check_val_every_n_epoch: 20
   log_every_n_steps: 1
   fast_dev_run: False
-  terminate_on_nan: True
 
 monitor: val/iter_r
 test: True
