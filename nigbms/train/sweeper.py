@@ -11,11 +11,13 @@ import wandb
 
 @hydra.main(version_base="1.3", config_path="../configs/sweep", config_name="poisson1d_small")
 def main(cfg: DictConfig):
-    # wandb.require("core")
+    wandb.require("core")
     cfg = OmegaConf.to_container(cfg, resolve=True)
     cfg["command"] = ["${env}", "python", "${program}", "${args_no_hyphens}"]  # for hydra compatibility
     sweep_id = wandb.sweep(cfg)
     path = wandb.Api().sweep(sweep_id).path
+    path = os.path.join(*path)
+    # path = "sohei/poisson1d_small/u1bjp3xx"
     agents = []
     RUN_PER_GPU = 3
 
