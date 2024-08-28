@@ -1,6 +1,6 @@
 hydra:
   run:
-    dir: data/raw/poisson1d/${now:%Y-%m-%d_%H-%M-%S}
+    dir: data/raw/poisson1d/small
   job:
     chdir: True
 
