@@ -22,10 +22,10 @@ parameters:
         parameters:
           output_activation:
             values:
-              - { _target_: torch.nn.Identity}
-              - { _target_: nigbms.modules.models.InverseBoxCox, lmbda: 0 }
-              - { _target_: nigbms.modules.models.InverseBoxCox, lmbda: 1.0e-3 }
-              - { _target_: nigbms.modules.models.InverseBoxCox, lmbda: 1.0e-1 }
+              # - {_target_: torch.nn.Identity}
+              - {_target_: nigbms.modules.models.InverseBoxCox, lmbda: 0}
+              # - {_target_: nigbms.modules.models.InverseBoxCox, lmbda: 1.0e-3}
+              # - {_target_: nigbms.modules.models.InverseBoxCox, lmbda: 1.0e-1}
   wrapper:
     parameters:
       hparams:
