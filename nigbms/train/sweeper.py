@@ -4,9 +4,8 @@ import time
 
 import hydra
 import torch
-from omegaconf import DictConfig, OmegaConf
-
 import wandb
+from omegaconf import DictConfig, OmegaConf
 
 
 @hydra.main(version_base="1.3", config_path="../configs/sweep", config_name="poisson1d_small")
