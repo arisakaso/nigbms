@@ -8,7 +8,7 @@ defaults:
   - wrapper: wrapped_solver_default
 
 wandb: 
-  mode: disabled # must be onoine when sweep
+  mode: online # must be onoine when sweep
 
 data:
   data_dir: /workspaces/nigbms/data/raw/poisson1d/small
@@ -94,7 +94,7 @@ wrapper:
         # dvf_loss: 1
         dvL_loss: 1
     clip: 10.0
-    grad_type: f_true
+    grad_type: cv_fwd
     jvp_type: forwardAD
     eps: 1.0e-10
     Nv: 1
@@ -134,7 +134,7 @@ callbacks:
     save_last: ${test}
 
 trainer:
-  max_epochs: 1
+  max_epochs: 100
   accelerator: gpu
   devices: 
     - 0
