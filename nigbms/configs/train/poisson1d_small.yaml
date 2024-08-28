@@ -13,9 +13,9 @@ wandb:
 data:
   data_dir: /workspaces/nigbms/data/raw/poisson1d/small
   dataset_sizes:
-    train: 5000
-    val: 5000
-    test: 5000
+    train: 10_000
+    val: 10_000
+    test: 10_000
   batch_size: 256
   # rtol_dists:
   #   train:
@@ -141,7 +141,7 @@ callbacks:
   
 
 trainer:
-  max_epochs: 100
+  max_epochs: 1
   accelerator: gpu
   devices: 
     - 0

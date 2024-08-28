@@ -27,7 +27,7 @@ def main(cfg: DictConfig):
     for i in range(torch.cuda.device_count()):
         for _ in range(RUN_PER_GPU):
             agents.append(subprocess.Popen(f"CUDA_VISIBLE_DEVICES={i} wandb agent {path}", shell=True))
-            time.sleep(1)
+            time.sleep(2)
     try:
         for agent in agents:
             agent.wait()
