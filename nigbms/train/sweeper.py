@@ -23,7 +23,7 @@ def main(cfg: DictConfig):
 
     for i in range(torch.cuda.device_count()):
         for _ in range(RUN_PER_GPU):
-            agents.append(subprocess.Popen(f"CUDA_VISIBLE_DEVICES={i} wandb agent {os.path.join(*path)}", shell=True))
+            agents.append(subprocess.Popen(f"CUDA_VISIBLE_DEVICES={i} wandb agent {path}", shell=True))
             time.sleep(1)
     try:
         for agent in agents:
@@ -33,7 +33,7 @@ def main(cfg: DictConfig):
             for agent in agents:
                 agent.wait()
         except KeyboardInterrupt:
-            subprocess.run(f"wandb sweep --cancel {os.path.join(*path)}")
+            subprocess.run(f"wandb sweep --cancel {path}")
 
     print("Sweep finished")
 
