@@ -4,14 +4,16 @@ import time
 
 import hydra
 import torch
-import wandb
 from omegaconf import DictConfig, OmegaConf
+
+import wandb
 
 
 @hydra.main(version_base="1.3", config_path="../configs/sweep", config_name="poisson1d_small")
 def main(cfg: DictConfig):
-    RUN_PER_GPU = 2
-    path = "sohei/poisson1d_small/9h7gji5c"
+    RUN_PER_GPU = 3
+    # path = "sohei/poisson1d_small/9h7gji5c"
+    path = None
 
     if path is None:
         wandb.require("core")

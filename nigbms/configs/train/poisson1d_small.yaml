@@ -90,10 +90,10 @@ wrapper:
       lr: 1.0e+1
     loss:
       weights:
-        # y_loss: 1
-        # dvf_loss: 1
-        dvL_loss: 1
-    clip: 10.0
+        y_loss: 0
+        dvf_loss: 0
+        dvL_loss: 0
+    clip: null
     grad_type: cv_fwd
     jvp_type: forwardAD
     eps: 1.0e-10
