@@ -8,7 +8,7 @@ defaults:
   - wrapper: wrapped_solver_default
 
 wandb: 
-  mode: online # must be onoine when sweep
+  mode: disabled # must be onoine when sweep
 
 data:
   data_dir: /workspaces/nigbms/data/raw/poisson1d/small
@@ -87,7 +87,7 @@ wrapper:
   hparams:
     opt:
       _target_: torch.optim.Adam
-      lr: 1.0e-4
+      lr: 1.0e+1
     loss:
       weights:
         # y_loss: 1
@@ -132,6 +132,13 @@ callbacks:
     mode: min
     save_top_k: 0
     save_last: ${test}
+  - _target_: lightning.pytorch.callbacks.EarlyStopping
+    monitor: surrogate/sim
+    patience: 10000
+    verbose: True
+    check_finite: True
+    check_on_train_epoch_end: True
+  
 
 trainer:
   max_epochs: 100
