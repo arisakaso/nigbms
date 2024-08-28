@@ -8,7 +8,7 @@ defaults:
   - wrapper: wrapped_solver_default
 
 wandb: 
-  mode: online
+  mode: online # must be onoine when sweep
 
 data:
   data_dir: /workspaces/nigbms/data/raw/poisson1d/small
@@ -67,13 +67,17 @@ surrogate:
     init_weight: null
       # dist: uniform
       # scale: 1.0e-3
+    # output_activation: 
+    #   _target_: nigbms.modules.models.InverseBoxCox
+    #   lmbda: 0.1
+
 
 constructor:
   _target_: nigbms.modules.constructors.ThetaConstructor
   params: 
     x0:
       codec: 
-        _target_: nigbms.modules.constructors.FFTCodec
+        _target_: nigbms.modules.constructors.LinearCodec
         param_dim: ${dim}
         latent_dim: ${latent_dim}
       shape: ${solver.params_learn.x0}
@@ -90,7 +94,7 @@ wrapper:
         # dvf_loss: 1
         dvL_loss: 1
     clip: 10.0
-    grad_type: cv_fwd
+    grad_type: f_true
     jvp_type: forwardAD
     eps: 1.0e-10
     Nv: 1
@@ -108,7 +112,7 @@ loss:
   
 opt:
   _target_: torch.optim.Adam
-  lr: 5.0e-4
+  lr: 1.0e-4
 
 sch:
   _target_: torch.optim.lr_scheduler.MultiStepLR

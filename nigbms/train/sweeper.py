@@ -11,7 +11,7 @@ import wandb
 
 @hydra.main(version_base="1.3", config_path="../configs/sweep", config_name="poisson1d_small")
 def main(cfg: DictConfig):
-    wandb.require("core")
+    # wandb.require("core")
     cfg = OmegaConf.to_container(cfg, resolve=True)
     cfg["command"] = ["${env}", "python", "${program}", "${args_no_hyphens}"]  # for hydra compatibility
     sweep_id = wandb.sweep(cfg)

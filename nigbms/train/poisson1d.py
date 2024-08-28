@@ -1,4 +1,5 @@
 import logging
+import sys
 
 import hydra
 import torch
@@ -122,13 +123,18 @@ class NIGBMS(LightningModule):
 
 @hydra.main(version_base="1.3", config_path="../configs/train", config_name="poisson1d_small")
 def main(cfg: DictConfig):
-    wandb.require("core")
+    # wandb.require("core")
     log.info(OmegaConf.to_yaml(cfg))
     seed_everything(seed=cfg.seed, workers=True)
     torch.set_default_dtype(eval(cfg.dtype))
-    wandb.config = OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True)
-    wandb.init(project=cfg.wandb.project, config=wandb.config, mode=cfg.wandb.mode)
-    logger = WandbLogger(settings=wandb.Settings(start_method="thread"))
+
+    if cfg.wandb is not None:  # WandbLogger
+        wandb.require("core")
+        wandb.config = OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True)
+        wandb.init(project=cfg.wandb.project, config=wandb.config, mode=cfg.wandb.mode)
+        logger = WandbLogger(settings=wandb.Settings(start_method="thread"))
+    else:
+        logger = None
 
     callbacks = [instantiate(c) for c in cfg.callbacks]
     data_module = instantiate(cfg.data)
@@ -145,4 +151,12 @@ def main(cfg: DictConfig):
 
 # %%
 if __name__ == "__main__":
+    new_cmd_line_args = []
+    for arg in sys.argv:
+        # Try and catch the wandb agent formatted args
+        if "={" in arg:
+            arg = arg.replace("'", "")
+        new_cmd_line_args.append(arg)
+    sys.argv = new_cmd_line_args
+    print(sys.argv)
     main()
