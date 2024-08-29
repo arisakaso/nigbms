@@ -68,8 +68,7 @@ surrogate:
       # dist: uniform
       # scale: 1.0e-3
     output_activation: 
-      _target_: nigbms.modules.models.InverseBoxCox
-      lmbda: 0.1
+      _target_: torch.nn.Identity
 
 
 constructor:
@@ -141,7 +140,7 @@ callbacks:
   
 
 trainer:
-  max_epochs: 1
+  max_epochs: 100
   accelerator: gpu
   devices: 
     - 0

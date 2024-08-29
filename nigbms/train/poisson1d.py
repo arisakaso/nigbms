@@ -1,5 +1,4 @@
 import logging
-import sys
 
 import hydra
 import torch
@@ -15,6 +14,7 @@ import nigbms.configs.surrogates  # noqa
 import nigbms.configs.wrapper  # noqa
 import wandb
 from nigbms.modules.solvers import _PytorchIterativeSolver
+from nigbms.utils.args import arrange_sweep_args_for_hydra
 
 log = logging.getLogger(__name__)
 
@@ -70,20 +70,19 @@ class NIGBMS(LightningModule):
             loss_ref = self.loss(tau, theta_ref, y_ref)["loss"]
             f_true = torch.autograd.grad(loss_ref, theta_ref)[0]
             sim = torch.cosine_similarity(f_true, theta.grad, dim=1, eps=1e-20)
-            self.log("surrogate/sim", sim.mean(), prog_bar=True)
+            self.log("surrogate/sim", sim.mean(), logger=True, prog_bar=True, batch_size=tau.batch_size[0])
 
         if self.current_epoch >= self.cfg.warmup:
             opt.step()
 
-        self.log_dict(
-            self._add_prefix(loss_dict, "train/"),
-            logger=True,
-            on_epoch=True,
-            on_step=False,
-            prog_bar=True,
-        )
+        self.log_dict(self._add_prefix(loss_dict, "train/"), logger=True, prog_bar=True, batch_size=tau.batch_size[0])
         if self.wrapped_solver.loss_dict:
-            self.log_dict(self._add_prefix(self.wrapped_solver.loss_dict, "surrogate/"), prog_bar=True)
+            self.log_dict(
+                self._add_prefix(self.wrapped_solver.loss_dict, "surrogate/"),
+                logger=True,
+                prog_bar=True,
+                batch_size=tau.batch_size[0],
+            )
 
     def on_train_epoch_end(self):
         if self.current_epoch >= self.cfg.warmup:
@@ -95,7 +94,7 @@ class NIGBMS(LightningModule):
         y = self.wrapped_solver(tau, theta, mode="test")  # no surrogate
         loss_dict = self.loss(tau, theta, y)
 
-        self.log_dict(self._add_prefix(loss_dict, "val/"), prog_bar=True)
+        self.log_dict(self._add_prefix(loss_dict, "val/"), logger=True, prog_bar=True, batch_size=tau.batch_size[0])
 
     def test_step(self, batch, batch_idx):
         tau = batch
@@ -103,15 +102,17 @@ class NIGBMS(LightningModule):
         theta = self.meta_solver(tau)
         y = self.wrapped_solver(tau, theta, mode="test")  # no surrogate
         loss_dict = self.loss(tau, theta, y)
-        self.log_dict(self._add_prefix(loss_dict, "test/"))
+        self.log_dict(self._add_prefix(loss_dict, "test/"), logger=True, prog_bar=True, batch_size=tau.batch_size[0])
 
         theta_dict = self.constructor(theta)
         y_ref = self.ref_solver(tau, theta_dict)
         loss_dict_ref = self.loss(tau, theta, y_ref)
-        self.log_dict(self._add_prefix(loss_dict_ref, "test_ref/"))
+        self.log_dict(
+            self._add_prefix(loss_dict_ref, "ref/"), logger=True, prog_bar=True, batch_size=tau.batch_size[0]
+        )
 
     def configure_optimizers(self):
-        opt = instantiate(self.cfg.opt, params=self.meta_solver.parameters())
+        opt = instantiate(self.cfg.opt, params=self.meta_solver.model.parameters())
         sch = instantiate(self.cfg.sch, optimizer=opt)
 
         return {
@@ -123,7 +124,6 @@ class NIGBMS(LightningModule):
 
 @hydra.main(version_base="1.3", config_path="../configs/train", config_name="poisson1d_small")
 def main(cfg: DictConfig):
-    # wandb.require("core")
     log.info(OmegaConf.to_yaml(cfg))
     seed_everything(seed=cfg.seed, workers=True)
     torch.set_default_dtype(eval(cfg.dtype))
@@ -131,8 +131,9 @@ def main(cfg: DictConfig):
     if cfg.wandb is not None:  # WandbLogger
         wandb.require("core")
         wandb.config = OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True)
-        wandb.init(project=cfg.wandb.project, config=wandb.config, mode=cfg.wandb.mode)
-        logger = WandbLogger(settings=wandb.Settings(start_method="thread"))
+        logger = WandbLogger(
+            settings=wandb.Settings(start_method="thread"), project=cfg.wandb.project, config=wandb.config
+        )
     else:
         logger = None
 
@@ -151,12 +152,5 @@ def main(cfg: DictConfig):
 
 # %%
 if __name__ == "__main__":
-    new_cmd_line_args = []
-    for arg in sys.argv:
-        # Try and catch the wandb agent formatted args
-        if "={" in arg:
-            arg = arg.replace("'", "")
-        new_cmd_line_args.append(arg)
-    sys.argv = new_cmd_line_args
-    print(sys.argv)
+    arrange_sweep_args_for_hydra()
     main()

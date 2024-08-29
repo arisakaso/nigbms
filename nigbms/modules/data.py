@@ -1,4 +1,5 @@
 # %%
+import warnings
 from pathlib import Path
 from typing import Callable, Dict, List, Type
 
@@ -20,6 +21,9 @@ from nigbms.modules.tasks import (
     torch2petsc_collate_fn,
 )
 from nigbms.utils.distributions import Distribution
+
+# suppress warnings. TODO: Deal with multiple workers compatibility
+warnings.filterwarnings("ignore", ".*does not have many workers.*")
 
 
 class OfflineDataset(Dataset):
