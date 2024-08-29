@@ -17,7 +17,7 @@ parameters:
               - _target_: nigbms.modules.models.InverseBoxCox
                 lmbda: 0
               - _target_: nigbms.modules.models.InverseBoxCox
-                mbda: 1.0e-3
+                lmbda: 1.0e-3
               - _target_: nigbms.modules.models.InverseBoxCox
                 lmbda: 1.0e-1
   wrapper:
