@@ -27,11 +27,15 @@ class Task:
 
 @tensorclass
 class MinimizeTestFunctionTask(Task):
+    """Task to minimize a test function f"""
+
     f: Callable = None  # Test function to minimize
 
 
 @tensorclass
 class LinearSystemTask(Task):
+    """Base class for linear system tasks"""
+
     A: Any = None
     b: Any = None
     x: Any = None  # Ground Truth if applicable, otherwise the solution provided by the solver
@@ -40,9 +44,9 @@ class LinearSystemTask(Task):
 
 @tensorclass(autocast=True)
 class PyTorchLinearSystemTask(LinearSystemTask):
-    """PyTorch Linear System Task"""
+    """PyTorch Linear System Task. Currentyl only support dense matrix A"""
 
-    A: Tensor = None  # currentyl only support dense matrix
+    A: Tensor = None
     b: Tensor = None
     x: Tensor = None  # Ground Truth if applicable, otherwise the solution provided by the solver
     rtol: Tensor = None
@@ -52,7 +56,7 @@ class PyTorchLinearSystemTask(LinearSystemTask):
 
 @tensorclass
 class PETScLinearSystemTask(LinearSystemTask):
-    """PETSc Linear System Task"""
+    """PETSc Linear System Task. A, b, x are PETSc objects, and othrers are tensors or tensordict."""
 
     A: PETSc.Mat | List[PETSc.Mat] = None  # currently only support sparse matrix (AIJ)
     b: PETSc.Vec | List[PETSc.Vec] = None
@@ -63,6 +67,15 @@ class PETScLinearSystemTask(LinearSystemTask):
     is_batched: bool = False
 
     def get_task(self, idx: int) -> LinearSystemTask:
+        """Get a single task from a batched task.
+
+        Args:
+            idx (int): index
+
+        Returns:
+            LinearSystemTask: task
+        """
+
         assert self.is_batched, "This method is only for batched tasks."
         return PETScLinearSystemTask(
             params=self.params[idx],
@@ -76,6 +89,8 @@ class PETScLinearSystemTask(LinearSystemTask):
 
 @tensorclass
 class OpenFOAMTask:
+    """OpenFOAM Task (placeholder)"""
+
     u: Any = None
     p: Any = None
 
@@ -99,6 +114,15 @@ class TaskDistribution:
 
 
 def generate_sample_pytorch_task(seed=0) -> PyTorchLinearSystemTask:
+    """Generate a sample PyTorchLinearSystemTask. Mainly for testing.
+
+    Args:
+        seed (int, optional): random seed. Defaults to 0.
+
+    Returns:
+        PyTorchLinearSystemTask: task
+    """
+
     torch.manual_seed(seed)
     params = TensorDict({"param1": torch.randn(5)})
     root_A = torch.randn(5, 5, dtype=torch.float64)
@@ -111,21 +135,58 @@ def generate_sample_pytorch_task(seed=0) -> PyTorchLinearSystemTask:
 
 
 def generate_sample_petsc_task(seed=0) -> PETScLinearSystemTask:
+    """Generate a sample PETScLinearSystemTask. Mainly for testing.
+
+    Args:
+        seed (int, optional): random seed. Defaults to 0.
+
+    Returns:
+        PETScLinearSystemTask: task
+    """
+
     pytorch_task = generate_sample_pytorch_task(seed)
     return torch2petsc(pytorch_task)
 
 
 def generate_sample_batched_pytorch_task(seed=0) -> PyTorchLinearSystemTask:
+    """Generate a batched PyTorchLinearSystemTask. Mainly for testing.
+
+    Args:
+        seed (int, optional): random seed. Defaults to 0.
+
+    Returns:
+        PyTorchLinearSystemTask: batched task
+    """
+
     pytorch_tasks = [generate_sample_pytorch_task(seed + i) for i in range(3)]
     return pytorch_task_collate_fn(pytorch_tasks)
 
 
 def generate_sample_batched_petsc_task(seed=0) -> PETScLinearSystemTask:
+    """Generate a batched PETScLinearSystemTask. Mainly for testing.
+
+    Args:
+        seed (int, optional): random seed. Defaults to 0.
+
+    Returns:
+        PETScLinearSystemTask: batched task
+    """
+
     petsc_tasks = [generate_sample_petsc_task(seed + i) for i in range(3)]
     return petsc_task_collate_fn(petsc_tasks)
 
 
 def petsc2torch(task: PETScLinearSystemTask) -> PyTorchLinearSystemTask:
+    """Convert PETScLinearSystemTask to PyTorchLinearSystemTask.
+    Currently this function only supports non-batched tasks.
+
+    Args:
+        task (PETScLinearSystemTask): task
+
+    Returns:
+        PyTorchLinearSystemTask: task
+    """
+    # TODO: Support batched tasks
     assert not task.is_batched, "Batched tasks are not supported yet. Please convert them one by one."
     size = task.A.getSize()
     row_idx, col_idx, values = task.A.getValuesCSR()
@@ -142,6 +203,16 @@ def petsc2torch(task: PETScLinearSystemTask) -> PyTorchLinearSystemTask:
 
 
 def torch2petsc(task: PyTorchLinearSystemTask) -> PETScLinearSystemTask:
+    """Convert PyTorchLinearSystemTask to PETScLinearSystemTask.
+    Currently this function only supports non-batched tasks.
+
+    Args:
+        task (PyTorchLinearSystemTask): task
+
+    Returns:
+        PETScLinearSystemTask: task
+    """
+    # TODO: Support batched tasks
     assert not task.is_batched, "Batched tasks are not supported yet. Please convert them one by one."
     A_sp = task.A.cpu().to_sparse_csr()
     A = PETSc.Mat().createAIJ(size=A_sp.shape, nnz=A_sp._nnz())
@@ -215,26 +286,54 @@ def load_petsc_task(path: Path) -> PETScLinearSystemTask:
 
 
 def save_pytorch_task(task: PyTorchLinearSystemTask, path: Path) -> None:
-    """Save PyTorchLinearSystemTask to disk."""
+    """Save PyTorchLinearSystemTask to disk.
+
+    Args:
+        task (PyTorchLinearSystemTask): task
+        path (Path): path to save the task
+    """
     # task.memmap(path)
     path.mkdir(parents=True, exist_ok=True)
     pickle.dump(task, (path / "task.pkl").open("wb"))
 
 
 def load_pytorch_task(path: Path) -> PyTorchLinearSystemTask:
-    """Load PyTorchLinearSystemTask from disk."""
+    """Load PyTorchLinearSystemTask from disk.
+
+    Args:
+        path (Path): path to the task directory
+
+    Returns:
+        PyTorchLinearSystemTask: task
+    """
     # FIXME: load_memmap gives an error: /usr/local/lib/python3.10/dist-packages/tensordict/_td.py:2390: KeyError
     # return TensorDict.load_memmap(path)
     return pickle.load((path / "task.pkl").open("rb"))
 
 
 def pytorch_task_collate_fn(batch: List[PyTorchLinearSystemTask]) -> PyTorchLinearSystemTask:
+    """Collate function for PyTorchLinearSystemTask.
+
+    Args:
+        batch (List[PyTorchLinearSystemTask]): batch of tasks
+
+    Returns:
+        PyTorchLinearSystemTask: batched task
+    """
     task = torch.stack(batch)
     task.is_batched = True
     return task
 
 
 def petsc_task_collate_fn(batch: List[PETScLinearSystemTask]) -> PETScLinearSystemTask:
+    """Collate function for PETScLinearSystemTask.
+
+    Args:
+        batch (List[PETScLinearSystemTask]): batch of tasks
+
+    Returns:
+        PETScLinearSystemTask: batched task. A, b, x are lists, others are tensors or tensordict.
+    """
     tau = torch.stack(batch)
     tau.A = [task.A for task in batch]
     tau.b = [task.b for task in batch]
@@ -244,10 +343,26 @@ def petsc_task_collate_fn(batch: List[PETScLinearSystemTask]) -> PETScLinearSyst
 
 
 def torch2petsc_collate_fn(batch: List[PyTorchLinearSystemTask]) -> PETScLinearSystemTask:
+    """Collate function for converting PyTorchLinearSystemTask to PETScLinearSystemTask.
+
+    Args:
+        batch (List[PyTorchLinearSystemTask]): batch of tasks
+
+    Returns:
+        PETScLinearSystemTask: batched task
+    """
     batch = [torch2petsc(task) for task in batch]
     return petsc_task_collate_fn(batch)
 
 
 def petsc2torch_collate_fn(batch: List[PETScLinearSystemTask]) -> PyTorchLinearSystemTask:
+    """Collate function for converting PETScLinearSystemTask to PyTorchLinearSystemTask.
+
+    Args:
+        batch (List[PETScLinearSystemTask]): batch of tasks
+
+    Returns:
+        PyTorchLinearSystemTask: batched task
+    """
     batch = [petsc2torch(task) for task in batch]
     return pytorch_task_collate_fn(batch)

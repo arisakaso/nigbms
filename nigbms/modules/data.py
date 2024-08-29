@@ -1,4 +1,3 @@
-# %%
 import warnings
 from pathlib import Path
 from typing import Callable, Dict, List, Type
@@ -27,6 +26,8 @@ warnings.filterwarnings("ignore", ".*does not have many workers.*")
 
 
 class OfflineDataset(Dataset):
+    """Offline dataset for loading pre-generated tasks from disk."""
+
     def __init__(
         self,
         data_dir: Path,
@@ -35,6 +36,16 @@ class OfflineDataset(Dataset):
         maxiter_dist: Distribution,
         task_type: Type,
     ) -> None:
+        """
+
+        Args:
+            data_dir (Path): directory containing the pre-generated tasks.
+                Each task is saved in a subdirectory with the task id as the name.
+            idcs (List[int]): list of task ids to load.
+            rtol_dist (Distribution): distribution for rtol values.
+            maxiter_dist (Distribution): distribution for maxiter values.
+            task_type (Type): task type, either PyTorchLinearSystemTask or PETScLinearSystemTask.
+        """
         self.data_dir = Path(data_dir)
         self.idcs = idcs
         self.rtol_dist = rtol_dist
@@ -60,7 +71,15 @@ class OfflineDataset(Dataset):
 # TODO: Is IterableDataset more appropriate?
 # see https://pytorch.org/docs/stable/data.html#iterable-style-datasets
 class OnlineDataset(Dataset):
+    """Online dataset for generating tasks on-the-fly."""
+
     def __init__(self, task_params_type: Type, task_constructor: Callable, distributions: DictConfig) -> None:
+        """
+        Args:
+            task_params_type (Type): TaskParams type
+            task_constructor (Callable): task constructor function that takes a TaskParams object and returns a Task
+            distributions (DictConfig): dictionary of distributions for each parameter in the TaskParams
+        """
         self.task_params_type = task_params_type
         self.task_constructor = task_constructor
         self.distributions = distributions
@@ -75,7 +94,15 @@ class OnlineDataset(Dataset):
 
 
 class OnlineIterableDataset(IterableDataset):
+    """Online iterable dataset for generating tasks on-the-fly."""
+
     def __init__(self, task_params_type: Type, task_constructor: Callable, distributions: DictConfig) -> None:
+        """
+        Args:
+            task_params_type (Type): TaskParams type
+            task_constructor (Callable): task constructor function that takes a TaskParams object and returns a Task
+            distributions (DictConfig): dictionary of distributions for each parameter in the TaskParams
+        """
         self.task_params_type = task_params_type
         self.task_constructor = task_constructor
         self.distributions = distributions
@@ -105,9 +132,12 @@ class OfflineDataModule(LightningDataModule):
 
         Args:
             data_dir (Path): root directory of the dataset
-            dataset_sizes (Dict[str, int]): number of samples in each dataset. keys: "train", "val", "test"
-            rtol_dists (Dict[str, Distribution]): rtol distributions for each dataset. keys: "train", "val", "test"
-            maxiter_dists (Dict[str, Distribution]): maxiter distributions for each dataset. keys: "train", "val", "test"
+            dataset_sizes (Dict[str, int]): number of samples in each dataset.
+                keys: "train", "val", "test"
+            rtol_dists (Dict[str, Distribution]): rtol distributions for each dataset.
+                keys: "train", "val", "test"
+            maxiter_dists (Dict[str, Distribution]): maxiter distributions for each dataset.
+                keys: "train", "val", "test"
             in_task_type (Type): task type used for loading the dataset
             out_task_type (Type): task type used for the output of the dataloader
             batch_size (int): batch size
@@ -124,11 +154,14 @@ class OfflineDataModule(LightningDataModule):
         self.num_workers = num_workers
 
     def prepare_data(self) -> None:
+        """Prepare data by splitting the indices for each dataset."""
         dataset_names, dataset_sizes = zip(*self.dataset_sizes.items(), strict=False)
         indices_ranges = np.split(np.arange(sum(dataset_sizes)), np.cumsum(dataset_sizes)[:-1])
         self.indcs = dict(zip(dataset_names, indices_ranges, strict=False))
 
     def setup(self, stage: str = None):
+        """Choose appropriate collate_fn and set up datasets."""
+
         # set up collate_fn
         task_combination = (self.in_task_type, self.out_task_type)
         if task_combination == (PyTorchLinearSystemTask, PyTorchLinearSystemTask):
@@ -195,6 +228,3 @@ class OfflineDataModule(LightningDataModule):
             num_workers=self.num_workers,
             # generator=torch.Generator(device="cuda"), # What was this...?
         )
-
-
-# %%
