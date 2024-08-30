@@ -37,8 +37,9 @@ class SurrogateSolverLoss(Module):
         Returns:
             dict: dict of losses
         """
+        is_converged = y == 0
+
         if self.mask:
-            is_converged = y == 0
             y_hat = torch.where(is_converged, 0, y_hat)
             dvf_hat = torch.where(is_converged, 0, dvf_hat)
 

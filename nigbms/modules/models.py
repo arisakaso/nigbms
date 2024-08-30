@@ -45,7 +45,7 @@ class InverseBoxCox(Module):
 
 
 class ExponentialDecay(Module):
-    def __init__(self, in_dim, out_dim, n_units, n_components, **kwargs) -> None:
+    def __init__(self, in_dim, out_dim, n_units, n_components, output_activation, **kwargs) -> None:
         super().__init__()
 
         self.decay_rates = nn.Parameter(torch.rand(n_components, 1))  # (n_components, 1)
@@ -54,7 +54,7 @@ class ExponentialDecay(Module):
             nn.Linear(in_dim, n_units),
             nn.GELU(),
             nn.Linear(n_units, n_components),
-            nn.ReLU(),  # must be postive
+            output_activation,  # must be postive
         )  # output: (bs, n_components)
 
     def forward(self, x: Tensor) -> Tensor:
