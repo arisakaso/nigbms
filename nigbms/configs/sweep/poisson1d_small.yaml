@@ -22,16 +22,22 @@ sweep:
     #     lmbda: 1.0e-3
     #   - _target_: nigbms.modules.models.InverseBoxCox
     #     lmbda: 1.0e-1
-    surrogate.model.hidden_activation:
+    # surrogate.model.hidden_activation:
+    #   values:
+    #   - _target_: torch.nn.SiLU
+    #   - _target_: torch.nn.GELU
+    # surrogate.model.n_layers:
+    #   values:
+    #   - 1
+    #   - 2
+    #   - 3
+    #   - 4
+    surrogate.model.n_components:
       values:
-      - _target_: torch.nn.SiLU
-      - _target_: torch.nn.GELU
-    surrogate.model.n_layers:
-      values:
-      - 1
-      - 2
-      - 3
-      - 4
+      - 31
+      - 64
+      - 128
+      - 256
     # wrapper.hparams.loss.weights:
     #   values:
     #     - dvL_loss: 1

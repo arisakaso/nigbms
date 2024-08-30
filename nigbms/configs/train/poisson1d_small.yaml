@@ -67,7 +67,7 @@ surrogate:
     n_units: 1024
     n_layers: 2
     hidden_activation:
-      _target_: torch.nn.GELU
+      _target_: torch.nn.SiLU
     output_activation: 
       _target_: torch.nn.Identity
     init_weight: null
