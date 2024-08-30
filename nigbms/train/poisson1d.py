@@ -70,17 +70,34 @@ class NIGBMS(LightningModule):
             loss_ref = self.loss(tau, theta_ref, y_ref)["loss"]
             f_true = torch.autograd.grad(loss_ref, theta_ref)[0]
             sim = torch.cosine_similarity(f_true, theta.grad, dim=1, eps=1e-20)
-            self.log("surrogate/sim", sim.mean(), logger=True, prog_bar=True, batch_size=tau.batch_size[0])
+            self.log(
+                "surrogate/sim",
+                sim.mean(),
+                logger=True,
+                prog_bar=True,
+                on_epoch=True,
+                on_step=False,
+                batch_size=tau.batch_size[0],
+            )
 
         if self.current_epoch >= self.cfg.warmup:
             opt.step()
 
-        self.log_dict(self._add_prefix(loss_dict, "train/"), logger=True, prog_bar=True, batch_size=tau.batch_size[0])
+        self.log_dict(
+            self._add_prefix(loss_dict, "train/"),
+            logger=True,
+            prog_bar=True,
+            on_epoch=True,
+            on_step=False,
+            batch_size=tau.batch_size[0],
+        )
         if self.wrapped_solver.loss_dict:
             self.log_dict(
                 self._add_prefix(self.wrapped_solver.loss_dict, "surrogate/"),
                 logger=True,
                 prog_bar=True,
+                on_epoch=True,
+                on_step=False,
                 batch_size=tau.batch_size[0],
             )
 
@@ -94,7 +111,14 @@ class NIGBMS(LightningModule):
         y = self.wrapped_solver(tau, theta, mode="test")  # no surrogate
         loss_dict = self.loss(tau, theta, y)
 
-        self.log_dict(self._add_prefix(loss_dict, "val/"), logger=True, prog_bar=True, batch_size=tau.batch_size[0])
+        self.log_dict(
+            self._add_prefix(loss_dict, "val/"),
+            logger=True,
+            prog_bar=True,
+            on_epoch=True,
+            on_step=False,
+            batch_size=tau.batch_size[0],
+        )
 
     def test_step(self, batch, batch_idx):
         tau = batch
@@ -102,13 +126,25 @@ class NIGBMS(LightningModule):
         theta = self.meta_solver(tau)
         y = self.wrapped_solver(tau, theta, mode="test")  # no surrogate
         loss_dict = self.loss(tau, theta, y)
-        self.log_dict(self._add_prefix(loss_dict, "test/"), logger=True, prog_bar=True, batch_size=tau.batch_size[0])
+        self.log_dict(
+            self._add_prefix(loss_dict, "test/"),
+            logger=True,
+            prog_bar=True,
+            on_epoch=True,
+            on_step=False,
+            batch_size=tau.batch_size[0],
+        )
 
         theta_dict = self.constructor(theta)
         y_ref = self.ref_solver(tau, theta_dict)
         loss_dict_ref = self.loss(tau, theta, y_ref)
         self.log_dict(
-            self._add_prefix(loss_dict_ref, "ref/"), logger=True, prog_bar=True, batch_size=tau.batch_size[0]
+            self._add_prefix(loss_dict_ref, "ref/"),
+            logger=True,
+            prog_bar=True,
+            on_epoch=True,
+            on_step=False,
+            batch_size=tau.batch_size[0],
         )
 
     def configure_optimizers(self):
