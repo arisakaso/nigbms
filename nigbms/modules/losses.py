@@ -11,7 +11,7 @@ from nigbms.utils.convert import petscvec2tensor
 class SurrogateSolverLoss(Module):
     """Loss function for training surrogate solvers (f_hat)"""
 
-    def __init__(self, weights: dict, reduce: bool) -> None:
+    def __init__(self, weights: dict, reduce: bool, mask: bool = False) -> None:
         """
 
         Args:
@@ -21,12 +21,13 @@ class SurrogateSolverLoss(Module):
         super().__init__()
         self.weights = weights
         self.reduce = reduce
+        self.mask = mask
 
     def forward(self, y, y_hat, dvf, dvf_hat, dvL, dvL_hat) -> dict:
         """Compute the loss
 
         Args:
-            y (_type_): output of the solver
+            y (_type_): output of the solver i.e. history of residuals
             y_hat (_type_): output of the surrogate solver
             dvf (_type_): directional derivative of the solver
             dvf_hat (_type_): directional derivative of the surrogate solver
@@ -36,6 +37,10 @@ class SurrogateSolverLoss(Module):
         Returns:
             dict: dict of losses
         """
+        if self.mask:
+            is_converged = y == 0
+            y_hat = torch.where(is_converged, 0, y_hat)
+            dvf_hat = torch.where(is_converged, 0, dvf_hat)
 
         losses = {
             "y_loss": mse_loss(y, y_hat),

@@ -44,6 +44,26 @@ class InverseBoxCox(Module):
             return torch.exp(torch.log(self.lmbda * x + 1) / self.lmbda)
 
 
+class ExponentialDecay(Module):
+    def __init__(self, in_dim, out_dim, n_units, n_components, **kwargs) -> None:
+        super().__init__()
+
+        self.decay_rates = nn.Parameter(torch.rand(n_components, 1))  # (n_components, 1)
+        self.roll_out = torch.arange(out_dim).unsqueeze(0).to("cuda:1")  # (1, out_dim)
+        self.layers = nn.Sequential(
+            nn.Linear(in_dim, n_units),
+            nn.GELU(),
+            nn.Linear(n_units, n_components),
+            nn.ReLU(),  # must be postive
+        )  # output: (bs, n_components)
+
+    def forward(self, x: Tensor) -> Tensor:
+        c = self.layers(x)
+        base = torch.exp(-self.decay_rates * self.roll_out)  # (n_components, out_dim)
+        y = c @ base  # (bs, out_dim)
+        return y
+
+
 class MLP(Module):
     def __init__(
         self,
@@ -69,7 +89,7 @@ class MLP(Module):
         self.layers.append(nn.Dropout(p=dropout))
 
         # hidden layers
-        for i in range(num_layers):
+        for _ in range(num_layers):
             self.layers.append(nn.Linear(num_neurons, num_neurons))
             if batch_normalization:
                 self.layers.append(nn.BatchNorm1d(num_neurons, track_running_stats=False))

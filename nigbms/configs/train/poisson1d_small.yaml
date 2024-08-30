@@ -61,14 +61,19 @@ surrogate:
     # e0_enc:
     #   - ${latent_dim}
   model:
+    _target_: nigbms.modules.models.ExponentialDecay
+    in_dim: 124
     out_dim: ${solver.params_fix.history_length}
-    num_layers: 2
-    num_neurons: 1024
-    init_weight: null
-      # dist: uniform
-      # scale: 1.0e-3
-    output_activation: 
-      _target_: torch.nn.Identity
+    n_units: 1024
+    n_components: ${dim}
+    # out_dim: ${solver.params_fix.history_length}
+    # num_layers: 2
+    # num_neurons: 1024
+    # init_weight: null
+    #   # dist: uniform
+    #   # scale: 1.0e-3
+    # output_activation: 
+    #   _target_: torch.nn.Identity
 
 
 constructor:
@@ -90,8 +95,9 @@ wrapper:
     loss:
       weights:
         y_loss: 0
-        dvf_loss: 0
+        dvf_loss: 1
         dvL_loss: 0
+      mask: True
     clip: null
     grad_type: cv_fwd
     jvp_type: forwardAD
@@ -143,7 +149,7 @@ trainer:
   max_epochs: 100
   accelerator: gpu
   devices: 
-    - 0
+    - 1
   check_val_every_n_epoch: 20
   fast_dev_run: False
   # limit_train_batches: 2
