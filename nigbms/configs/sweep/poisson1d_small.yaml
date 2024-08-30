@@ -1,49 +1,33 @@
-project: ${hydra:job.config_name}
-program: nigbms/train/poisson1d.py
-name: ${now:%Y-%m-%d_%H-%M-%S}
-method: grid
-parameters:
-  latent_dim:
-    values:
-      - 32
-      - 16
-  surrogate:
-    parameters:
-      model:
-        parameters:
-          output_activation:
-            values:
-              - _target_: torch.nn.Identity
-              - _target_: nigbms.modules.models.InverseBoxCox
-                lmbda: 0
-              - _target_: nigbms.modules.models.InverseBoxCox
-                lmbda: 1.0e-3
-              - _target_: nigbms.modules.models.InverseBoxCox
-                lmbda: 1.0e-1
-  wrapper:
-    parameters:
-      hparams:
-        parameters:
-          # grad_type:
-          #   values:
-          #     - f_true
-          #     - f_fwd
-          opt:
-            parameters:
-              lr:
-                values:
-                  - 1.0e-2        
-                  - 1.0e-3
-                  - 1.0e-4
-                  - 1.0e-5
-          # clip:
-          #   values:
-          #     - null
-          #     - 1.0
-          loss:
-            parameters:
-              weights:
-                values:
-                  - {dvL_loss: 1}
-                  - {dvf_loss: 1}
-  
+settings:
+  agents_per_gpu: 2
+  sweep_path: null
+
+sweep:
+  project: ${hydra:job.config_name}
+  program: nigbms/train/poisson1d.py
+  name: ${now:%Y-%m-%d_%H-%M-%S}
+  method: grid
+  parameters:
+    latent_dim:
+      values:
+        - 32
+        - 16
+    # surrogate.model.output_activation:
+    #   values:
+    #   - _target_: torch.nn.Identity
+    #   - _target_: nigbms.modules.models.InverseBoxCox
+    #     lmbda: 0
+    #   - _target_: nigbms.modules.models.InverseBoxCox
+    #     lmbda: 1.0e-3
+    #   - _target_: nigbms.modules.models.InverseBoxCox
+    #     lmbda: 1.0e-1
+    # wrapper.hparams.loss.weights:
+    #   values:
+    #     - dvL_loss: 1
+    #     - dvf_loss: 1
+    # wrapper.hparams.opt.lr:
+    #   values:
+    #     - 1.0e-2        
+    #     - 1.0e-3
+    #     - 1.0e-4
+    #     - 1.0e-5

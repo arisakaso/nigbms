@@ -124,7 +124,7 @@ class NIGBMS(LightningModule):
 
 @hydra.main(version_base="1.3", config_path="../configs/train", config_name="poisson1d_small")
 def main(cfg: DictConfig):
-    log.info(OmegaConf.to_yaml(cfg))
+    # log.info(OmegaConf.to_yaml(cfg))
     seed_everything(seed=cfg.seed, workers=True)
     torch.set_default_dtype(eval(cfg.dtype))
 
@@ -148,6 +148,8 @@ def main(cfg: DictConfig):
     # TEST
     if cfg.test:
         trainer.test(ckpt_path="last", datamodule=data_module)
+
+    wandb.finish()
 
 
 # %%

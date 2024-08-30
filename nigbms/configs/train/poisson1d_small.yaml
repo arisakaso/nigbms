@@ -140,13 +140,16 @@ callbacks:
   
 
 trainer:
-  max_epochs: 100
+  max_epochs: 1
   accelerator: gpu
   devices: 
     - 0
   check_val_every_n_epoch: 20
   log_every_n_steps: 1
   fast_dev_run: False
+  limit_train_batches: 2
+  limit_val_batches: 2
+  limit_test_batches: 2
 
 monitor: val/iter_r
 test: True

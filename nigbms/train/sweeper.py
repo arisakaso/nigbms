@@ -4,9 +4,26 @@ import time
 
 import hydra
 import torch
+import wandb
 from omegaconf import DictConfig, OmegaConf
 
-import wandb
+# TODO: nested parameters do not work properly with wandb 0.17.7
+# It causes duplicate runs in the sweep
+# Probably it is wandb's bug, but I'm not sure
+# Please use the flatten version of the sweep config
+# e.g.
+# ```yaml
+# parameters:
+#   param_group:
+#     parameters:
+#       param1:
+#         values: [1, 2, 3]```
+# should be
+# ```yaml
+# parameters:
+#   param_group.param1:
+#     values: [1, 2, 3]```
+# Although it causes duplicate parameters in the wandb log dashboard, we have no choice for now
 
 
 def create_new_sweep(cfg: DictConfig) -> str:
@@ -20,19 +37,15 @@ def create_new_sweep(cfg: DictConfig) -> str:
 
 @hydra.main(version_base="1.3", config_path="../configs/sweep", config_name="poisson1d_small")
 def main(cfg: DictConfig):
-    RUN_PER_GPU = 2
-    # path = "sohei/poisson1d_small/9h7gji5c"
-    path = None
-
+    path = cfg.settings.sweep_path
     if path is None:
-        path = create_new_sweep(cfg)
-
+        path = create_new_sweep(cfg.sweep)
     agents = []
     for i in range(torch.cuda.device_count()):
-        for _ in range(RUN_PER_GPU):
+        for _ in range(cfg.settings.agents_per_gpu):
             agents.append(
                 # start_new_session seems help to avoid wandb connection error (I'm not sure)
-                subprocess.Popen(f"CUDA_VISIBLE_DEVICES={i} wandb agent {path}", shell=True, start_new_session=True)
+                subprocess.Popen(f"CUDA_VISIBLE_DEVICES={i} wandb agent {path}", shell=True)
             )
             time.sleep(1)
 
