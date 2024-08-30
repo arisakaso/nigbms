@@ -32,8 +32,8 @@ meta_solver:
     b: 
       - ${dim}
   model:
-    num_layers: 1
-    num_neurons: 512
+    n_layers: 1
+    n_units: 512
     init_weight: 
       dist: uniform
       scale: 1.0e-2
@@ -62,18 +62,18 @@ surrogate:
     #   - ${latent_dim}
   model:
     _target_: nigbms.modules.models.ExponentialDecay
-    in_dim: 124
     out_dim: ${solver.params_fix.history_length}
-    n_units: 1024
     n_components: ${dim}
-    # out_dim: ${solver.params_fix.history_length}
-    # num_layers: 2
-    # num_neurons: 1024
-    # init_weight: null
+    n_units: 1024
+    n_layers: 2
+    hidden_activation:
+      _target_: torch.nn.GELU
+    output_activation: 
+      _target_: torch.nn.Identity
+    init_weight: null
       # dist: uniform
       # scale: 1.0e-3
-    # output_activation: 
-    #   _target_: torch.nn.Identity
+      
 
 
 constructor:
@@ -96,7 +96,7 @@ wrapper:
       weights:
         y_loss: 0
         y_loss_relative: 0
-        dvf_loss: 0
+        dvf_loss: 1
         dvf_loss_relative: 0
         dvL_loss: 0
       mask: True

@@ -45,17 +45,55 @@ class InverseBoxCox(Module):
 
 
 class ExponentialDecay(Module):
-    def __init__(self, in_dim, out_dim, n_units, n_components, output_activation, **kwargs) -> None:
+    def __init__(
+        self,
+        in_dim,  # input dimension
+        out_dim,  # output dimension
+        n_layers,  # number of hidden layers
+        n_units,  # number of neurons in the hidden layers
+        n_components,  # number of components
+        hidden_activation,
+        output_activation,
+        batch_normalization,
+        init_weight=None,
+        dropout=0,
+        **kwargs,
+    ) -> None:
         super().__init__()
 
         self.decay_rates = nn.Parameter(torch.rand(n_components, 1))  # (n_components, 1)
         self.roll_out = nn.Parameter(torch.arange(out_dim).unsqueeze(0), requires_grad=False)  # (1, out_dim)
-        self.layers = nn.Sequential(
-            nn.Linear(in_dim, n_units),
-            nn.GELU(),
-            nn.Linear(n_units, n_components),
-            output_activation,  # must be postive
-        )  # output: (bs, n_components)
+
+        self.layers = nn.Sequential()  # output: (bs, n_components)
+
+        # input layer
+        self.layers.append(nn.Linear(in_dim, n_units))
+        if batch_normalization:
+            self.layers.append(nn.BatchNorm1d(n_units, track_running_stats=False))
+        self.layers.append(hidden_activation)
+        self.layers.append(nn.Dropout(p=dropout))
+
+        # hidden layers
+        for _ in range(n_layers):
+            self.layers.append(nn.Linear(n_units, n_units))
+            if batch_normalization:
+                self.layers.append(nn.BatchNorm1d(n_units, track_running_stats=False))
+            self.layers.append(hidden_activation)
+            self.layers.append(nn.Dropout(p=dropout))
+
+        # output layer
+        self.layers.append(nn.Linear(n_units, n_components))
+        self.layers.append(output_activation)
+
+        # initialize weights
+        if init_weight is not None:
+            for layer in self.layers:
+                if isinstance(layer, nn.Linear):
+                    if init_weight.dist == "normal":
+                        nn.init.normal_(layer.weight, mean=0, std=init_weight.scale)
+                    elif init_weight.dist == "uniform":
+                        nn.init.uniform_(layer.weight, a=-init_weight.scale, b=init_weight.scale)
+                        nn.init.uniform_(layer.bias, a=-init_weight.scale, b=init_weight.scale)
 
     def forward(self, x: Tensor) -> Tensor:
         c = self.layers(x)
@@ -69,35 +107,36 @@ class MLP(Module):
         self,
         in_dim,  # input dimension
         out_dim,  # output dimension
-        num_layers,  # number of hidden layers
-        num_neurons,  # number of neurons in the hidden layers
+        n_layers,  # number of hidden layers
+        n_units,  # number of neurons in the hidden layers
         hidden_activation,
         output_activation,
         batch_normalization,
         init_weight=None,
         dropout=0,
+        **kwargs,
     ):
         super(MLP, self).__init__()
 
         self.layers = nn.Sequential()
 
         # input layer
-        self.layers.append(nn.Linear(in_dim, num_neurons))
+        self.layers.append(nn.Linear(in_dim, n_units))
         if batch_normalization:
-            self.layers.append(nn.BatchNorm1d(num_neurons, track_running_stats=False))
+            self.layers.append(nn.BatchNorm1d(n_units, track_running_stats=False))
         self.layers.append(hidden_activation)
         self.layers.append(nn.Dropout(p=dropout))
 
         # hidden layers
-        for _ in range(num_layers):
-            self.layers.append(nn.Linear(num_neurons, num_neurons))
+        for _ in range(n_layers):
+            self.layers.append(nn.Linear(n_units, n_units))
             if batch_normalization:
-                self.layers.append(nn.BatchNorm1d(num_neurons, track_running_stats=False))
+                self.layers.append(nn.BatchNorm1d(n_units, track_running_stats=False))
             self.layers.append(hidden_activation)
             self.layers.append(nn.Dropout(p=dropout))
 
         # output layer
-        self.layers.append(nn.Linear(num_neurons, out_dim))
+        self.layers.append(nn.Linear(n_units, out_dim))
         self.layers.append(output_activation)
 
         # initialize weights

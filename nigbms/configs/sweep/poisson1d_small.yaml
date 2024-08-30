@@ -12,26 +12,36 @@ sweep:
     #   values:
     #     - 32
     #     - 16
-    surrogate.model.output_activation:
-      values:
-      - _target_: torch.nn.Identity
-      - _target_: torch.nn.ReLU
+    # surrogate.model.output_activation:
+    #   values:
+    #   - _target_: torch.nn.Identity
+    #   - _target_: torch.nn.ReLU
     #   - _target_: nigbms.modules.models.InverseBoxCox
     #     lmbda: 0
     #   - _target_: nigbms.modules.models.InverseBoxCox
     #     lmbda: 1.0e-3
     #   - _target_: nigbms.modules.models.InverseBoxCox
     #     lmbda: 1.0e-1
-    wrapper.hparams.loss.weights:
+    surrogate.model.hidden_activation:
       values:
-        - dvL_loss: 1
-        - dvf_loss: 1
-        - dvf_loss_relative: 1
-        - y_loss: 1
-        - y_loss_relative: 1
-    wrapper.hparams.opt.lr:
+      - _target_: torch.nn.SiLU
+      - _target_: torch.nn.GELU
+    surrogate.model.n_layers:
       values:
-        - 1.0e-2        
-        - 1.0e-3
-        - 1.0e-4
-        - 1.0e-5
+      - 1
+      - 2
+      - 3
+      - 4
+    # wrapper.hparams.loss.weights:
+    #   values:
+    #     - dvL_loss: 1
+    #     - dvf_loss: 1
+    #     - dvf_loss_relative: 1
+    #     - y_loss: 1
+    #     - y_loss_relative: 1
+    # wrapper.hparams.opt.lr:
+    #   values:
+    #     - 1.0e-2        
+    #     - 1.0e-3
+    #     - 1.0e-4
+    #     - 1.0e-5
