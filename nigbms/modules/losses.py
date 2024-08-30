@@ -44,8 +44,9 @@ class SurrogateSolverLoss(Module):
 
         losses = {
             "y_loss": mse_loss(y, y_hat),
+            "y_loss_relative": (torch.where(is_converged, 0, (y - y_hat) / y) ** 2).mean(),
             "dvf_loss": mse_loss(dvf, dvf_hat),
-            "dvf_loss_relative": (((dvf - dvf_hat) / dvf) ** 2),
+            "dvf_loss_relative": (torch.where(is_converged, 0, (dvf - dvf_hat) / dvf) ** 2).mean(),
             "dvL_loss": mse_loss(dvL, dvL_hat),
             "loss": 0,
         }
@@ -53,8 +54,8 @@ class SurrogateSolverLoss(Module):
         for k, w in self.weights.items():
             losses["loss"] += w * losses[k]
 
-        if self.reduce:
-            losses = {k: v.mean() for k, v in losses.items()}
+        # if self.reduce:
+        #     losses = {k: v.mean() for k, v in losses.items()}
 
         return losses
 

@@ -49,7 +49,7 @@ class ExponentialDecay(Module):
         super().__init__()
 
         self.decay_rates = nn.Parameter(torch.rand(n_components, 1))  # (n_components, 1)
-        self.roll_out = torch.arange(out_dim).unsqueeze(0).to("cuda:1")  # (1, out_dim)
+        self.roll_out = nn.Parameter(torch.arange(out_dim).unsqueeze(0), requires_grad=False)  # (1, out_dim)
         self.layers = nn.Sequential(
             nn.Linear(in_dim, n_units),
             nn.GELU(),
