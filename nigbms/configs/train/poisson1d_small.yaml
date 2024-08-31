@@ -144,10 +144,12 @@ callbacks:
     save_last: ${test}
   - _target_: lightning.pytorch.callbacks.EarlyStopping
     monitor: surrogate/sim
-    patience: 10000
+    patience: 3
     verbose: True
     check_finite: True
     check_on_train_epoch_end: True
+    mode: max
+    min_delta: 0.01
   
 
 trainer:
