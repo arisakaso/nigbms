@@ -1,5 +1,5 @@
 settings:
-  agents_per_gpu: 2
+  agents_per_gpu: 3
   sweep_path: null
 
 sweep:
@@ -23,30 +23,7 @@ sweep:
     #   - _target_: nigbms.modules.models.InverseBoxCox
     #     lmbda: 1.0e-3
     #   - _target_: nigbms.modules.models.InverseBoxCox
-    #     lmbda: 1.0e-1
-    surrogate.features:
-      values:
-      - b: 
-        - 31
-        x0:
-        - 31
-        x:
-        - 31
-        e0:
-        - 31
-      - x0:
-        - 31
-        x:
-        - 31
-        e0:
-        - 31 
-      - x0:
-        - 31
-        x:
-        - 31
-      - e0:
-        - 31
-        
+    #     lmbda: 1.0e-1    
     # surrogate.model.hidden_activation:
     #   values:
     #   - _target_: torch.nn.SiLU
@@ -58,12 +35,32 @@ sweep:
     #   - 1.0e+0 # looks best
     #   - 1.0e-1
     #   - 1.0e-2
-    # surrogate.model.n_layers:
-    #   values:
-    #   - 1
-    #   - 2
-    #   - 3
-    #   - 4
+    surrogate.model.n_conv_layers:
+      values:
+      - 1
+      - 2
+      - 3
+      - 4
+    surrogate.model.n_fcv_layers:
+      values:
+      - 1
+      - 2
+      - 3
+      - 4
+    surrogate.model.base_channels:
+      values:
+      - 32
+      - 64
+      - 128
+      - 256
+      - 512
+    surrogate.model.kernel_size:
+      values:
+      - 3
+      - 5
+      - 7
+      - 9
+      - 11
     # surrogate.model.n_components:
     #   values:
     #   - 31
@@ -77,9 +74,9 @@ sweep:
     #     - dvf_loss_relative: 1
     #     - y_loss: 1
     #     - y_loss_relative: 1
-    # wrapper.hparams.opt.lr:
-    #   values:
-    #     - 1.0e-2        
-    #     - 1.0e-3
-    #     - 1.0e-4
-    #     - 1.0e-5
+    wrapper.hparams.opt.lr:
+      values:
+        - 1.0e-2        
+        - 1.0e-3
+        - 1.0e-4
+        - 1.0e-5

@@ -27,7 +27,7 @@ class Poisson1DSurrogateConfig:
             "hidden_activation": {"_target_": "torch.nn.SiLU"},
             "output_activation": {"_target_": "torch.nn.Identity"},
             "batch_normalization": False,
-            "init_weight": {"dist": "uniform", "scale": 1.0e-3},
+            "init_weight": None,
         }
     )
 
@@ -54,7 +54,7 @@ class ExponentialDecaySurrogateConfig:
             "hidden_activation": {"_target_": "torch.nn.SiLU"},
             "output_activation": {"_target_": "torch.nn.Identity"},
             "batch_normalization": False,
-            "init_weight": {"dist": "uniform", "scale": 1.0e-3},
+            "init_weight": None,
         }
     )
     n_components: int = 10
