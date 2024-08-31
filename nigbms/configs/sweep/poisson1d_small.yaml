@@ -1,5 +1,5 @@
 settings:
-  agents_per_gpu: 3
+  agents_per_gpu: 2
   sweep_path: null
 
 sweep:
@@ -24,6 +24,29 @@ sweep:
     #     lmbda: 1.0e-3
     #   - _target_: nigbms.modules.models.InverseBoxCox
     #     lmbda: 1.0e-1
+    surrogate.features:
+      values:
+      - b: 
+        - 31
+        x0:
+        - 31
+        x:
+        - 31
+        e0:
+        - 31
+      - x0:
+        - 31
+        x:
+        - 31
+        e0:
+        - 31 
+      - x0:
+        - 31
+        x:
+        - 31
+      - e0:
+        - 31
+        
     # surrogate.model.hidden_activation:
     #   values:
     #   - _target_: torch.nn.SiLU

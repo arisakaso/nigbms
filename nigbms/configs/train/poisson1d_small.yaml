@@ -4,11 +4,13 @@ defaults:
   - meta_solver: poisson1d_meta_solver_default
   - solver: pytorch_jacobi_default
   # - solver: petsc_jacobi_default  
-  - surrogate: poisson1d_surrogate_default
+  # - surrogate: poisson1d_surrogate_default
+  - surrogate: exponential_decay_default
   - wrapper: wrapped_solver_default
+  - _self_
 
 wandb: 
-  mode: disabled # must be onoine when sweep
+  mode: online # must be onoine when sweep
 
 data:
   data_dir: /workspaces/nigbms/data/raw/poisson1d/small
@@ -50,31 +52,37 @@ surrogate:
   params_fix: ${solver.params_fix}
   params_learn: ${solver.params_learn}
   features:
-    # b:
-    #   - ${dim}
-    # x0:
-    #   - ${dim}
-    # x:
-    #   - ${dim}
-    # e0:
-    #   - ${dim} 
-    e0_fft:
-      - 32
+    b:
+      - ${dim}
+    x0:
+      - ${dim}
+    x:
+      - ${dim}
+    e0:
+      - ${dim} 
+    # e0_fft:
+    #   - 32
     # e0_enc:
     #   - ${latent_dim}
+  n_components: 62
   model:
-    _target_: nigbms.modules.models.ExponentialDecay
-    out_dim: ${solver.params_fix.history_length}
-    n_components: 64
+    _target_: nigbms.modules.models.MLP
+    out_dim: 62
     n_units: 1024
     n_layers: 2
+    
+    # _target_: nigbms.modules.models.CNN1D
+    # out_dim: 62
+    # n_conv_layers: 5
+    # base_channels: 256
+
     hidden_activation:
       _target_: torch.nn.SiLU
     output_activation: 
       _target_: torch.nn.Identity
     init_weight: null
-    init_scale: 1.0e+0
-      
+    
+    
 
 
 constructor:

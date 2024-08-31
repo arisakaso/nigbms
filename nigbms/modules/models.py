@@ -119,6 +119,7 @@ class MLP(Module):
         **kwargs,
     ):
         super(MLP, self).__init__()
+        self.out_dim = out_dim
 
         self.layers = nn.Sequential()
 
@@ -200,48 +201,40 @@ class CNN1D(nn.Module):
     def __init__(
         self,
         in_channels,
-        out_unit=1,
+        out_dim=1,
         base_channels=64,
         kernel_size=3,
         batch_normalization=False,
-        hidden_activation="nn.GELU",
-        output_activation="nn.Identity",
-        num_conv_layers=2,
-        num_fcn_layers=2,
+        hidden_activation=nn.GELU(),
+        output_activation=nn.Identity(),
+        n_conv_layers=2,
+        n_fcn_layers=2,
+        **kwargs,
     ):
         super().__init__()
 
-        self.conv_layers = nn.ModuleList([nn.Conv1d(in_channels, base_channels, kernel_size, padding="same")])
+        self.layers = nn.Sequential()
+        self.layers.append(nn.Conv1d(in_channels, base_channels, kernel_size, padding="same"))
         self.fcn_layers = nn.ModuleList()
 
-        for _ in range(num_conv_layers - 1):
-            self.conv_layers.append(nn.Conv1d(base_channels, base_channels, kernel_size, padding="same"))
+        for _ in range(n_conv_layers - 1):
+            self.layers.append(nn.Conv1d(base_channels, base_channels, kernel_size, padding="same"))
             if batch_normalization:
-                self.conv_layers.append(nn.BatchNorm1d(base_channels, track_running_stats=False))
-            self.conv_layers.append(eval(hidden_activation)())
+                self.layers.append(nn.BatchNorm1d(base_channels, track_running_stats=False))
+            self.layers.append(hidden_activation)
 
-        self.gap = nn.AdaptiveAvgPool1d(1)
+        self.layers.append(nn.AdaptiveAvgPool1d(1))
+        self.layers.append(nn.Flatten())
 
-        for _ in range(num_fcn_layers - 1):
-            self.fcn_layers.append(nn.Linear(base_channels, base_channels))
-            self.fcn_layers.append(eval(hidden_activation)())
+        for _ in range(n_fcn_layers - 1):
+            self.layers.append(nn.Linear(base_channels, base_channels))
+            self.layers.append(hidden_activation)
 
-        self.fcn_last = nn.Linear(base_channels, out_unit)
-
-        self.output_activation = eval(output_activation)()
+        self.layers.append(nn.Linear(base_channels, out_dim))
+        self.layers.append(output_activation)
 
     def forward(self, x):
-        for layer in self.conv_layers:
-            x = layer(x)
-
-        x = self.gap(x).squeeze(-1)
-
-        for layer in self.fcn_layers:
-            x = layer(x)
-
-        x = self.fcn_last(x)
-
-        return self.output_activation(x)
+        return self.layers(x)
 
 
 class UNet(nn.Module):
