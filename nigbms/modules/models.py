@@ -98,7 +98,8 @@ class ExponentialDecay(Module):
 
     def forward(self, x: Tensor) -> Tensor:
         c = self.layers(x)
-        base = torch.exp(-self.decay_rates * self.roll_out)  # (n_components, out_dim)
+        # base = torch.exp(-self.decay_rates * self.roll_out)  # (n_components, out_dim)
+        base = torch.pow(self.decay_rates, self.roll_out)  # (n_components, out_dim)
         y = c @ base  # (bs, out_dim)
         return y
 
