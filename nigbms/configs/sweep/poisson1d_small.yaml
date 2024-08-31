@@ -41,7 +41,7 @@ sweep:
       - 2
       - 3
       - 4
-    surrogate.model.n_fcv_layers:
+    surrogate.model.n_fcn_layers:
       values:
       - 1
       - 2
