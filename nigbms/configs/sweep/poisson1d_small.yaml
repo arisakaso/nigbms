@@ -28,13 +28,13 @@ sweep:
     #   values:
     #   - _target_: torch.nn.SiLU
     #   - _target_: torch.nn.GELU
-    surrogate.model.init_scale:
-      values:
-      - 1.0e+2
-      - 1.0e+1
-      - 1.0e+0
-      - 1.0e-1
-      - 1.0e-2
+    # surrogate.model.init_scale:
+    #   values:
+    #   - 1.0e+2
+    #   - 1.0e+1
+    #   - 1.0e+0 # looks best
+    #   - 1.0e-1
+    #   - 1.0e-2
     # surrogate.model.n_layers:
     #   values:
     #   - 1

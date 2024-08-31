@@ -112,7 +112,7 @@ class FFTCodec(Codec):
         assert latent_dim % 2 == 0, "latent_dim must be even for FFT codec"
 
     def encode(self, x: Tensor) -> Tensor:
-        z = torch.fft.rfft(x, dim=-1)[..., : self.latent_dim // 2]
+        z = torch.fft.rfft(x, dim=-1)[..., : self.latent_dim // 2, :]
         z = torch.view_as_real(z).reshape(-1, self.latent_dim)
         return z
 

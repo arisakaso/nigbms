@@ -8,7 +8,7 @@ defaults:
   - wrapper: wrapped_solver_default
 
 wandb: 
-  mode: online # must be onoine when sweep
+  mode: disabled # must be onoine when sweep
 
 data:
   data_dir: /workspaces/nigbms/data/raw/poisson1d/small
@@ -50,14 +50,16 @@ surrogate:
   params_fix: ${solver.params_fix}
   params_learn: ${solver.params_learn}
   features:
-    b:
-      - ${dim}
-    x0:
-      - ${dim}
-    x:
-      - ${dim}
-    e0:
-      - ${dim} 
+    # b:
+    #   - ${dim}
+    # x0:
+    #   - ${dim}
+    # x:
+    #   - ${dim}
+    # e0:
+    #   - ${dim} 
+    e0_fft:
+      - 32
     # e0_enc:
     #   - ${latent_dim}
   model:
@@ -90,10 +92,10 @@ wrapper:
   hparams:
     opt:
       _target_: torch.optim.Adam
-      lr: 5.0e-3
+      lr: 1.0e-3
     loss:
       weights:
-        y_loss: 1
+        y_loss: 0
         y_loss_relative: 0
         dvf_loss: 1
         dvf_loss_relative: 0
