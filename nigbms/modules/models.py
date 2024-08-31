@@ -55,13 +55,14 @@ class ExponentialDecay(Module):
         hidden_activation,
         output_activation,
         batch_normalization,
+        init_scale=1.0,
         init_weight=None,
         dropout=0,
         **kwargs,
     ) -> None:
         super().__init__()
 
-        self.decay_rates = nn.Parameter(torch.rand(n_components, 1))  # (n_components, 1)
+        self.decay_rates = nn.Parameter(torch.rand(n_components, 1) * init_scale)  # (n_components, 1)
         self.roll_out = nn.Parameter(torch.arange(out_dim).unsqueeze(0), requires_grad=False)  # (1, out_dim)
 
         self.layers = nn.Sequential()  # output: (bs, n_components)

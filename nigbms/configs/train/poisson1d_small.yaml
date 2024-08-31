@@ -63,7 +63,7 @@ surrogate:
   model:
     _target_: nigbms.modules.models.ExponentialDecay
     out_dim: ${solver.params_fix.history_length}
-    n_components: ${dim}
+    n_components: 64
     n_units: 1024
     n_layers: 2
     hidden_activation:
@@ -71,8 +71,7 @@ surrogate:
     output_activation: 
       _target_: torch.nn.Identity
     init_weight: null
-      # dist: uniform
-      # scale: 1.0e-3
+    init_scale: 1.0e+0
       
 
 
@@ -91,10 +90,10 @@ wrapper:
   hparams:
     opt:
       _target_: torch.optim.Adam
-      lr: 1.0e-3
+      lr: 5.0e-3
     loss:
       weights:
-        y_loss: 0
+        y_loss: 1
         y_loss_relative: 0
         dvf_loss: 1
         dvf_loss_relative: 0
@@ -148,7 +147,7 @@ callbacks:
   
 
 trainer:
-  max_epochs: 30
+  max_epochs: 20
   accelerator: gpu
   devices: 
     - 0

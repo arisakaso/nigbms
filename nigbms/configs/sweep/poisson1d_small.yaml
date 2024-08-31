@@ -1,5 +1,5 @@
 settings:
-  agents_per_gpu: 2
+  agents_per_gpu: 3
   sweep_path: null
 
 sweep:
@@ -12,6 +12,8 @@ sweep:
     #   values:
     #     - 32
     #     - 16
+    #     - 8
+    #     - 4
     # surrogate.model.output_activation:
     #   values:
     #   - _target_: torch.nn.Identity
@@ -26,18 +28,25 @@ sweep:
     #   values:
     #   - _target_: torch.nn.SiLU
     #   - _target_: torch.nn.GELU
+    surrogate.model.init_scale:
+      values:
+      - 1.0e+2
+      - 1.0e+1
+      - 1.0e+0
+      - 1.0e-1
+      - 1.0e-2
     # surrogate.model.n_layers:
     #   values:
     #   - 1
     #   - 2
     #   - 3
     #   - 4
-    surrogate.model.n_components:
-      values:
-      - 31
-      - 64
-      - 128
-      - 256
+    # surrogate.model.n_components:
+    #   values:
+    #   - 31
+    #   - 64
+    #   - 128
+    #   - 256
     # wrapper.hparams.loss.weights:
     #   values:
     #     - dvL_loss: 1
