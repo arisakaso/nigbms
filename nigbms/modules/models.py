@@ -215,7 +215,6 @@ class CNN1D(nn.Module):
 
         self.layers = nn.Sequential()
         self.layers.append(nn.Conv1d(in_channels, base_channels, kernel_size, padding="same"))
-        self.fcn_layers = nn.ModuleList()
 
         for _ in range(n_conv_layers - 1):
             self.layers.append(nn.Conv1d(base_channels, base_channels, kernel_size, padding="same"))
@@ -232,6 +231,53 @@ class CNN1D(nn.Module):
 
         self.layers.append(nn.Linear(base_channels, out_dim))
         self.layers.append(output_activation)
+
+    def forward(self, x):
+        return self.layers(x)
+
+
+class CNN1DWithPooling(nn.Module):
+    def __init__(
+        self,
+        in_channels,
+        out_dim=1,
+        base_channels=64,
+        kernel_size=3,
+        batch_normalization=False,
+        hidden_activation=nn.GELU(),
+        output_activation=nn.Identity(),
+        n_conv_layers=2,
+        n_fcn_layers=2,
+        **kwargs,
+    ):
+        super().__init__()
+
+        layers = nn.Sequential()
+        layers.append(nn.Conv1d(in_channels, base_channels, kernel_size, padding="same"))
+        layers.append(nn.Conv1d(base_channels, base_channels, kernel_size, padding="same"))
+        layers.append(hidden_activation)
+        layers.append(nn.MaxPool1d(2))
+
+        for i in range(n_conv_layers - 1):  # Double conv
+            layers.append(
+                nn.Conv1d(base_channels * (2**i), base_channels * (2 ** (i + 1)), kernel_size, padding="same")
+            )
+            layers.append(
+                nn.Conv1d(base_channels * (2 ** (i + 1)), base_channels * (2 ** (i + 1)), kernel_size, padding="same")
+            )
+            layers.append(hidden_activation)
+            layers.append(nn.MaxPool1d(2))
+
+        layers.append(nn.AdaptiveAvgPool1d(1))
+        layers.append(nn.Flatten())
+
+        # for _ in range(n_fcn_layers - 1):
+        #     layers.append(nn.Linear(base_channels, base_channels))
+        #     layers.append(hidden_activation)
+
+        layers.append(nn.Linear(base_channels * (2 ** (n_conv_layers - 1)), out_dim))
+        layers.append(output_activation)
+        self.layers = layers
 
     def forward(self, x):
         return self.layers(x)
