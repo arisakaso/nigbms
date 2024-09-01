@@ -73,6 +73,16 @@ class register_custom_grad(Function):
                         torch.nn.utils.clip_grad_norm_(wrapper.surrogate.parameters(), hparams.clip)
                     wrapper.opt.step()
 
+                    for _ in range(hparams.additional_steps):
+                        wrapper.opt.zero_grad()
+                        _y_hat, _dvf_hat = torch.func.jvp(wrapper.f_hat, (theta,), (v,))  # forward AD
+                        _dvL_hat = torch.sum(grad_y * _dvf_hat, dim=1, keepdim=True)
+                        _loss_dict = wrapper.loss(wrapper.y, _y_hat, dvf, _dvf_hat, dvL, _dvL_hat)
+                        _loss_dict["loss"].backward(inputs=parameters)
+                        if isinstance(hparams.clip, float):
+                            torch.nn.utils.clip_grad_norm_(wrapper.surrogate.parameters(), hparams.clip)
+                        wrapper.opt.step()
+
         with torch.no_grad():
             grad_theta = torch.mean(eval(hparams.grad_type), dim=0)  # average over Nv
 

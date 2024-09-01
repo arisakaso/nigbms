@@ -236,6 +236,43 @@ class CNN1D(nn.Module):
         return self.layers(x)
 
 
+class CNN1DRes(nn.Module):
+    def __init__(
+        self,
+        in_channels,
+        out_dim=1,
+        base_channels=64,
+        kernel_size=3,
+        batch_normalization=False,
+        hidden_activation=nn.GELU(),
+        output_activation=nn.Identity(),
+        n_conv_layers=2,
+        n_fcn_layers=2,
+        **kwargs,
+    ):
+        super().__init__()
+
+        self.layers = nn.Sequential()
+        self.layers.append(nn.Conv1d(in_channels, base_channels, kernel_size, padding="same"))
+        self.layers.append(ResBlock1D(base_channels, kernel_size, hidden_activation))
+
+        for _ in range(n_conv_layers - 1):
+            self.layers.append(ResBlock1D(base_channels, kernel_size, hidden_activation))
+
+        self.layers.append(nn.AdaptiveAvgPool1d(1))
+        self.layers.append(nn.Flatten())
+
+        for _ in range(n_fcn_layers - 1):
+            self.layers.append(nn.Linear(base_channels, base_channels))
+            self.layers.append(hidden_activation)
+
+        self.layers.append(nn.Linear(base_channels, out_dim))
+        self.layers.append(output_activation)
+
+    def forward(self, x):
+        return self.layers(x)
+
+
 class CNN1DWithPooling(nn.Module):
     def __init__(
         self,
@@ -256,7 +293,7 @@ class CNN1DWithPooling(nn.Module):
         layers.append(nn.Conv1d(in_channels, base_channels, kernel_size, padding="same"))
         layers.append(nn.Conv1d(base_channels, base_channels, kernel_size, padding="same"))
         layers.append(hidden_activation)
-        layers.append(nn.MaxPool1d(2))
+        layers.append(nn.AvgPool1d(2))
 
         for i in range(n_conv_layers - 1):  # Double conv
             layers.append(
@@ -266,7 +303,7 @@ class CNN1DWithPooling(nn.Module):
                 nn.Conv1d(base_channels * (2 ** (i + 1)), base_channels * (2 ** (i + 1)), kernel_size, padding="same")
             )
             layers.append(hidden_activation)
-            layers.append(nn.MaxPool1d(2))
+            layers.append(nn.AvgPool1d(2))
 
         layers.append(nn.AdaptiveAvgPool1d(1))
         layers.append(nn.Flatten())
@@ -281,6 +318,72 @@ class CNN1DWithPooling(nn.Module):
 
     def forward(self, x):
         return self.layers(x)
+
+
+class CNN1DWithPoolingRes(nn.Module):
+    def __init__(
+        self,
+        in_channels,
+        out_dim=1,
+        base_channels=64,
+        kernel_size=3,
+        batch_normalization=False,
+        hidden_activation=nn.GELU(),
+        output_activation=nn.Identity(),
+        n_conv_layers=2,
+        n_fcn_layers=2,
+        **kwargs,
+    ):
+        super().__init__()
+
+        layers = nn.Sequential()
+        layers.append(nn.Conv1d(in_channels, base_channels, kernel_size, padding="same"))
+        layers.append(ResBlock1D(base_channels, base_channels))
+        layers.append(nn.AvgPool1d(2))
+
+        for i in range(n_conv_layers - 1):  # Double conv
+            layers.append(
+                nn.Conv1d(base_channels * (2**i), base_channels * (2 ** (i + 1)), kernel_size, padding="same")
+            )
+            layers.append(ResBlock1D(base_channels * (2 ** (i + 1)), base_channels * (2 ** (i + 1))))
+            layers.append(nn.AvgPool1d(2))
+
+        layers.append(nn.AdaptiveAvgPool1d(1))
+        layers.append(nn.Flatten())
+
+        # for _ in range(n_fcn_layers - 1):
+        #     layers.append(nn.Linear(base_channels, base_channels))
+        #     layers.append(hidden_activation)
+
+        layers.append(nn.Linear(base_channels * (2 ** (n_conv_layers - 1)), out_dim))
+        layers.append(output_activation)
+        self.layers = layers
+
+    def forward(self, x):
+        return self.layers(x)
+
+
+class ResBlock1D(nn.Module):
+    def __init__(self, n_channels, kernel_size=3, activation=nn.GELU()):
+        super().__init__()
+        self.conv1 = nn.Conv1d(
+            in_channels=n_channels, out_channels=n_channels, kernel_size=kernel_size, padding="same"
+        )
+        self.bn1 = nn.BatchNorm1d(n_channels, track_running_stats=False)
+        self.conv2 = nn.Conv1d(
+            in_channels=n_channels, out_channels=n_channels, kernel_size=kernel_size, padding="same"
+        )
+        self.bn2 = nn.BatchNorm1d(n_channels, track_running_stats=False)
+        self.activation = activation
+
+    def forward(self, inputs):
+        x = self.conv1(inputs)
+        x = self.bn1(x)
+        x = self.activation(x)
+        x = self.conv2(x)
+        x = self.bn2(x)
+        out = x + inputs
+        return self.activation(out)
 
 
 class UNet(nn.Module):

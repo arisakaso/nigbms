@@ -18,7 +18,7 @@ data:
     train: 10_000
     val: 10_000
     test: 10_000
-  batch_size: 256
+  batch_size: 1024
   # rtol_dists:
   #   train:
   #     value: 1.0e-6
@@ -73,17 +73,19 @@ surrogate:
     # n_units: 1024
     # n_layers: 2
     
-    # _target_: nigbms.modules.models.CNN1DWithPooling
-    # out_dim: 62
-    # n_conv_layers: 4
-    # base_channels: 128
-    # kernel_size: 5
-
     _target_: nigbms.modules.models.CNN1D
     n_conv_layers: 4
-    base_channels: 64
-    kernel_size: 31
     n_fcn_layers: 1
+    base_channels: 128
+    kernel_size: 31
+
+    # _target_: nigbms.modules.models.CNN1DWithPoolingRes
+    # n_conv_layers: 4
+    # base_channels: 32
+    # kernel_size: 3
+    # n_fcn_layers: 1
+    # hidden_activation: 
+    #   _target_: torch.nn.LeakyReLU
 
 
 
@@ -105,7 +107,7 @@ wrapper:
       lr: 1.0e-3
     loss:
       weights:
-        y_loss: 0.01
+        y_loss: 0
         y_loss_relative: 0
         dvf_loss: 1
         dvf_loss_relative: 0
@@ -118,6 +120,7 @@ wrapper:
     Nv: 1
     v_scale: 1.0
     v_dist: rademacher
+    additional_steps: 5
     
 loss:
   _target_: nigbms.modules.losses.MetaSolverLoss
@@ -130,7 +133,7 @@ loss:
   
 opt:
   _target_: torch.optim.Adam
-  lr: 0
+  lr: 1.0e-4
 
 sch:
   _target_: torch.optim.lr_scheduler.MultiStepLR
@@ -150,18 +153,18 @@ callbacks:
     mode: min
     save_top_k: 0
     save_last: ${test}
-  - _target_: lightning.pytorch.callbacks.EarlyStopping
-    monitor: surrogate/sim
-    patience: 3
-    verbose: True
-    check_finite: True
-    check_on_train_epoch_end: True
-    mode: max
-    min_delta: 0.01
+  # - _target_: lightning.pytorch.callbacks.EarlyStopping
+  #   monitor: surrogate/sim
+  #   patience: 3
+  #   verbose: True
+  #   check_finite: True
+  #   check_on_train_epoch_end: True
+  #   mode: max
+  #   min_delta: 0.01
   
 
 trainer:
-  max_epochs: 20
+  max_epochs: 100
   accelerator: gpu
   devices: 
     - 1
