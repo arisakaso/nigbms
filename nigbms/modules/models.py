@@ -410,30 +410,29 @@ class UNet(nn.Module):
 
     def __init__(
         self,
-        num_classes: int,
-        input_channels: int = 3,
-        num_layers: int = 5,
-        features_start: int = 64,
+        out_channels: int = 1,
+        in_channels: int = 3,
+        n_layers: int = 5,
+        base_channels: int = 64,
         bilinear: bool = False,
     ) -> None:
-        if num_layers < 1:
-            raise ValueError(f"num_layers = {num_layers}, expected: num_layers > 0")
+        assert n_layers > 0, f"num_layers = {n_layers}, expected: num_layers > 0"
 
         super().__init__()
-        self.num_layers = num_layers
+        self.num_layers = n_layers
 
-        layers = [DoubleConv(input_channels, features_start)]
+        layers = [DoubleConv(in_channels, base_channels)]
 
-        feats = features_start
-        for _ in range(num_layers - 1):
-            layers.append(Down(feats, feats * 2))
-            feats *= 2
+        n_channels = base_channels
+        for _ in range(n_layers - 1):
+            layers.append(Down(n_channels, n_channels * 2))
+            n_channels *= 2
 
-        for _ in range(num_layers - 1):
-            layers.append(Up(feats, feats // 2, bilinear))
-            feats //= 2
+        for _ in range(n_layers - 1):
+            layers.append(Up(n_channels, n_channels // 2, bilinear))
+            n_channels //= 2
 
-        layers.append(nn.Conv2d(feats, num_classes, kernel_size=1))
+        layers.append(nn.Conv2d(n_channels, out_channels, kernel_size=1))
 
         self.layers = nn.ModuleList(layers)
 
@@ -516,40 +515,41 @@ class UNet1D(nn.Module):
 
     def __init__(
         self,
-        num_classes: int,
-        input_channels: int = 1,
-        num_layers: int = 5,
-        features_start: int = 64,
+        out_channels: int = 1,
+        in_channels: int = 1,
+        n_layers: int = 5,
+        base_channels: int = 64,
+        hidden_activation: Module = nn.ReLU(),
         bilinear: bool = False,
+        **kwargs,
     ) -> None:
-        if num_layers < 1:
-            raise ValueError(f"num_layers = {num_layers}, expected: num_layers > 0")
+        assert n_layers > 0, f"num_layers = {n_layers}, expected: num_layers > 0"
 
         super().__init__()
-        self.num_layers = num_layers
+        self.n_layers = n_layers
 
-        layers = [DoubleConv1D(input_channels, features_start)]
+        layers = [DoubleConv1D(in_channels, base_channels, hidden_activation)]
 
-        feats = features_start
-        for _ in range(num_layers - 1):
-            layers.append(Down1D(feats, feats * 2))
-            feats *= 2
+        n_channels = base_channels
+        for _ in range(n_layers - 1):
+            layers.append(Down1D(n_channels, n_channels * 2, hidden_activation))
+            n_channels *= 2
 
-        for _ in range(num_layers - 1):
-            layers.append(Up1D(feats, feats // 2, bilinear))
-            feats //= 2
+        for _ in range(n_layers - 1):
+            layers.append(Up1D(n_channels, n_channels // 2, bilinear, hidden_activation))
+            n_channels //= 2
 
-        layers.append(nn.Conv1d(feats, num_classes, kernel_size=1))
+        layers.append(nn.Conv1d(n_channels, out_channels, kernel_size=1))
 
         self.layers = nn.ModuleList(layers)
 
     def forward(self, x: Tensor) -> Tensor:
         xi = [self.layers[0](x)]
         # Down path
-        for layer in self.layers[1 : self.num_layers]:
+        for layer in self.layers[1 : self.n_layers]:
             xi.append(layer(xi[-1]))
         # Up path
-        for i, layer in enumerate(self.layers[self.num_layers : -1]):
+        for i, layer in enumerate(self.layers[self.n_layers : -1]):
             xi[-1] = layer(xi[-1], xi[-2 - i])
         return self.layers[-1](xi[-1])
 
@@ -557,15 +557,15 @@ class UNet1D(nn.Module):
 class DoubleConv1D(nn.Module):
     """[ Conv1d => BatchNorm => ReLU ] x 2."""
 
-    def __init__(self, in_ch: int, out_ch: int) -> None:
+    def __init__(self, in_ch: int, out_ch: int, activation: Module) -> None:
         super().__init__()
         self.net = nn.Sequential(
             nn.Conv1d(in_ch, out_ch, kernel_size=3, padding=1, bias=False),
             nn.BatchNorm1d(out_ch),
-            nn.ReLU(inplace=True),
+            activation,
             nn.Conv1d(out_ch, out_ch, kernel_size=3, padding=1, bias=False),
             nn.BatchNorm1d(out_ch),
-            nn.ReLU(inplace=True),
+            activation,
         )
 
     def forward(self, x: Tensor) -> Tensor:
@@ -575,9 +575,9 @@ class DoubleConv1D(nn.Module):
 class Down1D(nn.Module):
     """Downscale with MaxPool => DoubleConvolution block."""
 
-    def __init__(self, in_ch: int, out_ch: int) -> None:
+    def __init__(self, in_ch: int, out_ch: int, activation) -> None:
         super().__init__()
-        self.net = nn.Sequential(nn.MaxPool1d(kernel_size=2, stride=2), DoubleConv1D(in_ch, out_ch))
+        self.net = nn.Sequential(nn.MaxPool1d(kernel_size=2, stride=2), DoubleConv1D(in_ch, out_ch, activation))
 
     def forward(self, x: Tensor) -> Tensor:
         return self.net(x)
@@ -587,7 +587,7 @@ class Up1D(nn.Module):
     """Upsampling (by either bilinear interpolation or transpose convolutions) followed by concatenation of feature map
     from contracting path, followed by DoubleConv."""
 
-    def __init__(self, in_ch: int, out_ch: int, bilinear: bool = False) -> None:
+    def __init__(self, in_ch: int, out_ch: int, bilinear: bool = False, activation=nn.ReLU()) -> None:
         super().__init__()
         self.upsample = None
         if bilinear:
@@ -598,7 +598,7 @@ class Up1D(nn.Module):
         else:
             self.upsample = nn.ConvTranspose1d(in_ch, in_ch // 2, kernel_size=2, stride=2)
 
-        self.conv = DoubleConv1D(in_ch, out_ch)
+        self.conv = DoubleConv1D(in_ch, out_ch, activation)
 
     def forward(self, x1: Tensor, x2: Tensor) -> Tensor:
         x1 = self.upsample(x1)

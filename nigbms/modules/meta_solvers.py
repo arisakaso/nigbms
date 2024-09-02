@@ -45,7 +45,7 @@ class MetaSolver(Module):
         """
         x = self.arrange_input(tau)
         theta = self.model(x)
-        return theta
+        return theta.squeeze()
 
 
 class Poisson1DMetaSolver(MetaSolver):
@@ -83,7 +83,11 @@ class Poisson1DMetaSolver(MetaSolver):
             else:
                 raise ValueError(f"Feature {k} not found in task")
 
-        features = torch.cat(features, dim=1).squeeze()  # (bs, dim)
+        if "MLP" in self.model.__class__.__name__:
+            features = torch.cat(features, dim=1).squeeze(-1)  # (bs, dim)
+        else:
+            features = torch.stack(features, dim=1).squeeze(-1)  # (bs, channel, dim)
+
         return features
 
 

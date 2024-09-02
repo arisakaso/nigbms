@@ -46,6 +46,7 @@ class OfflineDatasetConfig:
     task_type: DictConfig = DictConfig(
         {"_target_": "hydra.utils.get_class", "path": "nigbms.modules.tasks.PETScLinearSystemTask"}
     )
+    normalize: bool = False
 
 
 cs.store(name="offline_dataset_default", group="data", node=OfflineDatasetConfig)
@@ -62,6 +63,7 @@ class OfflineDataModuleConfig:
     out_task_type: DictConfig = MISSING
     batch_size: int = MISSING
     num_workers: int = MISSING
+    normalize: bool = MISSING
 
 
 @dataclass
@@ -90,6 +92,7 @@ class Poisson1DOfflineDataModuleConfig(OfflineDataModuleConfig):
     )
     batch_size: int = 32
     num_workers: int = 0
+    normalize: bool = False
 
 
 cs.store(name="poisson1d_offline_datamodule", group="data", node=Poisson1DOfflineDataModuleConfig)

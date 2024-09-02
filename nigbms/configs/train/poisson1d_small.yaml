@@ -4,13 +4,13 @@ defaults:
   - meta_solver: poisson1d_meta_solver_default
   - solver: pytorch_jacobi_default
   # - solver: petsc_jacobi_default  
-  # - surrogate: poisson1d_surrogate_default
-  - surrogate: exponential_decay_default
+  - surrogate: poisson1d_surrogate_default
+  # - surrogate: exponential_decay_default
   - wrapper: wrapped_solver_default
   - _self_
 
 wandb: 
-  mode: online # must be onoine when sweep
+  mode: disabled # must be onoine when sweep
 
 data:
   data_dir: /workspaces/nigbms/data/raw/poisson1d/small
@@ -18,7 +18,7 @@ data:
     train: 10_000
     val: 10_000
     test: 10_000
-  batch_size: 1024
+  batch_size: 256
   # rtol_dists:
   #   train:
   #     value: 1.0e-6
@@ -34,11 +34,15 @@ meta_solver:
     b: 
       - ${dim}
   model:
-    n_layers: 1
-    n_units: 512
-    init_weight: 
-      dist: uniform
-      scale: 1.0e-2
+    _target_: nigbms.modules.models.UNet1D
+    n_layers: 4
+    n_units: 64
+    out_dim: 1
+    # n_layers: 1
+    # n_units: 512
+    # init_weight: 
+    #   dist: uniform
+    #   scale: 1.0e-2
   
 solver:
   params_fix: 
@@ -64,20 +68,20 @@ surrogate:
     #   - 32
     # e0_enc:
     #   - ${latent_dim}
-  n_components: 62
+  # n_components: 62
   model:
-    out_dim: 62
-
-    # _target_: nigbms.modules.models.MLP
     # out_dim: 62
-    # n_units: 1024
-    # n_layers: 2
+
+    _target_: nigbms.modules.models.MLP
+    n_units: 256
+    n_layers: 2
+    out_dim: 501
     
-    _target_: nigbms.modules.models.CNN1D
-    n_conv_layers: 4
-    n_fcn_layers: 1
-    base_channels: 128
-    kernel_size: 31
+    # _target_: nigbms.modules.models.CNN1D
+    # n_conv_layers: 4
+    # n_fcn_layers: 1
+    # base_channels: 128
+    # kernel_size: 31
 
     # _target_: nigbms.modules.models.CNN1DWithPoolingRes
     # n_conv_layers: 4
@@ -104,23 +108,23 @@ wrapper:
   hparams:
     opt:
       _target_: torch.optim.Adam
-      lr: 1.0e-3
+      lr: 1.0e-4
     loss:
       weights:
-        y_loss: 0
+        y_loss: 0.01
         y_loss_relative: 0
         dvf_loss: 1
         dvf_loss_relative: 0
         dvL_loss: 0
       mask: True
     clip: 10
-    grad_type: cv_fwd
+    grad_type: f_fwd
     jvp_type: forwardAD
     eps: 1.0e-10
     Nv: 1
     v_scale: 1.0
     v_dist: rademacher
-    additional_steps: 5
+    additional_steps: 100
     
 loss:
   _target_: nigbms.modules.losses.MetaSolverLoss
@@ -167,7 +171,7 @@ trainer:
   max_epochs: 100
   accelerator: gpu
   devices: 
-    - 1
+    - 0
   check_val_every_n_epoch: 20
   fast_dev_run: False
   # limit_train_batches: 2
@@ -177,7 +181,7 @@ trainer:
 monitor: val/iter_r
 test: True
 dim: 31
-latent_dim: 32
+latent_dim: 31
 compile: False
 logging: True
 warmup: 0

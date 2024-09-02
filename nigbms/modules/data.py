@@ -35,6 +35,7 @@ class OfflineDataset(Dataset):
         rtol_dist: Distribution,
         maxiter_dist: Distribution,
         task_type: Type,
+        normalize: bool = False,
     ) -> None:
         """
 
@@ -51,6 +52,7 @@ class OfflineDataset(Dataset):
         self.rtol_dist = rtol_dist
         self.maxiter_dist = maxiter_dist
         self.task_type = task_type
+        self.normalize = normalize
 
     def load(self, path: Path) -> PyTorchLinearSystemTask | PETScLinearSystemTask:
         if self.task_type == PyTorchLinearSystemTask:
@@ -65,6 +67,8 @@ class OfflineDataset(Dataset):
         tau = self.load(self.data_dir / str(self.idcs[idx]))
         tau.rtol = self.rtol_dist.sample()
         tau.maxiter = self.maxiter_dist.sample()
+        if self.normalize:
+            tau.b = tau.b / tau.b.norm(dim=0, keepdim=True)
         return tau
 
 
@@ -127,6 +131,7 @@ class OfflineDataModule(LightningDataModule):
         out_task_type: Type,
         batch_size: int,
         num_workers: int,
+        normalize: bool,
     ) -> None:
         """
 
@@ -152,6 +157,7 @@ class OfflineDataModule(LightningDataModule):
         self.out_task_type = out_task_type
         self.batch_size = batch_size
         self.num_workers = num_workers
+        self.normalize = normalize
 
     def prepare_data(self) -> None:
         """Prepare data by splitting the indices for each dataset."""
@@ -183,6 +189,7 @@ class OfflineDataModule(LightningDataModule):
                 self.rtol_dists["train"],
                 self.maxiter_dits["train"],
                 self.in_task_type,
+                self.normalize,
             )
             self.val_ds = OfflineDataset(
                 self.data_dir,
@@ -190,6 +197,7 @@ class OfflineDataModule(LightningDataModule):
                 self.rtol_dists["val"],
                 self.maxiter_dits["val"],
                 self.in_task_type,
+                self.normalize,
             )
 
         if stage == "test":
@@ -199,6 +207,7 @@ class OfflineDataModule(LightningDataModule):
                 self.rtol_dists["test"],
                 self.maxiter_dits["test"],
                 self.in_task_type,
+                self.normalize,
             )
 
     def train_dataloader(self):
