@@ -10,7 +10,7 @@ defaults:
   - _self_
 
 wandb: 
-  mode: online # must be onoine when sweep
+  mode: online # must be online when sweep
 
 data:
   data_dir: /workspaces/nigbms/data/raw/poisson1d/small
