@@ -74,10 +74,10 @@ surrogate:
     
     _target_: nigbms.modules.models.CNN1D
     n_layers: 4
-    base_channels: 64
-    kernel_size: 3
+    base_channels: 32
+    kernel_size: 31
     skip: True
-    downsample: True
+    downsample: False
 
     # _target_: nigbms.modules.models.CNN1DWithPoolingRes
     # n_conv_layers: 4
@@ -120,7 +120,7 @@ wrapper:
     Nv: 1
     v_scale: 1.0
     v_dist: rademacher
-    additional_steps: 50
+    additional_steps: 10
     
 loss:
   _target_: nigbms.modules.losses.MetaSolverLoss
@@ -167,7 +167,7 @@ trainer:
   max_epochs: 100
   accelerator: gpu
   devices: 
-    - 0
+    - 1
   check_val_every_n_epoch: 20
   fast_dev_run: False
   # limit_train_batches: 2
