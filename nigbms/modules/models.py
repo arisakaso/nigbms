@@ -17,8 +17,8 @@ class Square(Module):
 class Constant(Module):
     def __init__(self, shape, range):
         super().__init__()
-        theta = torch.distributions.Uniform(*range).sample(shape)
-        self.weight = Parameter(theta)
+        _theta = torch.distributions.Uniform(*range).sample(shape)
+        self.weight = Parameter(_theta, requires_grad=True)
 
     def forward(self, x):
         return self.weight

@@ -1,5 +1,4 @@
 from hydra import compose, initialize
-
 from nigbms.train.poisson1d import main
 
 
@@ -7,9 +6,10 @@ from nigbms.train.poisson1d import main
 # TODO: why???
 def test_main():
     with initialize(version_base="1.3", config_path="../configs/train"):
-        cfg = compose(config_name="poisson1d")
+        cfg = compose(config_name="poisson1d_small")
         # workaround for hydra error: raise ValueError("HydraConfig was not set").
         # See https://github.com/facebookresearch/hydra/issues/2017
         cfg.wandb.project = "test_poisson1d"
         cfg.trainer.max_epochs = 1
+        cfg.trainer.fast_dev_run = True
         main(cfg)

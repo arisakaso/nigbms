@@ -43,9 +43,7 @@ class MetaSolver(Module):
         Returns:
             Tensor: theta (solver parameters)
         """
-        x = self.arrange_input(tau)
-        theta = self.model(x)
-        return theta.squeeze()
+        raise NotImplementedError
 
 
 class Poisson1DMetaSolver(MetaSolver):
@@ -90,6 +88,19 @@ class Poisson1DMetaSolver(MetaSolver):
 
         return features
 
+    def forward(self, tau: PyTorchLinearSystemTask | PETScLinearSystemTask) -> Tensor:
+        """Generate theta (solver parameters) from Task
+
+        Args:
+            tau (Task): Task dataclass
+
+        Returns:
+            Tensor: theta (solver parameters)
+        """
+        x = self.arrange_input(tau)
+        theta = self.model(x)
+        return theta.squeeze()
+
 
 class ConstantMetaSolver(MetaSolver):
     def __init__(self, params_learn: DictConfig, features: DictConfig, model: Module):
@@ -101,7 +112,7 @@ class ConstantMetaSolver(MetaSolver):
         """
         super().__init__(params_learn, features, model)
 
-    def arrange_input(self, tau: PETScLinearSystemTask) -> Tensor:
+    def arrange_input(self, tau: Task) -> Tensor:
         """Arrange input feature for the model from Task
 
         Args:
@@ -111,3 +122,17 @@ class ConstantMetaSolver(MetaSolver):
             Tensor: input features
         """
         return None
+
+    def forward(self, tau: Task) -> Tensor:
+        """Generate theta (solver parameters) from Task
+
+        Args:
+            tau (Task): Task dataclass
+
+        Returns:
+            Tensor: theta (solver parameters)
+        """
+        x = self.arrange_input(tau)
+        theta = self.model(x)
+        return theta  # theta.squeeze() breaks computation graph, so I implemented forward for each metasolver
+        # TODO: Check Why? and merge forward method in MetaSolver

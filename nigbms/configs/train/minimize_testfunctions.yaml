@@ -5,6 +5,7 @@ defaults:
   - surrogate: testfunction_surrogate_default
   - constructor: constructor_testfunction_default
   - wrapper: wrapped_solver_default
+  - _self_
 
 problem:
   test_function: sphere
@@ -49,12 +50,13 @@ wrapper:
     opt:
       momentum: 0.9
     clip: 100.0
-    grad_type: cv_fwd
-    jvp_type: forwardFD
+    grad_type: f_true
+    jvp_type: forwardAD
     eps: 1.0e-10
     Nv: 1
     v_scale: 1.0
     v_dist: rademacher
+    additional_steps: 0
 
 
 opt:
