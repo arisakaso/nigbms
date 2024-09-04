@@ -21,7 +21,7 @@ class TestPoisson1DSurrogate:
         tau = generate_sample_batched_pytorch_task()
         theta = TensorDict({"x0": torch.zeros_like(tau.b)})
         y = surrogate(tau, theta)
-        assert y.shape == torch.Size([len(tau), cfg.model.out_dim])
+        assert y.shape == torch.Size([len(tau), surrogate.model.out_dim])
 
 
 class TestTestFunctionSurrogate:
@@ -37,4 +37,4 @@ class TestTestFunctionSurrogate:
         tau = Task()
         theta = TensorDict({"x": torch.zeros(batch_size, cfg.features.x[0])})
         y = surrogate(tau, theta)
-        assert y.shape == torch.Size([batch_size, cfg.model.out_dim])
+        assert y.shape == torch.Size([batch_size, surrogate.model.out_dim])
