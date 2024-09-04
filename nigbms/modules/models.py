@@ -44,6 +44,61 @@ class InverseBoxCox(Module):
             return torch.exp(torch.log(self.lmbda * x + 1) / self.lmbda)
 
 
+class MLP(Module):
+    def __init__(
+        self,
+        in_dim: int = 32,  # input dimension
+        out_dim: int = 32,  # output dimension
+        n_layers: int = 3,  # number of hidden layers
+        n_units: int = 64,  # number of neurons in the hidden layers
+        hidden_activation: Module = nn.ReLU(),
+        output_activation: Module = nn.Identity(),
+        batch_normalization: bool = False,
+        init_weight=None,
+        dropout=0,
+        **kwargs,
+    ):
+        super(MLP, self).__init__()
+        self.in_dim = in_dim
+        self.out_dim = out_dim
+
+        layers = nn.Sequential()
+
+        # input layer
+        layers.append(nn.Linear(in_dim, n_units))
+        if batch_normalization:
+            layers.append(nn.BatchNorm1d(n_units, track_running_stats=False))
+        layers.append(hidden_activation)
+        layers.append(nn.Dropout(p=dropout))
+
+        # hidden layers
+        for _ in range(n_layers):
+            layers.append(nn.Linear(n_units, n_units))
+            if batch_normalization:
+                layers.append(nn.BatchNorm1d(n_units, track_running_stats=False))
+            layers.append(hidden_activation)
+            layers.append(nn.Dropout(p=dropout))
+
+        # output layer
+        layers.append(nn.Linear(n_units, out_dim))
+        layers.append(output_activation)
+
+        # initialize weights
+        if init_weight is not None:
+            for layer in layers:
+                if isinstance(layer, nn.Linear):
+                    if init_weight.dist == "normal":
+                        nn.init.normal_(layer.weight, mean=0, std=init_weight.scale)
+                    elif init_weight.dist == "uniform":
+                        nn.init.uniform_(layer.weight, a=-init_weight.scale, b=init_weight.scale)
+                        nn.init.uniform_(layer.bias, a=-init_weight.scale, b=init_weight.scale)
+
+        self.layers = layers
+
+    def forward(self, x: Tensor) -> Tensor:
+        return self.layers(x)
+
+
 class ExponentialDecay(Module):
     def __init__(
         self,
@@ -104,58 +159,6 @@ class ExponentialDecay(Module):
         return y
 
 
-class MLP(Module):
-    def __init__(
-        self,
-        in_dim,  # input dimension
-        out_dim,  # output dimension
-        n_layers,  # number of hidden layers
-        n_units,  # number of neurons in the hidden layers
-        hidden_activation,
-        output_activation,
-        batch_normalization,
-        init_weight=None,
-        dropout=0,
-        **kwargs,
-    ):
-        super(MLP, self).__init__()
-        self.out_dim = out_dim
-
-        self.layers = nn.Sequential()
-
-        # input layer
-        self.layers.append(nn.Linear(in_dim, n_units))
-        if batch_normalization:
-            self.layers.append(nn.BatchNorm1d(n_units, track_running_stats=False))
-        self.layers.append(hidden_activation)
-        self.layers.append(nn.Dropout(p=dropout))
-
-        # hidden layers
-        for _ in range(n_layers):
-            self.layers.append(nn.Linear(n_units, n_units))
-            if batch_normalization:
-                self.layers.append(nn.BatchNorm1d(n_units, track_running_stats=False))
-            self.layers.append(hidden_activation)
-            self.layers.append(nn.Dropout(p=dropout))
-
-        # output layer
-        self.layers.append(nn.Linear(n_units, out_dim))
-        self.layers.append(output_activation)
-
-        # initialize weights
-        if init_weight is not None:
-            for layer in self.layers:
-                if isinstance(layer, nn.Linear):
-                    if init_weight.dist == "normal":
-                        nn.init.normal_(layer.weight, mean=0, std=init_weight.scale)
-                    elif init_weight.dist == "uniform":
-                        nn.init.uniform_(layer.weight, a=-init_weight.scale, b=init_weight.scale)
-                        nn.init.uniform_(layer.bias, a=-init_weight.scale, b=init_weight.scale)
-
-    def forward(self, x: Tensor) -> Tensor:
-        return self.layers(x)
-
-
 class MLPSkip(Module):
     def __init__(self, layers, hidden_activation, output_activation, batch_normalization):
         super(MLPSkip, self).__init__()
@@ -197,40 +200,92 @@ class MLPSkip(Module):
         return x
 
 
+class DoubleConv1D(nn.Module):
+    """[ Conv1d => BatchNorm => activation ] x 2."""
+
+    def __init__(
+        self,
+        in_ch: int,
+        out_ch: int,
+        kernel_size: int = 3,
+        activation: Module = nn.GELU(),
+        batch_norm: bool = False,
+        skip: bool = False,
+        downsample: bool = False,
+    ) -> None:
+        super().__init__()
+        padding = kernel_size // 2
+        stride = 2 if downsample else 1
+        self.batch_norm = batch_norm
+
+        # track_running_stats=True breaks surrogate training, so we set it to False.
+        # This does not affect the performance so much.
+        self.conv1 = nn.Conv1d(in_ch, out_ch, kernel_size=kernel_size, padding=padding, stride=stride)
+        self.bn1 = nn.BatchNorm1d(out_ch, track_running_stats=False)
+        self.conv2 = nn.Conv1d(out_ch, out_ch, kernel_size=kernel_size, padding=padding)
+        self.bn2 = nn.BatchNorm1d(out_ch, track_running_stats=False)
+        self.activation = activation
+        if skip:
+            if downsample or in_ch != out_ch:
+                self.skip = nn.Conv1d(in_ch, out_ch, kernel_size=1, stride=stride)
+            else:
+                self.skip = nn.Identity()
+        else:
+            self.skip = None
+
+    def forward(self, x: Tensor) -> Tensor:
+        identity = x  # keep the input for skip connection
+
+        x = self.conv1(x)
+        if self.batch_norm:
+            x = self.bn1(x)
+        x = self.activation(x)
+
+        x = self.conv2(x)
+        if self.batch_norm:
+            x = self.bn2(x)
+
+        if self.skip:
+            x += self.skip(identity)
+
+        out = self.activation(x)
+        return out
+
+
 class CNN1D(nn.Module):
     def __init__(
         self,
-        in_channels,
-        out_dim=1,
-        base_channels=64,
-        kernel_size=3,
-        batch_normalization=False,
+        in_channels: int = 1,
+        out_dim: int = 1,
+        base_channels: int = 64,
+        kernel_size: int = 3,
+        n_layers: int = 2,
         hidden_activation=nn.GELU(),
         output_activation=nn.Identity(),
-        n_conv_layers=2,
-        n_fcn_layers=2,
+        batch_norm=False,
+        skip=False,
+        downsample=False,
         **kwargs,
     ):
         super().__init__()
 
-        self.layers = nn.Sequential()
-        self.layers.append(nn.Conv1d(in_channels, base_channels, kernel_size, padding="same"))
+        layers = nn.Sequential()
 
-        for _ in range(n_conv_layers - 1):
-            self.layers.append(nn.Conv1d(base_channels, base_channels, kernel_size, padding="same"))
-            if batch_normalization:
-                self.layers.append(nn.BatchNorm1d(base_channels, track_running_stats=False))
-            self.layers.append(hidden_activation)
+        _in_ch = in_channels
+        _out_ch = base_channels
+        for _ in range(n_layers):
+            layers.append(DoubleConv1D(_in_ch, _out_ch, kernel_size, hidden_activation, batch_norm, skip, downsample))
+            _in_ch = _out_ch
+            if downsample:
+                _out_ch *= 2
 
-        self.layers.append(nn.AdaptiveAvgPool1d(1))
-        self.layers.append(nn.Flatten())
+        layers.append(nn.AdaptiveAvgPool1d(1))
+        layers.append(nn.Flatten())
 
-        for _ in range(n_fcn_layers - 1):
-            self.layers.append(nn.Linear(base_channels, base_channels))
-            self.layers.append(hidden_activation)
+        layers.append(nn.Linear(_in_ch, out_dim))
+        layers.append(output_activation)
 
-        self.layers.append(nn.Linear(base_channels, out_dim))
-        self.layers.append(output_activation)
+        self.layers = layers
 
     def forward(self, x):
         return self.layers(x)
@@ -386,6 +441,94 @@ class ResBlock1D(nn.Module):
         return self.activation(out)
 
 
+### UNet1D
+
+
+class UNet1D(nn.Module):
+    """UNet 1D implementation."""
+
+    def __init__(
+        self,
+        in_channels: int = 1,
+        out_channels: int = 1,
+        base_channels: int = 64,
+        kernel_size: int = 3,
+        n_layers: int = 4,
+        hidden_activation: Module = nn.ReLU(),
+        bilinear: bool = False,
+        **kwargs,
+    ) -> None:
+        super().__init__()
+        self.n_layers = n_layers
+
+        layers = [DoubleConv1D(in_channels, base_channels, kernel_size, hidden_activation, True, True, False)]
+
+        n_channels = base_channels
+        for _ in range(n_layers - 1):
+            layers.append(DoubleConv1D(n_channels, n_channels * 2, kernel_size, hidden_activation, True, True, True))
+            n_channels *= 2
+
+        for _ in range(n_layers - 1):
+            layers.append(Up1D(n_channels, n_channels // 2, kernel_size, hidden_activation, bilinear))
+            n_channels //= 2
+
+        layers.append(nn.Conv1d(n_channels, out_channels, kernel_size=1))
+
+        self.layers = nn.ModuleList(layers)
+
+    def forward(self, x: Tensor) -> Tensor:
+        xi = [self.layers[0](x)]
+        # Down path
+        for layer in self.layers[1 : self.n_layers]:
+            xi.append(layer(xi[-1]))
+        # Up path
+        for i, layer in enumerate(self.layers[self.n_layers : -1]):
+            xi[-1] = layer(xi[-1], xi[-2 - i])
+        return self.layers[-1](xi[-1])
+
+
+class Down1D(nn.Module):
+    """Downscale with MaxPool => DoubleConvolution block."""
+
+    def __init__(self, in_ch: int, out_ch: int, activation) -> None:
+        super().__init__()
+        self.net = nn.Sequential(nn.MaxPool1d(kernel_size=2, stride=2), DoubleConv1D(in_ch, out_ch, activation))
+
+    def forward(self, x: Tensor) -> Tensor:
+        return self.net(x)
+
+
+class Up1D(nn.Module):
+    """Upsampling (by either bilinear interpolation or transpose convolutions) followed by concatenation of feature map
+    from contracting path, followed by DoubleConv."""
+
+    def __init__(
+        self, in_ch: int, out_ch: int, kernel_size: int, activation=nn.ReLU(), bilinear: bool = False
+    ) -> None:
+        super().__init__()
+        self.upsample = None
+        if bilinear:
+            self.upsample = nn.Sequential(
+                nn.Upsample(scale_factor=2, mode="bilinear", align_corners=True),
+                nn.Conv1d(in_ch, in_ch // 2, kernel_size=1),
+            )
+        else:
+            self.upsample = nn.ConvTranspose1d(in_ch, in_ch // 2, kernel_size=2, stride=2)
+
+        self.conv = DoubleConv1D(in_ch, out_ch, kernel_size, activation, True, True, False)
+
+    def forward(self, x1: Tensor, x2: Tensor) -> Tensor:
+        x1 = self.upsample(x1)
+
+        # Pad x1 to the size of x2
+        diff = x2.shape[2] - x1.shape[2]
+        x1 = F.pad(x1, [diff // 2, diff - diff // 2])
+
+        # Concatenate along the channels axis
+        x = torch.cat([x2, x1], dim=1)
+        return self.conv(x)
+
+
 class UNet(nn.Module):
     """Pytorch Lightning implementation of U-Net.
 
@@ -501,111 +644,6 @@ class Up(nn.Module):
         diff_w = x2.shape[3] - x1.shape[3]
 
         x1 = F.pad(x1, [diff_w // 2, diff_w - diff_w // 2, diff_h // 2, diff_h - diff_h // 2])
-
-        # Concatenate along the channels axis
-        x = torch.cat([x2, x1], dim=1)
-        return self.conv(x)
-
-
-### UNet1D
-
-
-class UNet1D(nn.Module):
-    """UNet 1D implementation."""
-
-    def __init__(
-        self,
-        out_channels: int = 1,
-        in_channels: int = 1,
-        n_layers: int = 5,
-        base_channels: int = 64,
-        hidden_activation: Module = nn.ReLU(),
-        bilinear: bool = False,
-        **kwargs,
-    ) -> None:
-        assert n_layers > 0, f"num_layers = {n_layers}, expected: num_layers > 0"
-
-        super().__init__()
-        self.n_layers = n_layers
-
-        layers = [DoubleConv1D(in_channels, base_channels, hidden_activation)]
-
-        n_channels = base_channels
-        for _ in range(n_layers - 1):
-            layers.append(Down1D(n_channels, n_channels * 2, hidden_activation))
-            n_channels *= 2
-
-        for _ in range(n_layers - 1):
-            layers.append(Up1D(n_channels, n_channels // 2, bilinear, hidden_activation))
-            n_channels //= 2
-
-        layers.append(nn.Conv1d(n_channels, out_channels, kernel_size=1))
-
-        self.layers = nn.ModuleList(layers)
-
-    def forward(self, x: Tensor) -> Tensor:
-        xi = [self.layers[0](x)]
-        # Down path
-        for layer in self.layers[1 : self.n_layers]:
-            xi.append(layer(xi[-1]))
-        # Up path
-        for i, layer in enumerate(self.layers[self.n_layers : -1]):
-            xi[-1] = layer(xi[-1], xi[-2 - i])
-        return self.layers[-1](xi[-1])
-
-
-class DoubleConv1D(nn.Module):
-    """[ Conv1d => BatchNorm => ReLU ] x 2."""
-
-    def __init__(self, in_ch: int, out_ch: int, activation: Module) -> None:
-        super().__init__()
-        self.net = nn.Sequential(
-            nn.Conv1d(in_ch, out_ch, kernel_size=3, padding=1, bias=False),
-            nn.BatchNorm1d(out_ch),
-            activation,
-            nn.Conv1d(out_ch, out_ch, kernel_size=3, padding=1, bias=False),
-            nn.BatchNorm1d(out_ch),
-            activation,
-        )
-
-    def forward(self, x: Tensor) -> Tensor:
-        return self.net(x)
-
-
-class Down1D(nn.Module):
-    """Downscale with MaxPool => DoubleConvolution block."""
-
-    def __init__(self, in_ch: int, out_ch: int, activation) -> None:
-        super().__init__()
-        self.net = nn.Sequential(nn.MaxPool1d(kernel_size=2, stride=2), DoubleConv1D(in_ch, out_ch, activation))
-
-    def forward(self, x: Tensor) -> Tensor:
-        return self.net(x)
-
-
-class Up1D(nn.Module):
-    """Upsampling (by either bilinear interpolation or transpose convolutions) followed by concatenation of feature map
-    from contracting path, followed by DoubleConv."""
-
-    def __init__(self, in_ch: int, out_ch: int, bilinear: bool = False, activation=nn.ReLU()) -> None:
-        super().__init__()
-        self.upsample = None
-        if bilinear:
-            self.upsample = nn.Sequential(
-                nn.Upsample(scale_factor=2, mode="bilinear", align_corners=True),
-                nn.Conv1d(in_ch, in_ch // 2, kernel_size=1),
-            )
-        else:
-            self.upsample = nn.ConvTranspose1d(in_ch, in_ch // 2, kernel_size=2, stride=2)
-
-        self.conv = DoubleConv1D(in_ch, out_ch, activation)
-
-    def forward(self, x1: Tensor, x2: Tensor) -> Tensor:
-        x1 = self.upsample(x1)
-
-        # Pad x1 to the size of x2
-        diff = x2.shape[2] - x1.shape[2]
-        x1 = F.pad(x1, [diff // 2, diff - diff // 2])
 
         # Concatenate along the channels axis
         x = torch.cat([x2, x1], dim=1)

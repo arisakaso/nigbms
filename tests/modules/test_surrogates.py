@@ -1,12 +1,11 @@
 import torch
 from hydra import compose, initialize
 from hydra.utils import instantiate
-from omegaconf import DictConfig
-from tensordict import TensorDict
-
 from nigbms.configs.surrogates import Poisson1DSurrogateConfig, TestFunctionSurrogateConfig
 from nigbms.modules.surrogates import Poisson1DSurrogate, TestFunctionSurrogate
 from nigbms.modules.tasks import Task, generate_sample_batched_pytorch_task
+from omegaconf import DictConfig
+from tensordict import TensorDict
 
 
 class TestPoisson1DSurrogate:

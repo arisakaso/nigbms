@@ -4,13 +4,13 @@ defaults:
   - meta_solver: poisson1d_meta_solver_default
   - solver: pytorch_jacobi_default
   # - solver: petsc_jacobi_default  
-  - surrogate: poisson1d_surrogate_default
-  # - surrogate: exponential_decay_default
+  # - surrogate: poisson1d_surrogate_default
+  - surrogate: exponential_decay_default
   - wrapper: wrapped_solver_default
   - _self_
 
 wandb: 
-  mode: disabled # must be onoine when sweep
+  mode: online # must be onoine when sweep
 
 data:
   data_dir: /workspaces/nigbms/data/raw/poisson1d/small
@@ -36,14 +36,9 @@ meta_solver:
   model:
     _target_: nigbms.modules.models.UNet1D
     n_layers: 4
-    n_units: 64
-    out_dim: 1
-    # n_layers: 1
-    # n_units: 512
-    # init_weight: 
-    #   dist: uniform
-    #   scale: 1.0e-2
-  
+    base_channels: 64
+    kernel_size: 3
+    
 solver:
   params_fix: 
     history_length: 501
@@ -68,20 +63,21 @@ surrogate:
     #   - 32
     # e0_enc:
     #   - ${latent_dim}
-  # n_components: 62
+  n_components: 62
   model:
     # out_dim: 62
 
-    _target_: nigbms.modules.models.MLP
-    n_units: 256
-    n_layers: 2
-    out_dim: 501
+    # _target_: nigbms.modules.models.MLP
+    # n_units: 256
+    # n_layers: 2
+    # out_dim: 501
     
-    # _target_: nigbms.modules.models.CNN1D
-    # n_conv_layers: 4
-    # n_fcn_layers: 1
-    # base_channels: 128
-    # kernel_size: 31
+    _target_: nigbms.modules.models.CNN1D
+    n_layers: 4
+    base_channels: 64
+    kernel_size: 3
+    skip: True
+    downsample: True
 
     # _target_: nigbms.modules.models.CNN1DWithPoolingRes
     # n_conv_layers: 4
@@ -118,13 +114,13 @@ wrapper:
         dvL_loss: 0
       mask: True
     clip: 10
-    grad_type: f_fwd
+    grad_type: cv_fwd
     jvp_type: forwardAD
     eps: 1.0e-10
     Nv: 1
     v_scale: 1.0
     v_dist: rademacher
-    additional_steps: 100
+    additional_steps: 50
     
 loss:
   _target_: nigbms.modules.losses.MetaSolverLoss
