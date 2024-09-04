@@ -124,6 +124,7 @@ class Poisson2DOfflineDataModuleConfig(OfflineDataModuleConfig):
     )
     batch_size: int = 32
     num_workers: int = 0
+    normalize: bool = False
 
 
 cs.store(name="poisson2d_offline_datamodule", group="data", node=Poisson2DOfflineDataModuleConfig)
