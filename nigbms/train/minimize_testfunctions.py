@@ -85,9 +85,9 @@ def main(cfg):
         if i % 100 == 0:
             log.info(f"{i=}, {y.mean()=:.3g}, {y.max()=:.3g}, {y.min()=:.3g}, {sim.mean()=:.3g}")
 
-        # clip gradients
-        # if cfg.clip:
-        #     torch.nn.utils.clip_grad_norm_(meta_solver.parameters(), cfg.clip)
+        clip gradients
+        if cfg.clip:
+            torch.nn.utils.clip_grad_norm_(meta_solver.parameters(), cfg.clip)
 
         # update
         opt.step()

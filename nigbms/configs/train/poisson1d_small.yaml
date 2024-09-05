@@ -2,15 +2,15 @@ defaults:
   - common
   - data: poisson1d_offline_datamodule
   - meta_solver: poisson1d_meta_solver_default
-  - solver: pytorch_jacobi_default
-  # - solver: petsc_jacobi_default  
+  # - solver: pytorch_jacobi_default
+  - solver: petsc_jacobi_default  
   # - surrogate: poisson1d_surrogate_default
   - surrogate: exponential_decay_default
   - wrapper: wrapped_solver_default
   - _self_
 
 wandb: 
-  mode: online # must be online when sweep
+  mode: disabled # must be online when sweep
 
 data:
   data_dir: /workspaces/nigbms/data/raw/poisson1d/small
@@ -19,12 +19,9 @@ data:
     val: 10_000
     test: 10_000
   batch_size: 256
-  # rtol_dists:
-  #   train:
-  #     value: 1.0e-6
-  # out_task_type: 
-  #   _target_: hydra.utils.get_class
-  #   path: nigbms.modules.tasks.PETScLinearSystemTask
+  out_task_type: 
+    _target_: hydra.utils.get_class
+    path: nigbms.modules.tasks.PETScLinearSystemTask
 
 meta_solver:
   params_learn: 
@@ -59,18 +56,8 @@ surrogate:
       - ${dim}
     e0:
       - ${dim} 
-    # e0_fft:
-    #   - 32
-    # e0_enc:
-    #   - ${latent_dim}
   n_components: 62
   model:
-    # out_dim: 62
-
-    # _target_: nigbms.modules.models.MLP
-    # n_units: 256
-    # n_layers: 2
-    # out_dim: 501
     
     _target_: nigbms.modules.models.CNN1D
     n_layers: 4
@@ -78,15 +65,8 @@ surrogate:
     kernel_size: 31
     skip: True
     downsample: False
-
-    # _target_: nigbms.modules.models.CNN1DWithPoolingRes
-    # n_conv_layers: 4
-    # base_channels: 32
-    # kernel_size: 3
-    # n_fcn_layers: 1
-    # hidden_activation: 
-    #   _target_: torch.nn.LeakyReLU
-
+    hidden_activation:
+      _target_: torch.nn.GELU
 
 
 constructor:
@@ -115,8 +95,8 @@ wrapper:
       mask: True
     clip: 10
     grad_type: cv_fwd
-    jvp_type: forwardAD
-    eps: 1.0e-10
+    jvp_type: forwardFD
+    eps: 1.0e-8
     Nv: 1
     v_scale: 1.0
     v_dist: rademacher
@@ -179,5 +159,5 @@ test: True
 dim: 31
 latent_dim: 31
 compile: False
-logging: True
+logging: False
 warmup: 0
