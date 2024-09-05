@@ -2,15 +2,15 @@ defaults:
   - common
   - data: poisson1d_offline_datamodule
   - meta_solver: poisson1d_meta_solver_default
-  # - solver: pytorch_jacobi_default
-  - solver: petsc_jacobi_default  
+  - solver: pytorch_jacobi_default
+  # - solver: petsc_jacobi_default  
   # - surrogate: poisson1d_surrogate_default
   - surrogate: exponential_decay_default
   - wrapper: wrapped_solver_default
   - _self_
 
 wandb: 
-  mode: disabled # must be online when sweep
+  mode: online # must be online when sweep
 
 data:
   data_dir: /workspaces/nigbms/data/raw/poisson1d/small
@@ -19,9 +19,9 @@ data:
     val: 10_000
     test: 10_000
   batch_size: 256
-  out_task_type: 
-    _target_: hydra.utils.get_class
-    path: nigbms.modules.tasks.PETScLinearSystemTask
+  # out_task_type: 
+  #   _target_: hydra.utils.get_class
+  #   path: nigbms.modules.tasks.PETScLinearSystemTask
 
 meta_solver:
   params_learn: 
@@ -58,7 +58,6 @@ surrogate:
       - ${dim} 
   n_components: 62
   model:
-    
     _target_: nigbms.modules.models.CNN1D
     n_layers: 4
     base_channels: 32
@@ -66,7 +65,7 @@ surrogate:
     skip: True
     downsample: False
     hidden_activation:
-      _target_: torch.nn.GELU
+      _target_: torch.nn.SiLU
 
 
 constructor:
@@ -87,13 +86,14 @@ wrapper:
       lr: 1.0e-4
     loss:
       weights:
-        y_loss: 0.01
+        y_loss: 0
         y_loss_relative: 0
         dvf_loss: 1
         dvf_loss_relative: 0
         dvL_loss: 0
       mask: True
-    clip: 10
+      conservative: False
+    clip: 1
     grad_type: cv_fwd
     jvp_type: forwardFD
     eps: 1.0e-8
@@ -147,7 +147,7 @@ trainer:
   max_epochs: 100
   accelerator: gpu
   devices: 
-    - 1
+    - 0
   check_val_every_n_epoch: 20
   fast_dev_run: False
   # limit_train_batches: 2
@@ -159,5 +159,5 @@ test: True
 dim: 31
 latent_dim: 31
 compile: False
-logging: False
+logging: True
 warmup: 0
