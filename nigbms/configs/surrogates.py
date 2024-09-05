@@ -1,9 +1,8 @@
 from dataclasses import dataclass
 
 from hydra.core.config_store import ConfigStore
-from omegaconf import DictConfig, OmegaConf
-
 from nigbms.utils.resolver import calc_in_channels, calc_in_dim
+from omegaconf import DictConfig, OmegaConf
 
 OmegaConf.register_new_resolver("calc_in_dim", calc_in_dim)
 OmegaConf.register_new_resolver("calc_in_channels", calc_in_channels)
@@ -65,6 +64,7 @@ class TestFunctionSurrogateConfig(SurrogateSolverConfig):
         {
             "_target_": "nigbms.modules.models.MLP",
             "in_dim": "${calc_in_dim:${..features}}",
+            "out_dim": 1,
         }
     )
 
