@@ -223,6 +223,11 @@ class TestFunctionSurrogate(SurrogateSolver):
             else:
                 raise ValueError(f"Feature {k} not found in task")
 
-        features = torch.cat(features, dim=1).squeeze()  # (bs, dim)
-        # features = features.float()  # neural network expects floats
+        if "MLP" in self.model.__class__.__name__:
+            features = torch.cat(features, dim=1).squeeze()  # (bs, dim)
+        elif "CNN" in self.model.__class__.__name__:
+            features = torch.stack(features, dim=1)  # (bs, channel, dim)
+        else:
+            raise ValueError("Model type not supported")
+
         return features

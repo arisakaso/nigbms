@@ -7,6 +7,9 @@ defaults:
   - wrapper: wrapped_solver_default
   - _self_
 
+wandb:
+  mode: disabled
+
 problem:
   test_function: sphere
   dim: 128
@@ -27,18 +30,21 @@ solver:
   params_learn: 
     x:
       - ${problem.dim}
+      - 1
 
 surrogate:
   params_learn: ${solver.params_learn}
   features: ${surrogate.params_learn}
   model:
-    n_units: 512
-    n_layers: 1
+    # _target_: nigbms.modules.models.CNN1D
+    _target_: nigbms.modules.models.MLPSkip
+    n_units: 256
+    n_layers: 2
+    kernel_size: 1
+    base_channels: 64
+    skip: True
     hidden_activation:
       _target_: torch.nn.GELU
-    init_weight:
-      dist: uniform
-      scale: 0.1
     
 
 constructor:
@@ -53,17 +59,14 @@ constructor:
 
 wrapper:
   hparams:
-    opt:
-      momentum: 0.9
-    clip: 100.0
+    clip: null
     grad_type: cv_fwd
     jvp_type: forwardAD
-    eps: 1.0e-10
+    eps: 1.0e-8
     Nv: 1
     v_scale: 1.0
     v_dist: rademacher
-    additional_steps: 0
-
+    additional_steps: 5
 
 opt:
   _target_: torch.optim.SGD

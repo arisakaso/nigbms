@@ -64,6 +64,7 @@ class TestFunctionSurrogateConfig(SurrogateSolverConfig):
         {
             "_target_": "nigbms.modules.models.MLP",
             "in_dim": "${calc_in_dim:${..features}}",
+            "in_channels": "${calc_in_channels:${..features}}",
             "out_dim": 1,
         }
     )

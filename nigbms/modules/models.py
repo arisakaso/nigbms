@@ -36,7 +36,55 @@ class InverseBoxCox(Module):
             return torch.exp(torch.log(self.lmbda * x + 1) / self.lmbda)
 
 
+class MLPSkipBlock(Module):
+    def __init__(self, inout_dim, n_units, activation=nn.ReLU(), skip=True):
+        super().__init__()
+        self.fc1 = nn.Linear(inout_dim, n_units)
+        self.fc2 = nn.Linear(n_units, inout_dim)
+        self.activation = activation
+        self.skip = skip
+
+    def forward(self, x: Tensor) -> Tensor:
+        identity = x  # keep the input for skip connection
+        x = self.fc1(x)
+        x = self.activation(x)
+        x = self.fc2(x)
+        if self.skip:
+            x += identity
+        out = self.activation(x)
+        return out
+
+
 ### Models
+class MLPSkip(Module):
+    def __init__(
+        self,
+        in_dim: int = 32,  # input dimension
+        out_dim: int = 32,  # output dimension
+        n_layers: int = 3,  # number of hidden layers
+        n_units: int = 64,  # number of neurons in the hidden layers
+        hidden_activation: Module = nn.ReLU(),
+        output_activation: Module = nn.Identity(),
+        skip: bool = True,
+        batch_normalization: bool = False,
+        init_weight=None,
+        dropout=0,
+        **kwargs,
+    ):
+        super().__init__()
+        self.in_dim = in_dim
+        self.out_dim = out_dim
+
+        layers = nn.Sequential()
+        for _ in range(n_layers):
+            layers.append(MLPSkipBlock(in_dim, n_units, hidden_activation, skip))
+
+        layers.append(nn.Linear(in_dim, out_dim))
+        layers.append(output_activation)
+        self.layers = layers
+
+    def forward(self, x: Tensor) -> Tensor:
+        return self.layers(x)
 
 
 class MLP(Module):
@@ -59,23 +107,18 @@ class MLP(Module):
 
         layers = nn.Sequential()
 
-        # input layer
-        layers.append(nn.Linear(in_dim, n_units))
-        if batch_normalization:
-            layers.append(nn.BatchNorm1d(n_units, track_running_stats=False))
-        layers.append(hidden_activation)
-        layers.append(nn.Dropout(p=dropout))
-
+        _in_dim = in_dim
         # hidden layers
         for _ in range(n_layers):
-            layers.append(nn.Linear(n_units, n_units))
+            layers.append(nn.Linear(_in_dim, n_units))
             if batch_normalization:
                 layers.append(nn.BatchNorm1d(n_units, track_running_stats=False))
             layers.append(hidden_activation)
             layers.append(nn.Dropout(p=dropout))
+            _in_dim = n_units
 
         # output layer
-        layers.append(nn.Linear(n_units, out_dim))
+        layers.append(nn.Linear(_in_dim, out_dim))
         layers.append(output_activation)
 
         # initialize weights

@@ -6,6 +6,7 @@ import torch
 import wandb
 from hydra.utils import instantiate
 from omegaconf import OmegaConf
+from torchinfo import summary
 
 from nigbms.configs.constructors import ConstructorTestFunctionConfig  # noqa
 from nigbms.configs.meta_solvers import ConstantMetaSolverConfig  # noqa
@@ -65,6 +66,7 @@ def main(cfg):
     loss = torch.sum
     opt = instantiate(cfg.opt, params=list(meta_solver.parameters()))
     wrapped_solver = instantiate(cfg.wrapper, solver=solver, surrogate=surrogate, constructor=constructor)
+    summary(surrogate)
 
     for i in range(1, cfg.problem.num_iter + 1):
         # clear gradients
@@ -85,7 +87,7 @@ def main(cfg):
         if i % 100 == 0:
             log.info(f"{i=}, {y.mean()=:.3g}, {y.max()=:.3g}, {y.min()=:.3g}, {sim.mean()=:.3g}")
 
-        clip gradients
+        # clip gradients
         if cfg.clip:
             torch.nn.utils.clip_grad_norm_(meta_solver.parameters(), cfg.clip)
 
