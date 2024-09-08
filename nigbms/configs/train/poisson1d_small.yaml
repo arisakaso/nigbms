@@ -59,11 +59,13 @@ surrogate:
   n_components: 62
   model:
     _target_: nigbms.modules.models.CNN1D
+    # _target_: nigbms.modules.models.MLPSkip
     n_layers: 4
+    # n_units: 1024
     base_channels: 32
-    kernel_size: 31
-    skip: True
-    downsample: False
+    kernel_size: 7
+    skip: False
+    downsample: True
     hidden_activation:
       _target_: torch.nn.SiLU
 
@@ -92,7 +94,7 @@ wrapper:
         dvf_loss_relative: 0
         dvL_loss: 0
       mask: True
-      conservative: False
+      conservative: True
     clip: 1
     grad_type: cv_fwd
     jvp_type: forwardFD

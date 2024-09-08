@@ -158,7 +158,7 @@ class NIGBMS(LightningModule):
         }
 
 
-@hydra.main(version_base="1.3", config_path="../configs/train", config_name="poisson1d_small")
+@hydra.main(version_base="1.3", config_path="../configs/train", config_name="poisson1d_large")
 def main(cfg: DictConfig):
     # log.info(OmegaConf.to_yaml(cfg))
     seed_everything(seed=cfg.seed, workers=True)
