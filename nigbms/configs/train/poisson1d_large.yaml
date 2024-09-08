@@ -15,9 +15,9 @@ wandb:
 data:
   data_dir: /workspaces/nigbms/data/raw/poisson1d/large
   dataset_sizes:
-    train: 5_000
-    val: 5_000
-    test: 5_000
+    train: 10_000
+    val: 10_000
+    test: 10_000
   batch_size: 256
   maxiter_dists:
     train:
@@ -59,16 +59,16 @@ surrogate:
       - ${dim}
     e0:
       - ${dim} 
-  n_components: 62
+  n_components: 64
   model:
     _target_: nigbms.modules.models.CNN1D
     # _target_: nigbms.modules.models.MLPSkip
     n_layers: 4
     # n_units: 1024
-    base_channels: 32
-    kernel_size: 7
-    skip: False
-    downsample: True
+    base_channels: 64
+    kernel_size: 65
+    skip: True
+    downsample: False
     hidden_activation:
       _target_: torch.nn.SiLU
 
@@ -99,13 +99,13 @@ wrapper:
       mask: True
       conservative: True
     clip: 1
-    grad_type: f_true
-    jvp_type: forwardFD
+    grad_type: cv_fwd
+    jvp_type: forwardAD
     eps: 1.0e-8
     Nv: 1
     v_scale: 1.0
     v_dist: rademacher
-    additional_steps: 10
+    additional_steps: 5
     
 loss:
   _target_: nigbms.modules.losses.MetaSolverLoss
@@ -152,7 +152,7 @@ trainer:
   max_epochs: 100
   accelerator: gpu
   devices: 
-    - 0
+    - 2
   check_val_every_n_epoch: 20
   fast_dev_run: False
   # limit_train_batches: 2
@@ -163,6 +163,6 @@ monitor: val/iter_r
 test: True
 dim: 127
 latent_dim: 127
-compile: False
+compile: True
 logging: True
 warmup: 0
