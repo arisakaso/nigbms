@@ -33,7 +33,7 @@ class register_custom_grad(Function):
         f_hat_true = torch.zeros(hparams.Nv, *theta.shape, device=theta.device)
         cv_fwd = torch.zeros(hparams.Nv, *theta.shape, device=theta.device)
 
-        for i in range(hparams.Nv):
+        for i in range(hparams.Nv):  # TODO: behavior of Nv>1 and cv_fwd seems wrong
             with torch.no_grad():  # f is black-box
                 # sample random vector
                 if hparams.v_dist == "rademacher":
