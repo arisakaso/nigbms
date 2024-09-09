@@ -41,9 +41,10 @@ class SurrogateSolverLoss(Module):
         is_converged = y == 0
 
         if self.conservative:
-            last_false_inds = (~is_converged).sum(dim=1) - 1
-            batch_inds = torch.arange(is_converged.size(0))
-            is_converged[batch_inds, last_false_inds] = True
+            rows, cols = is_converged.size()
+            last_false_inds = ((~is_converged).sum(dim=1) * self.conservative).long()
+            col_indices = torch.arange(cols, device=is_converged.device).expand(rows, cols)
+            is_converged = col_indices >= last_false_inds.unsqueeze(1)
 
         if self.mask:
             y_hat = torch.where(is_converged, 0, y_hat)

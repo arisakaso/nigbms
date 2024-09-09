@@ -3,6 +3,7 @@ from omegaconf import DictConfig
 from tensordict import TensorDict
 from torch import Tensor
 from torch.nn import Module, Parameter
+from torch.nn.functional import relu
 
 from nigbms.modules.constructors import FFTCodec
 from nigbms.modules.solvers import _Solver
@@ -194,7 +195,8 @@ class ExponentialDecaySurrogate(SurrogateSolver):
     def forward(self, tau: Task, theta: TensorDict) -> Tensor:
         x = self.arrange_input(tau, theta)
         c = self.model(x)  # (bs, n_components)
-        base = torch.pow(self.decay_rates, self.roll_out)  # (n_components, out_dim)
+
+        base = torch.pow(relu(self.decay_rates), self.roll_out)  # (n_components, out_dim)
         y = c @ base  # (bs, out_dim)
         return y
 

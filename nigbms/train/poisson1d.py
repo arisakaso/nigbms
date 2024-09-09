@@ -35,9 +35,9 @@ class NIGBMS(LightningModule):
         self.loss = instantiate(cfg.loss, constructor=self.constructor)
         if cfg.compile:  # This doesn't speed up the training, even slower. TODO: Investigate why?
             # possible backend ['cudagraphs', 'inductor', 'onnxrt', 'openxla', 'tvm']
-            self.meta_solver = torch.compile(self.meta_solver, mode="reduce-overhead", dynamic=True)
+            self.meta_solver = torch.compile(self.meta_solver)
             # self.solver = torch.compile(self.solver, backend=backend, mode="reduce-overhead", dynamic=True)
-            self.surrogate = torch.compile(self.surrogate, mode="reduce-overhead", dynamic=True)
+            self.surrogate = torch.compile(self.surrogate)
 
         ref_solver_cfg = cfg.solver.copy()
         ref_solver_cfg.params_learn = {}
@@ -97,7 +97,7 @@ class NIGBMS(LightningModule):
                 logger=True,
                 prog_bar=True,
                 on_epoch=True,
-                on_step=False,
+                on_step=True,
                 batch_size=tau.batch_size[0],
             )
 

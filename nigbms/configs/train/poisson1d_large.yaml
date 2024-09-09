@@ -97,10 +97,10 @@ wrapper:
         dvf_loss_relative: 0
         dvL_loss: 0
       mask: True
-      conservative: True
+      conservative: 0.99
     clip: 1
     grad_type: cv_fwd
-    jvp_type: forwardAD
+    jvp_type: forwardFD
     eps: 1.0e-8
     Nv: 1
     v_scale: 1.0
@@ -138,21 +138,19 @@ callbacks:
     mode: min
     save_top_k: 0
     save_last: ${test}
-  # - _target_: lightning.pytorch.callbacks.EarlyStopping
-  #   monitor: surrogate/sim
-  #   patience: 3
-  #   verbose: True
-  #   check_finite: True
-  #   check_on_train_epoch_end: True
-  #   mode: max
-  #   min_delta: 0.01
+  - _target_: lightning.pytorch.callbacks.EarlyStopping
+    monitor: surrogate/sim
+    patience: 100
+    verbose: True
+    check_finite: True
+    check_on_train_epoch_end: True
   
 
 trainer:
   max_epochs: 100
   accelerator: gpu
   devices: 
-    - 2
+    - 0
   check_val_every_n_epoch: 20
   fast_dev_run: False
   # limit_train_batches: 2
@@ -163,6 +161,6 @@ monitor: val/iter_r
 test: True
 dim: 127
 latent_dim: 127
-compile: True
+compile: False
 logging: True
 warmup: 0
