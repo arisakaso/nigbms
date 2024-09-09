@@ -150,7 +150,7 @@ trainer:
   max_epochs: 100
   accelerator: gpu
   devices: 
-    - 0
+    - 3
   check_val_every_n_epoch: 20
   fast_dev_run: False
   # limit_train_batches: 2
