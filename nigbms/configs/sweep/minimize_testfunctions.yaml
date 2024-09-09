@@ -1,30 +1,29 @@
-project: minimize_testfunctions
-program: nigbms/train/minimize_testfunctions.py
-name: adam
-metric:
-  name: cos_sim
-method: grid
-parameters:
-  problem.dim:
-    values:
-      - 32
-      - 128
-      - 512
-  wrapper.grad_type: 
-    values:
-      - f_true
-      - f_fwd
-      - f_hat_true
-      - cv_fwd
-  wrapper.Nv:
-    values:
-      - 1
-      - 4
-      - 16
+settings:
+  agents_per_gpu: 2
+  sweep_path: null
 
-# for hydra compatibility
-command:
-  - ${env}
-  - python
-  - ${program}
-  - ${args_no_hyphens}
+
+sweep:
+  project: minimize_testfunctions
+  program: nigbms/train/minimize_testfunctions.py
+  name: adam
+  method: grid
+  parameters:
+    problem.dim:
+      values:
+        - 8
+        - 32
+        - 128
+    wrapper.grad_type: 
+      values:
+        - f_true
+        - f_fwd
+        - f_hat_true
+        - cv_fwd
+    wrapper.Nv:
+      values:
+        - 1
+        - 4
+        - 16
+
+  

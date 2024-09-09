@@ -105,7 +105,7 @@ wrapper:
     Nv: 1
     v_scale: 1.0
     v_dist: rademacher
-    additional_steps: 5
+    additional_steps: 10
     
 loss:
   _target_: nigbms.modules.losses.MetaSolverLoss
@@ -150,7 +150,7 @@ trainer:
   max_epochs: 100
   accelerator: gpu
   devices: 
-    - 3
+    - 1
   check_val_every_n_epoch: 20
   fast_dev_run: False
   # limit_train_batches: 2

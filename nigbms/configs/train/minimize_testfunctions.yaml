@@ -38,8 +38,8 @@ surrogate:
   model:
     # _target_: nigbms.modules.models.CNN1D
     _target_: nigbms.modules.models.MLPSkip
-    n_units: 256
-    n_layers: 2
+    n_units: 512
+    n_layers: 1
     kernel_size: 1
     base_channels: 64
     skip: True
@@ -63,10 +63,10 @@ wrapper:
     grad_type: cv_fwd
     jvp_type: forwardAD
     eps: 1.0e-8
-    Nv: 1
+    Nv: 1 # TODO: check > 1
     v_scale: 1.0
     v_dist: rademacher
-    additional_steps: 5
+    additional_steps: 0
 
 opt:
   _target_: torch.optim.SGD
