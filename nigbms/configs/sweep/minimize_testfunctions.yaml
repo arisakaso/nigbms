@@ -9,21 +9,75 @@ sweep:
   name: adam
   method: grid
   parameters:
-    problem.dim:
-      values:
-        - 8
-        - 32
-        - 128
-    wrapper.grad_type: 
-      values:
-        - f_true
-        - f_fwd
-        - f_hat_true
-        - cv_fwd
-    wrapper.Nv:
+    wrapper.hparams.Nv:
       values:
         - 1
         - 4
         - 16
+
+    wrapper.hparams.additional_steps:
+      values:
+        - 0
+        - 1
+        - 4
+        - 16
+    # wrapper.hparams.opt._target_:
+    #   values:
+    #     - torch.optim.Adam
+    #     - torch.optim.SGD
+    # wrapper.hparams.opt.lr:
+    #   values:
+    #     - 1.0e-5
+    #     - 1.0e-4
+    #     - 1.0e-3
+    #     - 1.0e-2
+    #     - 1.0e-1
+    # wrapper.hparams.loss.weights.y_loss:
+    #   values:
+    #     - 1.0e-0
+    #     - 1.0e-1
+    #     - 1.0e-2
+    #     - 1.0e-3
+    #     - 0    
+    # surrogate.model.n_units:
+    #   values:
+    #     - 128
+    #     - 256
+    #     - 512
+    #     - 1024
+    #     - 2048
+    #     - 4096
+    #     - 8192
+    # surrogate.model.hidden_activation._target_:
+    #   values:
+    #     - torch.nn.ReLU
+    #     - torch.nn.LeakyReLU
+    #     - torch.nn.PReLU
+    #     - torch.nn.ELU
+    #     - torch.nn.GELU
+    #     - torch.nn.CELU
+    #     - torch.nn.SELU
+    #     - torch.nn.SiLU
+    #     - torch.nn.Mish
+    #     - torch.nn.Softplus
+    #     - torch.nn.Tanh
+    #     - torch.nn.Sigmoid
+    #     - torch.nn.Identity
+    # problem.dim:
+    #   values:
+    #     - 8
+    #     - 32
+    #     - 128
+    # wrapper.hparams.grad_type: 
+    #   values:
+    #     - f_true
+    #     - f_fwd
+        # - f_hat_true
+        # - cv_fwd
+    # wrapper.Nv:
+    #   values:
+    #     - 1
+    #     - 4
+    #     - 16
 
   

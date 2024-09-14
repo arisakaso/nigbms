@@ -8,7 +8,7 @@ defaults:
   - _self_
 
 wandb:
-  mode: disabled
+  mode: online
 
 problem:
   test_function: sphere
@@ -38,10 +38,10 @@ surrogate:
   model:
     # _target_: nigbms.modules.models.CNN1D
     _target_: nigbms.modules.models.MLPSkip
-    n_units: 512
-    n_layers: 1
+    n_units: 1024
+    n_layers: 2
     kernel_size: 1
-    base_channels: 64
+    base_channels: 128
     skip: True
     hidden_activation:
       _target_: torch.nn.GELU
@@ -63,10 +63,20 @@ wrapper:
     grad_type: cv_fwd
     jvp_type: forwardAD
     eps: 1.0e-8
-    Nv: 1 # TODO: check > 1
+    Nv: 1
     v_scale: 1.0
     v_dist: rademacher
-    additional_steps: 0
+    additional_steps: 4
+    loss:
+      weights:
+        y_loss: 0
+    # opt:
+    #   lr: 0.0001
+    # opt:
+    #   momentum: 0.9
+    #   _target_: torch.optim.Adam
+    #   lr: 0.0001
+
 
 opt:
   _target_: torch.optim.SGD
@@ -74,4 +84,4 @@ opt:
 
 clip: null
 device: cuda
-
+seed: 5

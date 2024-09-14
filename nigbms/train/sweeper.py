@@ -35,7 +35,7 @@ def create_new_sweep(cfg: DictConfig) -> str:
     return os.path.join(*path)
 
 
-@hydra.main(version_base="1.3", config_path="../configs/sweep", config_name="poisson1d_small")
+@hydra.main(version_base="1.3", config_path="../configs/sweep", config_name="minimize_testfunctions")
 def main(cfg: DictConfig):
     path = cfg.settings.sweep_path
     if path is None:
@@ -47,7 +47,7 @@ def main(cfg: DictConfig):
                 # start_new_session seems help to avoid wandb connection error (I'm not sure)
                 subprocess.Popen(f"CUDA_VISIBLE_DEVICES={i} wandb agent {path}", shell=True)
             )
-            time.sleep(1)
+            time.sleep(3)
 
     # Wait for all agents to finish
     try:

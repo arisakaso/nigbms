@@ -85,7 +85,8 @@ def main(cfg):
         sim = torch.cosine_similarity(f_true, theta.grad, dim=1, eps=1e-20).detach()
         wandb.log({"ymean": y.mean(), "ymax": y.max(), "ymin": y.min(), "cos_sim": sim.mean()})
         if i % 100 == 0:
-            log.info(f"{i=}, {y.mean()=:.3g}, {y.max()=:.3g}, {y.min()=:.3g}, {sim.mean()=:.3g}")
+            surroate_loss = wrapped_solver.loss_dict["loss"]
+            log.info(f"{i=}, {y.mean()=:.3g}, {y.max()=:.3g}, {y.min()=:.3g}, {sim.mean()=:.3g}, {surroate_loss=:.3g}")
 
         # clip gradients
         if cfg.clip:
