@@ -11,7 +11,7 @@ cs = ConfigStore.instance()
 class OnlineDatasetConfig:
     """OnlineDatasetConfig class."""
 
-    _target_: str = "nigbms.modules.data.OnlineDataset"
+    _target_: str = "nigbms.data.OnlineDataset"
     task_params_type: DictConfig = DictConfig(
         {"_target_": "hydra.utils.get_class", "path": "nigbms.data.generate_poisson2d.Poisson2DParams"}
     )
@@ -34,8 +34,8 @@ cs.store(name="online_dataset_default", group="data", node=OnlineDatasetConfig)
 
 @dataclass
 class OfflineDatasetConfig:
-    _target_: str = "nigbms.modules.data.OfflineDataset"
-    data_dir: str = "/workspaces/nigbms/data/raw/poisson2d/sample"
+    _target_: str = "nigbms.data.OfflineDataset"
+    data_dir: str = "/workspaces/nigbms/data/raw/temp/petsc"
     idcs: List[int] = field(default_factory=lambda: [0, 1, 2, 3, 4, 5])
     rtol_dist: DictConfig = DictConfig(
         {"_target_": "nigbms.utils.distributions.NumpyConstant", "shape": None, "value": 1.0e-6}
@@ -44,7 +44,7 @@ class OfflineDatasetConfig:
         {"_target_": "nigbms.utils.distributions.NumpyConstant", "shape": None, "value": 1000}
     )
     task_type: DictConfig = DictConfig(
-        {"_target_": "hydra.utils.get_class", "path": "nigbms.modules.tasks.PETScLinearSystemTask"}
+        {"_target_": "hydra.utils.get_class", "path": "nigbms.tasks.PETScLinearSystemTask"}
     )
     normalize: bool = False
 
@@ -54,7 +54,7 @@ cs.store(name="offline_dataset_default", group="data", node=OfflineDatasetConfig
 
 @dataclass
 class OfflineDataModuleConfig:
-    _target_: str = "nigbms.modules.data.OfflineDataModule"
+    _target_: str = "nigbms.data.OfflineDataModule"
     data_dir: str = MISSING
     dataset_sizes: DictConfig = MISSING
     rtol_dists: DictConfig = MISSING
@@ -85,10 +85,10 @@ class Poisson1DOfflineDataModuleConfig(OfflineDataModuleConfig):
         }
     )
     in_task_type: DictConfig = DictConfig(
-        {"_target_": "hydra.utils.get_class", "path": "nigbms.modules.tasks.PyTorchLinearSystemTask"}
+        {"_target_": "hydra.utils.get_class", "path": "nigbms.tasks.PyTorchLinearSystemTask"}
     )
     out_task_type: DictConfig = DictConfig(
-        {"_target_": "hydra.utils.get_class", "path": "nigbms.modules.tasks.PyTorchLinearSystemTask"}
+        {"_target_": "hydra.utils.get_class", "path": "nigbms.tasks.PyTorchLinearSystemTask"}
     )
     batch_size: int = 32
     num_workers: int = 0
@@ -117,10 +117,10 @@ class Poisson2DOfflineDataModuleConfig(OfflineDataModuleConfig):
         }
     )
     in_task_type: DictConfig = DictConfig(
-        {"_target_": "hydra.utils.get_class", "path": "nigbms.modules.tasks.PETScLinearSystemTask"}
+        {"_target_": "hydra.utils.get_class", "path": "nigbms.tasks.PETScLinearSystemTask"}
     )
     out_task_type: DictConfig = DictConfig(
-        {"_target_": "hydra.utils.get_class", "path": "nigbms.modules.tasks.PETScLinearSystemTask"}
+        {"_target_": "hydra.utils.get_class", "path": "nigbms.tasks.PETScLinearSystemTask"}
     )
     batch_size: int = 32
     num_workers: int = 0

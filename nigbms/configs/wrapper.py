@@ -11,7 +11,7 @@ class WrappedSolverConfig:
     """WrappedSolverConfig class.
     Solver, Surrogate, and Constructor are not included and should be specified later"""
 
-    _target_: str = "nigbms.modules.wrapper.WrappedSolver"
+    _target_: str = "nigbms.wrapper.WrappedSolver"
     _recursive_: bool = False
     hparams: DictConfig = DictConfig(
         {
@@ -20,7 +20,7 @@ class WrappedSolverConfig:
                 "lr": 0.001,
             },
             "loss": {
-                "_target_": "nigbms.modules.losses.SurrogateSolverLoss",
+                "_target_": "nigbms.losses.SurrogateSolverLoss",
                 "weights": {"dvf_loss": 1},
                 "reduce": True,
             },
