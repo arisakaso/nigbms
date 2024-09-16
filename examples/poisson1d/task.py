@@ -99,9 +99,6 @@ class Poisson1DTaskConstructor(TaskConstructor):
 @hydra.main(version_base="1.3", config_path=".", config_name="data_small")
 def main(cfg) -> None:
     dataset = instantiate(cfg.dataset)
-    import os
-
-    print(os.getcwd())
     for i in tqdm(range(cfg.N_data)):
         task = dataset[i]
         if isinstance(task, PyTorchLinearSystemTask):

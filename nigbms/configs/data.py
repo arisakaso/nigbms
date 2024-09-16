@@ -53,6 +53,9 @@ class OfflineDataModuleConfig:
     normalize: bool = MISSING
 
 
+# TODO: Separate task specific configs
+
+
 @dataclass
 class Poisson1DOfflineDataModuleConfig(OfflineDataModuleConfig):
     data_dir: str = "/workspaces/nigbms/data/poisson1d/small"
@@ -87,7 +90,7 @@ cs.store(name="poisson1d_offline_datamodule", group="data", node=Poisson1DOfflin
 
 @dataclass
 class Poisson2DOfflineDataModuleConfig(OfflineDataModuleConfig):
-    data_dir: str = "/workspaces/nigbms/data/raw/poisson2d/sample"
+    data_dir: str = "/workspaces/nigbms/data/poisson2d/small"
     dataset_sizes: DictConfig = DictConfig({"train": 100, "val": 100, "test": 100})
     rtol_dists: DictConfig = DictConfig(
         {
