@@ -1,0 +1,167 @@
+defaults:
+  - data: poisson1d_offline_datamodule
+  - meta_solver: poisson1d_meta_solver_default
+  - solver: pytorch_jacobi_default
+  # - solver: petsc_jacobi_default  
+  # - surrogate: poisson1d_surrogate_default
+  - surrogate: exponential_decay_default
+  - wrapper: wrapped_solver_default
+  - _self_
+
+wandb: 
+  mode: disabled # must be online when sweep
+  project: poisson1d
+
+data:
+  data_dir: /workspaces/nigbms/data/poisson1d/small
+  dataset_sizes:
+    train: 10_000
+    val: 10_000
+    test: 10_000
+  batch_size: 256
+  # out_task_type: 
+  #   _target_: hydra.utils.get_class
+  #   path: nigbms.tasks.PETScLinearSystemTask
+
+meta_solver:
+  params_learn: 
+    x0: 
+      - ${latent_dim}
+  features:
+    b: 
+      - ${dim}
+  model:
+    _target_: nigbms.models.UNet1D
+    n_layers: 4
+    base_channels: 64
+    kernel_size: 3
+    
+solver:
+  params_fix: 
+    history_length: 501
+  params_learn: 
+    x0: 
+      - ${dim}
+      - 1
+
+surrogate:
+  params_fix: ${solver.params_fix}
+  params_learn: ${solver.params_learn}
+  features:
+    b:
+      - ${dim}
+    x0:
+      - ${dim}
+    x:
+      - ${dim}
+    e0:
+      - ${dim} 
+  n_components: 62
+  model:
+    _target_: nigbms.models.CNN1D
+    # _target_: nigbms.models.MLPSkip
+    n_layers: 4
+    # n_units: 1024
+    base_channels: 32
+    kernel_size: 7
+    skip: False
+    downsample: True
+    hidden_activation:
+      _target_: torch.nn.SiLU
+
+
+constructor:
+  _target_: nigbms.constructors.ThetaConstructor
+  params: 
+    x0:
+      codec: 
+        _target_: nigbms.constructors.LinearCodec
+        param_dim: ${dim}
+        latent_dim: ${latent_dim}
+      shape: ${solver.params_learn.x0}
+    
+
+wrapper:
+  hparams:
+    opt:
+      _target_: torch.optim.Adam
+      lr: 1.0e-4
+    loss:
+      weights:
+        y_loss: 0
+        y_loss_relative: 0
+        dvf_loss: 1
+        dvf_loss_relative: 0
+        dvL_loss: 0
+      mask: True
+      conservative: True
+    clip: 1
+    grad_type: cv_fwd
+    jvp_type: forwardFD
+    eps: 1.0e-8
+    Nv: 1
+    v_scale: 1.0
+    v_dist: rademacher
+    additional_steps: 10
+    
+loss:
+  _target_: nigbms.losses.MetaSolverLoss
+  weights:
+    iter_r_proxy: 1
+    # e0: 1
+    # r0: 1
+  reduce: True
+  gain: 1.0e+3 # equal to 1/rtol
+  
+opt:
+  _target_: torch.optim.Adam
+  lr: 1.0e-4
+
+sch:
+  _target_: torch.optim.lr_scheduler.MultiStepLR
+  milestones: [1000000]
+  gamma: 0.1
+  
+callbacks:
+  - _target_: lightning.pytorch.callbacks.EarlyStopping
+    monitor: ${monitor}
+    patience: 10
+    mode: min
+    verbose: True
+  - _target_: lightning.pytorch.callbacks.LearningRateMonitor
+    logging_interval: epoch
+  - _target_: lightning.pytorch.callbacks.ModelCheckpoint
+    monitor: ${monitor}
+    mode: min
+    save_top_k: 0
+    save_last: ${test}
+  # - _target_: lightning.pytorch.callbacks.EarlyStopping
+  #   monitor: surrogate/sim
+  #   patience: 3
+  #   verbose: True
+  #   check_finite: True
+  #   check_on_train_epoch_end: True
+  #   mode: max
+  #   min_delta: 0.01
+  
+
+trainer:
+  max_epochs: 100
+  accelerator: gpu
+  devices: 
+    - 0
+  check_val_every_n_epoch: 20
+  fast_dev_run: False
+  # limit_train_batches: 2
+  # limit_val_batches: 2
+  # limit_test_batches: 2
+
+monitor: val/iter_r
+test: True
+dim: 31
+latent_dim: 31
+compile: False
+logging: True
+warmup: 0
+seed: 0
+dtype: torch.float64

@@ -10,7 +10,7 @@ cs = ConfigStore.instance()
 class IdentityCodecConfig:
     """IdentityCodecConfig class."""
 
-    _target_: str = "nigbms.modules.constructors.IdentityCodec"
+    _target_: str = "nigbms.constructors.IdentityCodec"
     param_dim: int = 128
     latent_dim: int = 128
 
@@ -22,7 +22,7 @@ cs.store(name="identity_codec_default", group="codec", node=IdentityCodecConfig)
 class SinCodecConfig:
     """SinCodecConfig class."""
 
-    _target_: str = "nigbms.modules.constructors.SinCodec"
+    _target_: str = "nigbms.constructors.SinCodec"
     param_dim: int = 128
     latent_dim: int = 64
 
@@ -34,7 +34,7 @@ cs.store(name="sin_codec_default", group="codec", node=SinCodecConfig)
 class LinearCodecConfig:
     """SinCodecConfig class."""
 
-    _target_: str = "nigbms.modules.constructors.LinearCodec"
+    _target_: str = "nigbms.constructors.LinearCodec"
     param_dim: int = 128
     latent_dim: int = 128
 
@@ -42,24 +42,23 @@ class LinearCodecConfig:
 cs.store(name="linear_codec_default", group="codec", node=LinearCodecConfig)
 
 
-
 @dataclass
 class FFTCodecConfig:
     """FFTCodecConfig class."""
-    
-    _target_: str = "nigbms.modules.constructors.FFTCodec"
+
+    _target_: str = "nigbms.constructors.FFTCodec"
     param_dim: int = 128
     latent_dim: int = 128
 
 
-
 cs.store(name="fft_codec_default", group="codec", node=FFTCodecConfig)
+
 
 @dataclass
 class ConstructorConfig:
     """ConstructorConfig class."""
 
-    _target_: str = "nigbms.modules.constructors.ThetaConstructor"
+    _target_: str = "nigbms.constructors.ThetaConstructor"
     params: DictConfig = DictConfig(
         {
             "x": DictConfig(
@@ -85,7 +84,7 @@ cs.store(name="constructor_default", group="constructor", node=ConstructorConfig
 class ConstructorTestFunctionConfig:
     """ConstructorConfig class."""
 
-    _target_: str = "nigbms.modules.constructors.ThetaConstructor"
+    _target_: str = "nigbms.constructors.ThetaConstructor"
     params: DictConfig = DictConfig(
         {
             "x": DictConfig(

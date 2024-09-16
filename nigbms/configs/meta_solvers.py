@@ -10,12 +10,12 @@ cs = ConfigStore.instance()
 class ConstantMetaSolverConfig:
     """ConstantMetaSolverConfig class."""
 
-    _target_: str = "nigbms.modules.meta_solvers.ConstantMetaSolver"
+    _target_: str = "nigbms.meta_solvers.ConstantMetaSolver"
     params_learn: DictConfig = DictConfig({})
     features: DictConfig = DictConfig({})
     model: DictConfig = DictConfig(
         {
-            "_target_": "nigbms.modules.models.Constant",
+            "_target_": "nigbms.models.Constant",
             "shape": [100, 200],
             "range": [-1, 1],
         }
@@ -27,12 +27,12 @@ cs.store(name="constant_meta_solver_default", group="meta_solver", node=Constant
 
 @dataclass
 class Poisson1DMetaSolverConfig:
-    _target_: str = "nigbms.modules.meta_solvers.Poisson1DMetaSolver"
+    _target_: str = "nigbms.meta_solvers.Poisson1DMetaSolver"
     params_learn: DictConfig = DictConfig({"x0": [5]})
     features: DictConfig = DictConfig({"b": [5]})
     model: DictConfig = DictConfig(
         {
-            "_target_": "nigbms.modules.models.MLP",
+            "_target_": "nigbms.models.MLP",
             "in_dim": "${..features.b[0]}",
             "out_dim": "${..params_learn.x0[0]}",
             "n_layers": 3,

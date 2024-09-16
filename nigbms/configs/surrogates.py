@@ -1,8 +1,9 @@
 from dataclasses import dataclass
 
 from hydra.core.config_store import ConfigStore
-from nigbms.utils.resolver import calc_in_channels, calc_in_dim
 from omegaconf import DictConfig, OmegaConf
+
+from nigbms.utils.resolver import calc_in_channels, calc_in_dim
 
 OmegaConf.register_new_resolver("calc_in_dim", calc_in_dim)
 OmegaConf.register_new_resolver("calc_in_channels", calc_in_channels)
@@ -13,7 +14,7 @@ cs = ConfigStore.instance()
 class SurrogateSolverConfig:
     """SurrogateSolverConfig class."""
 
-    _target_: str = "nigbms.modules.surrogates.SurrogateSolver"
+    _target_: str = "nigbms.surrogates.SurrogateSolver"
     params_fix: DictConfig = DictConfig({})
     params_learn: DictConfig = DictConfig({})
     features: DictConfig = DictConfig({})
@@ -24,10 +25,10 @@ class SurrogateSolverConfig:
 class Poisson1DSurrogateConfig(SurrogateSolverConfig):
     """Poisson1DSurrogateConfig class."""
 
-    _target_: str = "nigbms.modules.surrogates.Poisson1DSurrogate"
+    _target_: str = "nigbms.surrogates.Poisson1DSurrogate"
     model: DictConfig = DictConfig(
         {
-            "_target_": "nigbms.modules.models.MLP",
+            "_target_": "nigbms.models.MLP",
             "in_dim": "${calc_in_dim:${..features}}",
         }
     )
@@ -40,10 +41,10 @@ cs.store(name="poisson1d_surrogate_default", group="surrogate", node=Poisson1DSu
 class ExponentialDecaySurrogateConfig(SurrogateSolverConfig):
     """Poisson1DSurrogateConfig class."""
 
-    _target_: str = "nigbms.modules.surrogates.ExponentialDecaySurrogate"
+    _target_: str = "nigbms.surrogates.ExponentialDecaySurrogate"
     model: DictConfig = DictConfig(
         {
-            "_target_": "nigbms.modules.models.MLP",
+            "_target_": "nigbms.models.MLP",
             "in_dim": "${calc_in_dim:${..features}}",
             "in_channels": "${calc_in_channels:${..features}}",
             "out_dim": "${..n_components}",
@@ -57,12 +58,12 @@ cs.store(name="exponential_decay_default", group="surrogate", node=ExponentialDe
 
 @dataclass
 class TestFunctionSurrogateConfig(SurrogateSolverConfig):
-    _target_: str = "nigbms.modules.surrogates.TestFunctionSurrogate"
+    _target_: str = "nigbms.surrogates.TestFunctionSurrogate"
     params_learn: DictConfig = DictConfig({"x": [5]})
     features: DictConfig = DictConfig({"x": [5]})
     model: DictConfig = DictConfig(
         {
-            "_target_": "nigbms.modules.models.MLP",
+            "_target_": "nigbms.models.MLP",
             "in_dim": "${calc_in_dim:${..features}}",
             "in_channels": "${calc_in_channels:${..features}}",
             "out_dim": 1,

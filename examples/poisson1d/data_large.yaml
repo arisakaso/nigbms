@@ -1,0 +1,41 @@
+hydra:
+  run:
+    dir: /workspaces/nigbms/data/poisson1d/large
+  job:
+    chdir: True
+
+N_data: 30_000
+
+dataset:
+  _target_: nigbms.data.OnlineDataset
+  constructor: 
+    _target_: examples.poisson1d.task.Poisson1DTaskConstructor
+    # TODO: Setting task.Poisson1DTaskConstructor gives an error when loading saved .pkl files. This should be fixed.
+  distribution:
+    _target_: nigbms.tasks.TaskDistribution
+    task_params_class:
+      _target_: hydra.utils.get_class
+      path: examples.poisson1d.task.Poisson1DParams
+    distributions:
+      N_terms:
+        _target_: nigbms.utils.distributions.NumpyConstant
+        shape: null
+        value: 127
+      N_grid:
+        _target_: nigbms.utils.distributions.NumpyConstant
+        shape: null
+        value: ${dataset.distribution.distributions.N_terms.value}
+      coefs:
+        _target_: examples.poisson1d.task.CoefsDistribution
+        shape: 
+          - ${dataset.distribution.distributions.N_terms.value}
+        p: 0.01
+        scale: 1
+      rtol:
+        _target_: nigbms.utils.distributions.NumpyConstant
+        shape: null
+        value: 1.0e-3
+      maxiter:
+        _target_: nigbms.utils.distributions.NumpyConstant
+        shape: null
+        value: 1000
