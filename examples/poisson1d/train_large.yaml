@@ -12,7 +12,7 @@ wandb:
   mode: online # must be online when sweep
 
 data:
-  data_dir: /workspaces/nigbms/data/raw/poisson1d/large
+  data_dir: /workspaces/nigbms/data/poisson1d/large
   dataset_sizes:
     train: 10_000
     val: 10_000

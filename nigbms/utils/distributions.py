@@ -25,6 +25,17 @@ class Distribution(object):
         raise NotImplementedError
 
 
+class NumpyInteger(Distribution):
+    def __init__(self, shape, lb, ub):
+        super().__init__(shape)
+        self.lb = lb
+        self.ub = ub
+
+    def sample(self, seed=None) -> np.ndarray:
+        np.random.seed(seed)
+        return np.random.randint(self.lb, self.ub, self.shape)
+
+
 class NumpyLogUniform(Distribution):
     def __init__(self, shape, lb, ub):
         super().__init__(shape)

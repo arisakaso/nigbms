@@ -6,53 +6,40 @@ from hydra.utils import instantiate
 from nigbms.configs.data import Poisson1DOfflineDataModuleConfig
 from nigbms.tasks import PETScLinearSystemTask, PyTorchLinearSystemTask
 from numpy.testing import assert_array_equal
-from sympy import pi, sin, symbols
 
 from examples.poisson1d.task import (
     CoefsDistribution,
     Poisson1DParams,
-    construct_pytorch_poisson1d_task,
-    construct_sym_u,
-    discretize,
-    laplacian_matrix,
+    Poisson1DTaskConstructor,
 )
 
 
-def test_laplacian_matrix() -> None:
-    expected_result = np.array(
-        [
-            [2, -1, 0, 0, 0],
-            [-1, 2, -1, 0, 0],
-            [0, -1, 2, -1, 0],
-            [0, 0, -1, 2, -1],
-            [0, 0, 0, -1, 2],
-        ]
-    )
-    assert_array_equal(laplacian_matrix(5), expected_result)
+class TestPoisson1DTaskConstructor:
+    def setup_method(self):
+        self.constructor = Poisson1DTaskConstructor()
 
+    def test_laplacian_matrix(self) -> None:
+        expected_result = np.array(
+            [
+                [2, -1, 0, 0, 0],
+                [-1, 2, -1, 0, 0],
+                [0, -1, 2, -1, 0],
+                [0, 0, -1, 2, -1],
+                [0, 0, 0, -1, 2],
+            ]
+        )
+        assert_array_equal(self.constructor._laplacian_matrix(5), expected_result)
 
-def test_discretize() -> None:
-    x = symbols("x")
-    expr = sin(x)
-    N_grid = 128
+    def test_discretize(self) -> None:
+        N_grid = 128
+        expected_result = np.sin(np.pi * np.linspace(0, 1, N_grid))
+        result = self.constructor._discretize(1, np.array([1.0]), N_grid)
+        assert_array_equal(result, expected_result)
 
-    expected_result = np.sin(np.linspace(0, 1, N_grid))
-    result = discretize(expr, N_grid)
-
-    assert_array_equal(result, expected_result)
-
-
-def test_construct_sym_u() -> None:
-    N_terms = 3
-    coefs = np.ones(3)
-    u_sym = construct_sym_u(N_terms, coefs)
-    assert u_sym == sum([coefs[i] * sin((i + 1) * pi * symbols("x")) for i in range(N_terms)])
-
-
-def test_construct_pytorch_poisson1d_task() -> None:
-    parasm = Poisson1DParams()
-    task = construct_pytorch_poisson1d_task(parasm)
-    assert isinstance(task, PyTorchLinearSystemTask)
+    def test_construct_task(self) -> None:
+        params = Poisson1DParams()
+        task = self.constructor(params)
+        assert isinstance(task, PyTorchLinearSystemTask)
 
 
 class TestCoefsDistribution:
@@ -87,3 +74,8 @@ class TestPoisson1DDataModule:
         dl = self.dm.train_dataloader()
         batch = next(iter(dl))
         assert isinstance(batch, out_task_type)
+
+
+# TODO: Implement test for train.py
+def test_train():
+    pass

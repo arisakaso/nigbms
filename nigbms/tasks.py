@@ -15,6 +15,8 @@ from nigbms.utils.distributions import Distribution
 class TaskParams:
     """Parameters to generate a task"""
 
+    seed: int = 0
+
     pass
 
 
@@ -98,15 +100,15 @@ class OpenFOAMTask:
 class TaskDistribution:
     """Base class for task distributions"""
 
-    def __init__(self, task_params_type: Type, distributions: Dict[str, Distribution]):
-        self.task_params_type = task_params_type
+    def __init__(self, task_params_class: Type = TaskParams, distributions: Dict[str, Distribution] = {}):
+        self.task_params_class = task_params_class
         self.distributions = distributions
 
     def sample(self, seed: int = None) -> TaskParams:
-        params = {}
+        params = {"seed": seed}
         for key, dist in self.distributions.items():
             params[key] = dist.sample(seed)
-        task_params = self.task_params_type(**params)
+        task_params = self.task_params_class(**params)
         return task_params
 
 

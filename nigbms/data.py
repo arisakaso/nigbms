@@ -12,6 +12,8 @@ from nigbms.tasks import (
     PETScLinearSystemTask,
     PyTorchLinearSystemTask,
     Task,
+    TaskConstructor,
+    TaskDistribution,
     load_petsc_task,
     load_pytorch_task,
     petsc2torch_collate_fn,
@@ -77,23 +79,19 @@ class OfflineDataset(Dataset):
 class OnlineDataset(Dataset):
     """Online dataset for generating tasks on-the-fly."""
 
-    def __init__(self, task_params_type: Type, task_constructor: Callable, distributions: DictConfig) -> None:
+    def __init__(self, constructor: TaskConstructor, distribution: TaskDistribution) -> None:
         """
         Args:
-            task_params_type (Type): TaskParams type
-            task_constructor (Callable): task constructor function that takes a TaskParams object and returns a Task
-            distributions (DictConfig): dictionary of distributions for each parameter in the TaskParams
+            constructor (TaskConstructor):
+            distribution (TaskDistribution):
         """
-        self.task_params_type = task_params_type
-        self.task_constructor = task_constructor
-        self.distributions = distributions
+
+        self.constructor = constructor
+        self.distribution = distribution
 
     def __getitem__(self, idx) -> Task:
-        params = {}
-        for k, dist in self.distributions.items():
-            params[k] = dist.sample(idx)
-        task_params = self.task_params_type(**params)
-        tau = self.task_constructor(task_params)
+        task_params = self.distribution.sample(idx)
+        tau = self.constructor(task_params)
         return tau
 
 

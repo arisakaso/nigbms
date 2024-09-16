@@ -1,5 +1,4 @@
 defaults:
-  - common
   - data: poisson1d_offline_datamodule
   - meta_solver: poisson1d_meta_solver_default
   - solver: pytorch_jacobi_default
@@ -10,10 +9,11 @@ defaults:
   - _self_
 
 wandb: 
-  mode: online # must be online when sweep
+  mode: disabled # must be online when sweep
+  project: poisson1d
 
 data:
-  data_dir: /workspaces/nigbms/data/raw/poisson1d/small
+  data_dir: /workspaces/nigbms/data/poisson1d/small
   dataset_sizes:
     train: 10_000
     val: 10_000
@@ -21,7 +21,7 @@ data:
   batch_size: 256
   # out_task_type: 
   #   _target_: hydra.utils.get_class
-  #   path: nigbms.modules.tasks.PETScLinearSystemTask
+  #   path: nigbms.tasks.PETScLinearSystemTask
 
 meta_solver:
   params_learn: 
@@ -31,7 +31,7 @@ meta_solver:
     b: 
       - ${dim}
   model:
-    _target_: nigbms.modules.models.UNet1D
+    _target_: nigbms.models.UNet1D
     n_layers: 4
     base_channels: 64
     kernel_size: 3
@@ -58,8 +58,8 @@ surrogate:
       - ${dim} 
   n_components: 62
   model:
-    _target_: nigbms.modules.models.CNN1D
-    # _target_: nigbms.modules.models.MLPSkip
+    _target_: nigbms.models.CNN1D
+    # _target_: nigbms.models.MLPSkip
     n_layers: 4
     # n_units: 1024
     base_channels: 32
@@ -71,11 +71,11 @@ surrogate:
 
 
 constructor:
-  _target_: nigbms.modules.constructors.ThetaConstructor
+  _target_: nigbms.constructors.ThetaConstructor
   params: 
     x0:
       codec: 
-        _target_: nigbms.modules.constructors.LinearCodec
+        _target_: nigbms.constructors.LinearCodec
         param_dim: ${dim}
         latent_dim: ${latent_dim}
       shape: ${solver.params_learn.x0}
@@ -105,7 +105,7 @@ wrapper:
     additional_steps: 10
     
 loss:
-  _target_: nigbms.modules.losses.MetaSolverLoss
+  _target_: nigbms.losses.MetaSolverLoss
   weights:
     iter_r_proxy: 1
     # e0: 1
@@ -163,3 +163,5 @@ latent_dim: 31
 compile: False
 logging: True
 warmup: 0
+seed: 0
+dtype: torch.float64

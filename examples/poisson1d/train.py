@@ -6,7 +6,7 @@ import wandb
 from hydra.utils import instantiate
 from lightning import LightningModule, Trainer, seed_everything
 from nigbms.configs import data, meta_solvers, solvers, surrogates, wrapper  # noqa
-from nigbms.modules.solvers import _PytorchIterativeSolver
+from nigbms.solvers import _PytorchIterativeSolver
 from nigbms.utils.args import arrange_sweep_args_for_hydra
 from omegaconf import DictConfig, OmegaConf
 from pytorch_lightning.loggers.wandb import WandbLogger
@@ -29,9 +29,8 @@ class NIGBMS(LightningModule):
         )
         self.loss = instantiate(cfg.loss, constructor=self.constructor)
         if cfg.compile:  # This doesn't speed up the training, even slower. TODO: Investigate why?
-            # possible backend ['cudagraphs', 'inductor', 'onnxrt', 'openxla', 'tvm']
             self.meta_solver = torch.compile(self.meta_solver)
-            # self.solver = torch.compile(self.solver, backend=backend, mode="reduce-overhead", dynamic=True)
+            self.solver = torch.compile(self.solver)
             self.surrogate = torch.compile(self.surrogate)
 
         ref_solver_cfg = cfg.solver.copy()
@@ -58,6 +57,7 @@ class NIGBMS(LightningModule):
         self.manual_backward(loss_dict["loss"], inputs=list(self.meta_solver.model.parameters()))
 
         # log the cosine similarity between the true gradient and the surrogate gradient
+        # TODO: make this callback(?)
         if self.cfg.logging and self.cfg.wrapper.hparams.grad_type != "f_true":
             assert isinstance(self.solver, _PytorchIterativeSolver), "Only PytorchIterativeSolver is supported"
             theta_ref = theta.clone()  # copy to get the true gradient
@@ -153,7 +153,7 @@ class NIGBMS(LightningModule):
         }
 
 
-@hydra.main(version_base="1.3", config_path="configs", config_name="poisson1d_small")
+@hydra.main(version_base="1.3", config_path=".", config_name="train_small")
 def main(cfg: DictConfig):
     # log.info(OmegaConf.to_yaml(cfg))
     seed_everything(seed=cfg.seed, workers=True)

@@ -12,21 +12,8 @@ class OnlineDatasetConfig:
     """OnlineDatasetConfig class."""
 
     _target_: str = "nigbms.data.OnlineDataset"
-    task_params_type: DictConfig = DictConfig(
-        {"_target_": "hydra.utils.get_class", "path": "nigbms.data.generate_poisson2d.Poisson2DParams"}
-    )
-    task_constructor: DictConfig = DictConfig(
-        {"_target_": "hydra.utils.get_method", "path": "nigbms.data.generate_poisson2d.construct_petsc_poisson2d_task"}
-    )
-    distributions: DictConfig = DictConfig(
-        {
-            "coef": {"_target_": "nigbms.utils.distributions.NumpyNormal", "shape": [2], "mean": 0, "std": 1},
-            "N": {"_target_": "nigbms.utils.distributions.NumpyConstant", "shape": None, "value": 10},
-            "degree": {"_target_": "nigbms.utils.distributions.NumpyConstant", "shape": None, "value": 1},
-            "rtol": {"_target_": "nigbms.utils.distributions.NumpyConstant", "shape": None, "value": 1.0e-6},
-            "maxiter": {"_target_": "nigbms.utils.distributions.NumpyConstant", "shape": None, "value": 1000},
-        }
-    )
+    constructor: DictConfig = DictConfig({"_target_": "hydra.utils.get_class", "path": None})
+    distribution: DictConfig = DictConfig({"_target_": "nigbms.tasks.TaskDistribution"})
 
 
 cs.store(name="online_dataset_default", group="data", node=OnlineDatasetConfig)
@@ -68,7 +55,7 @@ class OfflineDataModuleConfig:
 
 @dataclass
 class Poisson1DOfflineDataModuleConfig(OfflineDataModuleConfig):
-    data_dir: str = "/workspaces/nigbms/data/raw/poisson1d/sample"
+    data_dir: str = "/workspaces/nigbms/data/poisson1d/small"
     dataset_sizes: DictConfig = DictConfig({"train": 100, "val": 100, "test": 100})
     rtol_dists: DictConfig = DictConfig(
         {

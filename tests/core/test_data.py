@@ -2,9 +2,7 @@ import pytest
 from hydra import compose, initialize
 from hydra.utils import instantiate
 from nigbms.configs.data import OfflineDatasetConfig, OnlineDatasetConfig
-from nigbms.tasks import (
-    PETScLinearSystemTask,
-)
+from nigbms.tasks import PETScLinearSystemTask, PyTorchLinearSystemTask
 
 
 class TestOfflineDataset:
@@ -23,13 +21,14 @@ class TestOfflineDataset:
         assert isinstance(tau, PETScLinearSystemTask)
 
 
+# TODO: parametrize this test with different task types
 class TestOnlineDataset:
     @pytest.fixture
-    def init_dataset(self):
+    def init_dataset(self, pytorch_task_constructor):
         with initialize(version_base="1.3"):
             cfg: OnlineDatasetConfig = compose(overrides=["+data@_global_=online_dataset_default"])
-            self.ds = instantiate(cfg)
+            self.ds = instantiate(cfg, constructor=pytorch_task_constructor)
 
     def test_iter(self, init_dataset):
         tau = next(iter(self.ds))
-        assert isinstance(tau, PETScLinearSystemTask)
+        assert isinstance(tau, PyTorchLinearSystemTask)

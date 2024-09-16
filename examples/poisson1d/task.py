@@ -1,10 +1,21 @@
+from pathlib import Path
+
+import hydra
 import numpy as np
 import torch
-from nigbms.tasks import PyTorchLinearSystemTask, TaskParams
+from hydra.utils import instantiate
+from nigbms.tasks import (
+    PETScLinearSystemTask,
+    PyTorchLinearSystemTask,
+    TaskConstructor,
+    TaskParams,
+    save_petsc_task,
+    save_pytorch_task,
+)
 from nigbms.utils.distributions import Distribution
-from sympy import Expr, S, lambdify, pi, sin, symbols
 from tensordict import tensorclass
 from torch import Tensor, tensor
+from tqdm import tqdm
 
 
 @tensorclass(autocast=True)
@@ -32,62 +43,74 @@ class CoefsDistribution(Distribution):
             return np.random.normal(0, self.scale * (1 - np.abs(np.linspace(-1, 1, self.shape[0]))), self.shape[0])
 
 
-def laplacian_matrix(N: int) -> np.ndarray:
-    """
-    Generate a Laplacian matrix of size N.
+class Poisson1DTaskConstructor(TaskConstructor):
+    def _laplacian_matrix(self, N: int) -> np.ndarray:
+        """
+        Generate a Laplacian matrix of size N.
 
-    Parameters:
-    - N (int): The size of the Laplacian matrix.
-    - out_type (str): The output type of the matrix. Default is "numpy".
+        Parameters:
+        - N (int): The size of the Laplacian matrix.
 
-    Returns:
-    - numpy.ndarray or scipy.sparse.spmatrix: The Laplacian matrix.
+        Returns:
+        - numpy.ndarray: The Laplacian matrix.
+        """
+        D = np.zeros((N, N))
+        D += np.diag([-1] * (N - 1), k=-1)
+        D += np.diag([2] * N, k=0)
+        D += np.diag([-1] * (N - 1), k=1)
+        return D
 
-    """
+    def _discretize(self, N_terms: int, coefs: np.ndarray, N_grid: int) -> np.ndarray:
+        """
+        Discretizes the given coefficients in [0, 1] over a specified number of grid points.
+        This includes the values at the boundaries.
 
-    D = np.zeros((N, N))
-    D += np.diag([-1] * (N - 1), k=-1)
-    D += np.diag([2] * N, k=0)
-    D += np.diag([-1] * (N - 1), k=1)
-    return D
+        Parameters:
+        N_terms (int): The number of terms in the series.
+        coefs (np.ndarray): The coefficients of the series.
+        N_grid (int): The number of grid points.
+
+        Returns:
+        numpy.ndarray: An array containing the discretized values.
+        """
+        x = np.linspace(0, 1, N_grid)
+        u = sum([coefs[i] * np.sin((i + 1) * np.pi * x) for i in range(N_terms)])
+        return u
+
+    def __call__(self, params: Poisson1DParams) -> PyTorchLinearSystemTask:
+        x = self._discretize(params.N_terms, params.coefs.numpy(), params.N_grid + 2)[1:-1]
+        x = x.reshape(params.N_grid, 1)  # column vector
+        A = self._laplacian_matrix(params.N_grid)
+        b = A @ x
+        task = PyTorchLinearSystemTask(
+            params,
+            tensor(A),
+            tensor(b),
+            tensor(x),
+            params.rtol,
+            params.maxiter,
+        )
+        return task
 
 
-def discretize(expr: Expr, N_grid: int) -> np.ndarray:
-    """
-    Discretizes the given expression in [0, 1] over a specified number of grid points.
-    This includes the values at the boundaries.
-
-    Parameters:
-    expr (sympy.Expr): The expression to be discretized.
-    N_grid (int): The number of grid points.
-
-    Returns:
-    numpy.ndarray: An array containing the discretized values of the expression.
-    """
-    lambdified_expr = lambdify(symbols("x"), expr, "numpy")
-    return lambdified_expr(np.linspace(0, 1, N_grid))
+### Data generation script
 
 
-def construct_sym_u(N_terms: int, coefs: np.ndarray) -> Expr:
-    x = symbols("x")
-    u_sym = S(0)
-    for i in range(N_terms):
-        u_sym += coefs[i] * sin((i + 1) * pi * x)
-    return u_sym
+@hydra.main(version_base="1.3", config_path=".", config_name="data_small")
+def main(cfg) -> None:
+    dataset = instantiate(cfg.dataset)
+    import os
+
+    print(os.getcwd())
+    for i in tqdm(range(cfg.N_data)):
+        task = dataset[i]
+        if isinstance(task, PyTorchLinearSystemTask):
+            save_pytorch_task(task, Path(str(i)))
+        elif isinstance(task, PETScLinearSystemTask):
+            save_petsc_task(task, Path(str(i)))
+        else:
+            raise ValueError("Unknown task constructor.")
 
 
-def construct_pytorch_poisson1d_task(params: Poisson1DParams) -> PyTorchLinearSystemTask:
-    u_sym = construct_sym_u(params.N_terms, params.coefs)
-    x = discretize(u_sym, params.N_grid + 2)[1:-1]  # exclude boundary because it is fixed to 0
-    x = x.reshape(-1, 1)  # (N_grid, 1), column vector
-    A = laplacian_matrix(params.N_grid)
-    b = A @ x
-    task = PyTorchLinearSystemTask(
-        params,
-        tensor(A),
-        tensor(b),
-        tensor(x),
-        params.rtol,
-        params.maxiter,
-    )
-    return task
+if __name__ == "__main__":
+    main()
