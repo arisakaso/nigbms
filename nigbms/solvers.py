@@ -51,6 +51,7 @@ class TestFunctionSolver(AbstractSolver):
         return tau.f(theta["x"])
 
 
+# TODO: speed up using jit(?)
 class _PytorchIterativeSolver(AbstractSolver):
     """Base class for iterative solvers written in Pytorch."""
 
@@ -198,6 +199,9 @@ class PyTorchCG(_PytorchIterativeSolver):
         self.rnorm = torch.norm(self.r, dim=(1, 2))
 
 
+# TODO: implement multigrid solver
+
+
 class PETScKSP(AbstractSolver):
     """Solver class for wrapping PETSc KSP solvers."""
 
@@ -267,6 +271,8 @@ class PETScKSP(AbstractSolver):
         device = theta.device
         theta = theta.detach().cpu()
         histories = []
+
+        # TODO: parallelize
         for i in range(len(batched_tau)):
             histories.append(self.solve(batched_tau.get_task(i), theta[i]))
         histories = torch.stack(histories).to(device=device, dtype=theta.dtype)

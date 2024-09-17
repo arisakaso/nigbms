@@ -35,7 +35,7 @@ def create_new_sweep(cfg: DictConfig) -> str:
     return os.path.join(*path)
 
 
-@hydra.main(version_base="1.3", config_path="../configs/sweep", config_name="minimize_testfunctions")
+@hydra.main(version_base="1.3", config_path="../poisson1d", config_name="sweep")
 def main(cfg: DictConfig):
     path = cfg.settings.sweep_path
     if path is None:

@@ -3,17 +3,21 @@ settings:
   sweep_path: null
 
 sweep:
-  project: ${hydra:job.config_name}
-  program: nigbms/train/poisson1d.py
+  project: poisson1d_small
+  program: /workspaces/nigbms/examples/poisson1d/train.py
   name: ${now:%Y-%m-%d_%H-%M-%S}
   method: grid
   parameters:
-    opt.lr:
+    wrapper.hparams.opt.lr:
       values:
         - 1.0e-2
         - 1.0e-3
         - 1.0e-4
         - 1.0e-5
+    wrapper.hparams.opt.momentum:
+      values:
+        - 0
+        - 0.9
     # latent_dim:
     #   values:
     #     - 32

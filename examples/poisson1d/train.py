@@ -1,3 +1,4 @@
+import collections
 import logging
 
 import hydra
@@ -92,13 +93,15 @@ class NIGBMS(LightningModule):
                 logger=True,
                 prog_bar=True,
                 on_epoch=True,
-                on_step=True,
+                on_step=False,
                 batch_size=tau.batch_size[0],
             )
 
     def on_train_epoch_end(self):
         if self.current_epoch >= self.cfg.warmup:
             self.lr_schedulers().step()
+        if self.cfg.reset_opt:
+            self.wrapped_solver.opt.state = collections.defaultdict(dict)  # Reset state
 
     def validation_step(self, batch, batch_idx):
         tau = batch
