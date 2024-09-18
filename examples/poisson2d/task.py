@@ -31,7 +31,13 @@ from ufl import SpatialCoordinate, TestFunction, TrialFunction, div, dx, grad, i
 # TODO: make this more complex
 @tensorclass(autocast=True)
 class Poisson2DParams(TaskParams):
-    coefs: Tensor = torch.ones(2)
+    # physical parameters
+    Tmax: Tensor = 100.0
+    alpha: Tensor = 10.0
+    u_center: Tensor = torch.tensor([0.5, 0.5])
+    k_center: Tensor = torch.tensor([0.5, 0.5])
+
+    # simulation parameters
     Nx: Tensor = 10
     Ny: Tensor = 10
     degree: Tensor = 1
@@ -42,36 +48,39 @@ class Poisson2DParams(TaskParams):
 
 # TODO: make this faster
 class Poisson2DTaskConstructor(TaskConstructor):
-    def _u_ex(self, mod, coefs):
-        return lambda x: mod.cos(coefs[0] * mod.pi * x[0]) * mod.cos(coefs[1] * mod.pi * x[1])
+    def _u(self, mod, Tmax, alpha, center):
+        return lambda x: Tmax * mod.exp(-alpha * ((x[0] - float(center[0])) ** 2 + (x[1] - float(center[1])) ** 2))
 
-    def _k_func(self, mod, k_coef):
-        return lambda x: 1.0 + k_coef * ((x[0] - 0.5) ** 2 + (x[1] - 0.5) ** 2)
+    def _k(self, k_coef, center):
+        return lambda x: 1.0 + k_coef * ((x[0] - float(center[0])) ** 2 + (x[1] - float(center[1])) ** 2)
 
     def __call__(self, params: Poisson2DParams) -> PETScLinearSystemTask:
         # Reference: https://jsdokken.com/dolfinx-tutorial/chapter4/solvers.html
 
         # this is a workaround for the issue that ufl cannot handle torch.Tensor
-        coefs = params.coefs.numpy()
+        Tmax = params.Tmax.numpy()
+        alpha = params.alpha.numpy()
         k_coef = params.k_coef.numpy()
+        u_center = params.u_center.numpy()
+        k_center = params.k_center.numpy()
 
-        u_numpy = self._u_ex(np, coefs)
-        u_ufl = self._u_ex(ufl, coefs)
+        u_np = self._u(np, Tmax, alpha, u_center)
+        u_ufl = self._u(ufl, Tmax, alpha, u_center)
+        k_ufl = self._k(k_coef, k_center)
 
         # Define the variational problem
         mesh = create_unit_square(MPI.COMM_WORLD, params.Nx, params.Ny)
         x = SpatialCoordinate(mesh)
-        k = self._k_func(ufl, k_coef)
-        f = -div(grad(u_ufl(x)))
+        f = -div(k_ufl(x) * grad(u_ufl(x)))
         V = functionspace(mesh, ("Lagrange", params.degree))
         u = TrialFunction(V)
         v = TestFunction(V)
-        a = inner(k(x) * grad(u), grad(v)) * dx
+        a = inner(k_ufl(x) * grad(u), grad(v)) * dx
         L = f * v * dx
 
         # Define the boundary condition
         u_bc = Function(V)
-        u_bc.interpolate(u_numpy)
+        u_bc.interpolate(u_np)
         facets = locate_entities_boundary(mesh, mesh.topology.dim - 1, lambda x: np.full(x.shape[1], True))
         dofs = locate_dofs_topological(V, mesh.topology.dim - 1, facets)
         bcs = [dirichletbc(u_bc, dofs)]

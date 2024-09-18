@@ -90,7 +90,7 @@ class OnlineDataset(Dataset):
         self.distribution = distribution
 
     def __getitem__(self, idx) -> Task:
-        task_params = self.distribution.sample(idx)
+        task_params = self.distribution.sample()
         tau = self.constructor(task_params)
         return tau
 

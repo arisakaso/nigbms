@@ -17,16 +17,18 @@ dataset:
       _target_: hydra.utils.get_class
       path: examples.poisson2d.task.Poisson2DParams
     distributions:
+      Tmax:
+        _target_: nigbms.utils.distributions.NumpyUniform
+        shape: null
+        lb: 0
+        ub: 100
+      alpha: ${.Tmax}
+
       Nx:
         _target_: nigbms.utils.distributions.NumpyConstant
         shape: null
         value: 10
       Ny: ${.Nx}
-      coefs:
-        _target_: nigbms.utils.distributions.NumpyNormal
-        shape: [2,]
-        mean: 0
-        std: 1
       rtol:
         _target_: nigbms.utils.distributions.NumpyConstant
         shape: null
