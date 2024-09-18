@@ -37,6 +37,7 @@ class Poisson2DParams(TaskParams):
     degree: Tensor = 1
     rtol: Tensor = 1e-6
     maxiter: Tensor = 100
+    k_coef: Tensor = 0.0  # 0: isotropic, non 0: anisotropic
 
 
 # TODO: make this faster
@@ -44,24 +45,38 @@ class Poisson2DTaskConstructor(TaskConstructor):
     def _u_ex(self, mod, coefs):
         return lambda x: mod.cos(coefs[0] * mod.pi * x[0]) * mod.cos(coefs[1] * mod.pi * x[1])
 
+    def _k_func(self, mod, k_coef):
+        return lambda x: 1.0 + k_coef * ((x[0] - 0.5) ** 2 + (x[1] - 0.5) ** 2)
+
     def __call__(self, params: Poisson2DParams) -> PETScLinearSystemTask:
         # Reference: https://jsdokken.com/dolfinx-tutorial/chapter4/solvers.html
-        coefs = params.coefs.numpy()  # this is a workaround for the issue that ufl cannot handle torch.Tensor
+
+        # this is a workaround for the issue that ufl cannot handle torch.Tensor
+        coefs = params.coefs.numpy()
+        k_coef = params.k_coef.numpy()
+
         u_numpy = self._u_ex(np, coefs)
         u_ufl = self._u_ex(ufl, coefs)
+
+        # Define the variational problem
         mesh = create_unit_square(MPI.COMM_WORLD, params.Nx, params.Ny)
         x = SpatialCoordinate(mesh)
+        k = self._k_func(ufl, k_coef)
         f = -div(grad(u_ufl(x)))
         V = functionspace(mesh, ("Lagrange", params.degree))
         u = TrialFunction(V)
         v = TestFunction(V)
-        a = inner(grad(u), grad(v)) * dx
+        a = inner(k(x) * grad(u), grad(v)) * dx
         L = f * v * dx
+
+        # Define the boundary condition
         u_bc = Function(V)
         u_bc.interpolate(u_numpy)
         facets = locate_entities_boundary(mesh, mesh.topology.dim - 1, lambda x: np.full(x.shape[1], True))
         dofs = locate_dofs_topological(V, mesh.topology.dim - 1, facets)
         bcs = [dirichletbc(u_bc, dofs)]
+
+        # Assemble the linear system
         problem = LinearProblem(a, L, bcs=bcs)
         problem.assemble_system()
 
