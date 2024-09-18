@@ -42,7 +42,6 @@ class NumpyLogUniform(Distribution):
         self.log_lb = np.log(lb)
         self.log_ub = np.log(ub)
 
-    # TODO: setting seed is not a good idea because it duplicates the same random numbers for different parameters
     def sample(self, seed=None) -> np.ndarray:
         np.random.seed(seed)
         return np.exp(np.random.uniform(self.log_lb, self.log_ub, self.shape))

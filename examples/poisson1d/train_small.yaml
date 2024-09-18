@@ -9,7 +9,7 @@ defaults:
   - _self_
 
 wandb: 
-  mode: online # must be online when sweep
+  mode: disabled # must be online when sweep
   project: poisson1d_small
 
 data:
@@ -97,7 +97,7 @@ wrapper:
       conservative: 0.99
     clip: 1
     grad_type: cv_fwd
-    jvp_type: forwardFD
+    jvp_type: forwardAD
     eps: 1.0e-8
     Nv: 1
     v_scale: 1.0

@@ -50,12 +50,11 @@ class NIGBMS(LightningModule):
 
         tau = batch
         theta = self.meta_solver(tau)
-        if self.cfg.logging:
-            theta.retain_grad()
+        theta.retain_grad()  # logging purpose
         y = self.wrapped_solver(tau, theta)
 
         loss_dict = self.loss(tau, theta, y)
-        self.manual_backward(loss_dict["loss"], inputs=list(self.meta_solver.model.parameters()))
+        self.manual_backward(loss_dict["loss"])
 
         # log the cosine similarity between the true gradient and the surrogate gradient
         # TODO: make this callback(?)

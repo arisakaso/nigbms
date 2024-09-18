@@ -1,3 +1,7 @@
+# TODO: This example should be a minimal example of using the framework.
+#       It should be easy to understand and should not contain any unnecessary code.
+#       lightning is not used in the example, so it should be removed.
+#       Also, consider removing the wandb logging later.
 import logging
 
 import hydra
