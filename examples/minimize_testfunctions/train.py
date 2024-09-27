@@ -1,14 +1,8 @@
-# TODO: This example should be a minimal example of using the framework.
-#       It should be easy to understand and should not contain any unnecessary code.
-#       lightning is not used in the example, so it should be removed.
-#       Also, consider removing the wandb logging later.
-
-import hydra
 import torch
-from hydra.utils import instantiate
-from nigbms.configs import constructors, meta_solvers, solvers, surrogates, wrapper  # noqa
-from nigbms.tasks import MinimizeTestFunctionTask
-from torchinfo import summary
+from nigbms.losses import SurrogateSolverLoss
+from nigbms.models import MLPSkip
+from nigbms.wrapper import NIGBMS, NIGBMSBundle
+from torch.nn import Parameter
 
 
 #### TEST FUNCTIONS ####
@@ -39,55 +33,58 @@ def rastrigin(x) -> torch.Tensor:
     return A * n + torch.sum(x**2 - A * torch.cos(x * torch.pi * 2), dim=-1, keepdim=True)
 
 
-### MAIN ###
-@hydra.main(version_base="1.3", config_path=".", config_name="train")
-def main(cfg):
+if __name__ == "__main__":
     # set up
-    torch.set_default_dtype(torch.float64)
     torch.set_default_device("cuda")
-
     test_func = sphere
-    tau = MinimizeTestFunctionTask(None, test_func)
-    meta_solver = instantiate(cfg.meta_solver)
-    solver = test_func
-    # instantiate(cfg.solver)
-    surrogate = instantiate(cfg.surrogate)
-    constructor = instantiate(cfg.constructor)
-    constructor = torch.nn.Identity()
+    bs = 100
+    dim = 128
+    theta = Parameter(torch.randn(bs, dim))
+    surrogate = MLPSkip(
+        in_dim=dim,
+        out_dim=1,
+        num_layers=2,
+        n_units=512,
+        hidden_activation=torch.nn.GELU(),
+    )
+    opt_outer = torch.optim.SGD([theta], lr=1e-2)
+    opt_inner = torch.optim.SGD(surrogate.parameters(), lr=1e-3)
+    loss_outer = torch.sum
+    loss_inner = SurrogateSolverLoss(weights={"dvf_loss": 1}, reduce=True)
 
-    loss = torch.sum
-    opt = instantiate(cfg.opt, params=list(meta_solver.parameters()))
-    wrapped_solver = instantiate(cfg.wrapper, solver=solver, surrogate=surrogate, constructor=constructor)
-    summary(surrogate)
-
-    for i in range(1, cfg.problem.num_iter + 1):
+    # minimize the test function by updating theta
+    for i in range(500):
         # clear gradients
-        opt.zero_grad()
+        opt_outer.zero_grad()
 
         # forward pass
-        theta = meta_solver(tau)
-        y = wrapped_solver(tau, theta)
+        bundle = NIGBMSBundle(  # package all the necessary information
+            f=test_func,  # f and f_hat MUST have the same input and output shape.
+            f_hat=surrogate,
+            loss=loss_inner,
+            opt=opt_inner,
+            grad_type="cv_fwd",
+            jvp_type="forwardAD",
+            eps=0,
+            Nv=1,
+            v_dist="rademacher",
+            v_scale=1.0,
+            additional_steps=1,
+        )
+        y = NIGBMS.apply(theta, bundle)  # This line does the magic. See nigbms/wrapper.py for details.
 
-        # backprop for theta
-        loss(y).backward()
+        # backprop as usual
+        loss_outer(y).backward()
 
-        # logging
-        ref = theta.clone()  # copy to get the true gradient
+        # logging and monitoring
+        ref = theta.clone()  # copy to get the true gradient to compare
         f_true = torch.autograd.grad(test_func(ref).sum(), ref)[0]
-        sim = torch.cosine_similarity(f_true, theta.grad, dim=1, eps=1e-20).detach()
+        sim = torch.cosine_similarity(f_true, theta.grad, dim=1)
         if i % 100 == 0:
-            surroate_loss = wrapped_solver.loss_dict["loss"]
-            print(f"{i=}, {y.mean()=:.3g}, {y.max()=:.3g}, {y.min()=:.3g}, {sim.mean()=:.3g}, {surroate_loss=:.3g}")
-
-        # clip gradients
-        if cfg.clip:
-            torch.nn.utils.clip_grad_norm_(meta_solver.parameters(), cfg.clip)
+            print(f"{i=}, {y.mean()=:.3g}, {y.max()=:.3g}, {y.min()=:.3g}, {sim.mean()=:.3g}")
 
         # update
-        opt.step()
+        opt_outer.step()
 
-    return y.mean()
-
-
-if __name__ == "__main__":
-    main()
+    print("Final Result:")
+    print(f"{i=}, {y.mean()=:.3g}, {y.max()=:.3g}, {y.min()=:.3g}, {sim.mean()=:.3g}")
